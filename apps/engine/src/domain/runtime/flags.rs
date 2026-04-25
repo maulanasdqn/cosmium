@@ -6,9 +6,23 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push(format!("--lang={}", primary_lang(&p.locale.languages)));
     f.push(format!("--accept-lang={}", p.locale.accept_language));
     f.push(format!(
+        "--cosmium-platform={}",
+        p.identity.navigator_platform
+    ));
+    f.push(format!(
         "--cosmium-ua-platform={}",
         p.identity.client_hints.platform
     ));
+    f.push(format!("--cosmium-languages={}", p.locale.languages.join(",")));
+    f.push(format!(
+        "--cosmium-hardware-concurrency={}",
+        p.hardware.hardware_concurrency
+    ));
+    f.push(format!(
+        "--cosmium-device-memory={}",
+        p.hardware.device_memory_gb
+    ));
+    f.push(format!("--cosmium-color-depth={}", p.screen.color_depth));
     f.push(format!("--cosmium-webgl-vendor={}", p.gpu.vendor));
     f.push(format!("--cosmium-webgl-renderer={}", p.gpu.renderer));
     f.push(format!(
@@ -41,4 +55,41 @@ fn webrtc_flags(policy: &IpHandlingPolicy) -> Vec<String> {
         IpHandlingPolicy::DisableNonProxiedUdp => "disable_non_proxied_udp",
     };
     vec![format!("--force-webrtc-ip-handling-policy={value}")]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture() -> Profile {
+        let raw = include_str!("../../../../../profiles/win11_rtx3060_en-us.json");
+        serde_json::from_str(raw).expect("fixture parses")
+    }
+
+    #[test]
+    fn emits_all_cosmium_switches() {
+        let flags = profile_to_flags(&fixture());
+        let want = [
+            "--cosmium-platform=Win32",
+            "--cosmium-ua-platform=Windows",
+            "--cosmium-languages=en-US,en",
+            "--cosmium-hardware-concurrency=12",
+            "--cosmium-device-memory=8",
+            "--cosmium-color-depth=24",
+            "--cosmium-webgl-vendor=Google Inc. (NVIDIA)",
+        ];
+        for w in want {
+            assert!(flags.iter().any(|f| f == w), "missing flag: {w}");
+        }
+    }
+
+    #[test]
+    fn webgl_renderer_passed_through() {
+        let flags = profile_to_flags(&fixture());
+        assert!(
+            flags
+                .iter()
+                .any(|f| f.starts_with("--cosmium-webgl-renderer=ANGLE (NVIDIA"))
+        );
+    }
 }

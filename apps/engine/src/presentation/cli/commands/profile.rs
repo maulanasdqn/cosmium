@@ -1,11 +1,10 @@
+mod ops;
+
 use std::path::PathBuf;
 
-use anyhow::{Context, Result, bail};
+use anyhow::Result;
 use clap::Subcommand;
 
-use crate::application::use_cases::list_profiles::ListProfiles;
-use crate::application::use_cases::validate_profile::ValidateProfile;
-use crate::domain::profile::Severity;
 use crate::presentation::cli::state::CliState;
 
 #[derive(Debug, Subcommand)]
@@ -19,73 +18,52 @@ pub enum ProfileCmd {
         target: PathBuf,
     },
     List,
+    Generate {
+        #[arg(long)]
+        persona: String,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        save: bool,
+    },
+    Repair {
+        target: PathBuf,
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
+    Mutate {
+        target: PathBuf,
+        #[arg(long, default_value_t = 5)]
+        count: usize,
+        #[arg(long)]
+        hint: Option<String>,
+        #[arg(long)]
+        output_dir: Option<PathBuf>,
+        #[arg(long)]
+        save: bool,
+    },
 }
 
 pub async fn execute(cmd: ProfileCmd, state: &CliState) -> Result<()> {
     match cmd {
-        ProfileCmd::Validate { target, strict } => validate(target, strict, state).await,
-        ProfileCmd::Show { target } => show(target, state).await,
-        ProfileCmd::List => list(state).await,
+        ProfileCmd::Validate { target, strict } => ops::validate(target, strict, state).await,
+        ProfileCmd::Show { target } => ops::show(target, state).await,
+        ProfileCmd::List => ops::list(state).await,
+        ProfileCmd::Generate {
+            persona,
+            name,
+            output,
+            save,
+        } => ops::generate(persona, name, output, save, state).await,
+        ProfileCmd::Repair { target, output } => ops::repair(target, output, state).await,
+        ProfileCmd::Mutate {
+            target,
+            count,
+            hint,
+            output_dir,
+            save,
+        } => ops::mutate(target, count, hint, output_dir, save, state).await,
     }
-}
-
-async fn validate(target: PathBuf, strict: bool, state: &CliState) -> Result<()> {
-    let uc = ValidateProfile::new(state.profile_repo.clone());
-    let out = uc
-        .execute(&target)
-        .await
-        .with_context(|| format!("validating {}", target.display()))?;
-
-    println!("profile: {}", out.profile.name);
-
-    if out.diagnostics.is_empty() {
-        println!("  coherent (0 diagnostics)");
-        return Ok(());
-    }
-
-    let mut errors = 0usize;
-    let mut warnings = 0usize;
-    for d in &out.diagnostics {
-        let tag = match d.severity {
-            Severity::Error => {
-                errors += 1;
-                "ERROR"
-            }
-            Severity::Warning => {
-                warnings += 1;
-                "WARN "
-            }
-        };
-        println!("  [{tag}] {:<40} {}", d.field, d.message);
-    }
-    println!("  {errors} error(s), {warnings} warning(s)");
-
-    if errors > 0 || (strict && warnings > 0) {
-        bail!("profile has unresolved diagnostics");
-    }
-    Ok(())
-}
-
-async fn show(target: PathBuf, state: &CliState) -> Result<()> {
-    let profile = state
-        .profile_repo
-        .load(&target)
-        .await
-        .with_context(|| format!("loading {}", target.display()))?;
-    let s = serde_json::to_string_pretty(&profile)?;
-    println!("{s}");
-    Ok(())
-}
-
-async fn list(state: &CliState) -> Result<()> {
-    let uc = ListProfiles::new(state.profile_repo.clone());
-    let names = uc.execute().await?;
-    if names.is_empty() {
-        println!("(no profiles found)");
-    } else {
-        for n in names {
-            println!("{n}");
-        }
-    }
-    Ok(())
 }
