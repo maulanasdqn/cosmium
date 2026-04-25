@@ -11,13 +11,13 @@ This repo ships:
 3. **An LLM-assisted profile authoring loop** via OpenRouter — generate, repair, and mutate coherent profiles from a persona description.
 4. **Build + runtime Docker images** — reproducible Chromium build env (`docker/Dockerfile.build`) and GPU/CPU runtime images.
 
-Cosmium is consumed by [`mrscraper-rs`](../mrscraper-rs) — its `infrastructure/browser/` chromiumoxide pool just needs the path to a built `cosmium` binary.
+Cosmium ships a single binary that any CDP-capable client (chromiumoxide, puppeteer, playwright) can drive — point it at the built `chrome` executable like you would any other Chromium-based browser.
 
 ---
 
 ## Architecture
 
-The Rust workspace mirrors mrscraper-rs's clean-architecture layout:
+The Rust workspace follows a clean-architecture layout (domain → application → infrastructure → presentation, dependencies pointing only inward):
 
 ```
 cosmium/
@@ -25,7 +25,7 @@ cosmium/
 ├── rust-toolchain.toml              1.85 / edition 2024
 ├── VERSION                          pinned Chromium tag (135.0.7049.84)
 │
-├── .config/                         env + logger bootstrap (mirrors mrscraper-rs/.config)
+├── .config/                         env + logger bootstrap shared by all binaries
 │   └── src/{env.rs, logger.rs, lib.rs}
 │
 ├── apps/
@@ -302,25 +302,34 @@ A `.env` at repo root is auto-loaded.
 
 ---
 
-## Integration with mrscraper-rs
+## Embedding in your own Rust project
 
-`mrscraper-rs/apps/engine/src/infrastructure/browser/` already runs a `chromiumoxide` pool. Wire cosmium in:
+The engine crate exposes a clean port-and-adapter API. Add it as a path or git dependency:
 
 ```toml
-# mrscraper-rs/apps/engine/Cargo.toml
 [dependencies]
-cosmium-engine = { path = "../../../cosmium/apps/engine", package = "engine" }
+cosmium-engine = { git = "https://github.com/<your-org>/cosmium", package = "engine" }
 ```
 
-Then call `cosmium_engine::domain::runtime::profile_to_flags(&profile)` to produce launch flags, and point the chromiumoxide pool's binary path at the cosmium tarball location.
+Then map a profile to launch flags from your own code:
+
+```rust
+use cosmium_engine::domain::runtime::profile_to_flags;
+use cosmium_engine::infrastructure::profile::FsJsonProfileRepository;
+
+let repo = FsJsonProfileRepository::new("./profiles");
+let profile = repo.load(std::path::Path::new("win11_rtx3060_en-us")).await?;
+let flags = profile_to_flags(&profile);
+// hand `flags` to chromiumoxide / fantoccini / your own CDP client
+```
 
 ---
 
 ## What this repo does NOT solve
 
-- **Datacenter ASN detection.** Cloudflare / PerimeterX / Akamai score IP type at the network layer. No browser patch fixes this. Run cosmium behind residential or mobile proxies (mrscraper-rs already exposes a proxy port).
-- **Behavioral analysis.** Mouse curves, scroll rhythm, dwell time, click entropy. These belong in your automation layer, not the browser.
-- **Captcha solving.** Out of scope. Use mrscraper-rs's captcha port adapters.
+- **Datacenter ASN detection.** Anti-bot vendors score IP type (datacenter vs residential vs mobile) at the network layer. No browser patch fixes this — run cosmium behind a residential or mobile proxy.
+- **Behavioral analysis.** Mouse curves, scroll rhythm, dwell time, click entropy. These belong in your automation layer, not in the browser binary.
+- **Captcha solving.** Out of scope. Plug a captcha solver into your own automation layer.
 
 ---
 

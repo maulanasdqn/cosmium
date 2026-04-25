@@ -5,7 +5,7 @@
 #     docker compose run --rm build ./scripts/04-build.sh
 #
 # - `gpu` and `cpu` services: runtime containers consuming a packaged tarball
-#   from dist/. Use for fingerprint testing and integration with mrscraper-rs.
+#   from dist/. Use for fingerprint testing and integration with automation clients.
 #     docker compose run --rm gpu --cosmium-profile=/profiles/win11_rtx3060_en-us.json https://creepjs.example/
 #
 # Volumes preserve the Chromium source tree and build outputs across runs —

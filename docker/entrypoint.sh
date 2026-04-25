@@ -65,7 +65,7 @@ if [[ -n "${profile_path}" ]]; then
   default_flags+=(--cosmium-profile="${profile_path}")
 fi
 
-# Optional CDP port for mrscraper-rs / chromiumoxide.
+# Optional CDP port for any automation client (chromiumoxide, puppeteer, playwright).
 if [[ -n "${COSMIUM_CDP_PORT:-}" ]]; then
   default_flags+=(--remote-debugging-port="${COSMIUM_CDP_PORT}")
 fi

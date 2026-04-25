@@ -19,7 +19,7 @@ Both paths require knowing the exact ordering of the `mojom::blink::MediaDeviceT
 
 ## CDP fallback in the meantime
 
-While this patch is deferred, mrscraper-rs can spoof mediaDevices via CDP injection at session start:
+While this patch is deferred, automation clients can spoof mediaDevices via CDP injection at session start:
 
 ```js
 Object.defineProperty(MediaDevices.prototype, 'enumerateDevices', {

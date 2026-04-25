@@ -49,7 +49,7 @@ webrtc.stun_servers       → optional: which STUN servers PCs may contact
 
 - **Docker bridge filter.** Beyond the policy enum, add a hardcoded filter that drops any candidate whose IP falls in RFC1918 ranges associated with container networks (`172.17.0.0/12`, `10.0.0.0/8` partial). Real residential users almost never have these on local interfaces; corporate users do, but their browser fingerprint also matches a corporate persona. Containers are the worst case.
 - **mDNS obfuscation toggle.** Real Chrome enables mDNS hostnames for host candidates by default. Don't disable this — sites expect the `.local` behavior.
-- **`disable_non_proxied_udp`** is the strongest setting: WebRTC only operates through the configured proxy. Combined with mrscraper-rs's proxy port, this means STUN never leaves the proxy, which means no IP leak at all.
+- **`disable_non_proxied_udp`** is the strongest setting: WebRTC only operates through the configured proxy. Combined with a proxy in front of cosmium, this means STUN never leaves the proxy, which means no IP leak at all.
 - **`getStats()` leaks too.** `RTCPeerConnection.getStats()` returns `local-candidate` records with the actual IPs even if `onicecandidate` was suppressed. Override the stats-collection path or sanitize values.
 
 ## Validation

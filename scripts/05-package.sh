@@ -52,7 +52,7 @@ done
 # enable it via setuid; here we just preserve the executable bit.
 chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 
-# Stamp the build with version info readable by mrscraper-rs.
+# Stamp the build with version info readable by automation clients.
 cat > "${stage}/cosmium.json" <<EOF
 {
   "chromium_tag": "${CHROMIUM_TAG}",

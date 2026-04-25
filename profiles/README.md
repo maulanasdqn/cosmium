@@ -46,7 +46,7 @@ See [`schema.json`](./schema.json) for the canonical structure. Top-level groups
 | `macos_m2_en-us.json` | MacBook Air M2, US English |
 | `win10_intel_uhd_pt-br.json` | Office laptop, integrated GPU, Brazilian Portuguese |
 
-Rotate profiles per-session in mrscraper-rs by passing different `--cosmium-profile` paths to each pool worker.
+Rotate profiles per-session in your automation pool by passing different `--cosmium-profile` paths to each worker.
 
 ## Anti-patterns
 

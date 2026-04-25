@@ -33,7 +33,7 @@ None. This patch is unconditional — webdriver is always false in cosmium. Ther
 - **Don't just delete the IDL attribute.** Sites probe both `navigator.webdriver === true` AND `'webdriver' in navigator`. Real Chrome returns false to the first and true to the second. Match that.
 - **Worker threads.** `WorkerNavigator` has its own automation-information module. Patch both.
 - **ServiceWorker / SharedWorker.** Same surface, separate file.
-- **`window.cdc_*` strings from chromedriver.** If shipping chromedriver alongside cosmium, also strip the `cdc_*` evaluate-script names — but better: don't ship chromedriver at all. mrscraper-rs uses CDP directly.
+- **`window.cdc_*` strings from chromedriver.** If shipping chromedriver alongside cosmium, also strip the `cdc_*` evaluate-script names — but better: don't ship chromedriver at all. Drive cosmium via CDP directly.
 
 ## Validation
 
