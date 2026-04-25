@@ -1,0 +1,124 @@
+# Reproducible build container for cosmium.
+#
+# Builds Chromium from source with depot_tools. ~100GB disk, 16GB+ RAM.
+# Use BuildKit for caching:
+#   DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.build -t cosmium-build .
+#
+# Then to actually build cosmium:
+#   docker run --rm \
+#     -v $PWD:/cosmium \
+#     -v cosmium-src:/cosmium/src \
+#     -v cosmium-out:/cosmium/out \
+#     cosmium-build \
+#     bash -c "./scripts/01-fetch.sh && ./scripts/02-checkout.sh && \
+#              ./scripts/03-apply-patches.sh && ./scripts/04-build.sh && \
+#              ./scripts/05-package.sh"
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    COSMIUM_SKIP_BUILD_DEPS=1
+
+# install-build-deps.sh from Chromium would normally install all of this,
+# but we bake the static prerequisites into the image so the build script
+# can run without sudo and without re-installing on every container start.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bison \
+    build-essential \
+    ca-certificates \
+    clang \
+    cmake \
+    curl \
+    file \
+    flex \
+    git \
+    gperf \
+    jq \
+    libasound2-dev \
+    libatk-bridge2.0-dev \
+    libatk1.0-dev \
+    libatomic1 \
+    libcairo2-dev \
+    libcap-dev \
+    libcups2-dev \
+    libdbus-1-dev \
+    libdrm-dev \
+    libegl1-mesa-dev \
+    libelf-dev \
+    libffi-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libgbm-dev \
+    libgcrypt20-dev \
+    libgles2-mesa-dev \
+    libglib2.0-dev \
+    libglu1-mesa-dev \
+    libgtk-3-dev \
+    libgtk-4-dev \
+    libkrb5-dev \
+    libnspr4-dev \
+    libnss3-dev \
+    libpam0g-dev \
+    libpci-dev \
+    libpipewire-0.3-dev \
+    libpulse-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libudev-dev \
+    libva-dev \
+    libwayland-dev \
+    libx11-dev \
+    libx11-xcb-dev \
+    libxcb1-dev \
+    libxcomposite-dev \
+    libxcursor-dev \
+    libxdamage-dev \
+    libxext-dev \
+    libxfixes-dev \
+    libxi-dev \
+    libxinerama-dev \
+    libxkbcommon-dev \
+    libxrandr-dev \
+    libxrender-dev \
+    libxslt1-dev \
+    libxss-dev \
+    libxt-dev \
+    libxtst-dev \
+    lld \
+    locales \
+    lsb-release \
+    ninja-build \
+    nodejs \
+    npm \
+    openssh-client \
+    pkg-config \
+    python3 \
+    python3-pip \
+    rsync \
+    sudo \
+    tzdata \
+    unzip \
+    uuid-dev \
+    wget \
+    xz-utils \
+    zstd \
+ && rm -rf /var/lib/apt/lists/*
+
+# Build user — depot_tools refuses to run as root.
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} build && \
+    useradd -m -u ${UID} -g ${GID} -s /bin/bash build && \
+    echo "build ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/build
+
+USER build
+WORKDIR /cosmium
+
+# Bake depot_tools location into PATH so all scripts find it.
+ENV PATH="/cosmium/depot_tools:${PATH}" \
+    DEPOT_TOOLS_UPDATE=1 \
+    GIT_CACHE_PATH=/cosmium/.git-cache
+
+CMD ["bash"]

@@ -1,0 +1,64 @@
+# cosmium gn build configuration
+#
+# Goal: produce a binary that is byte-pattern, codec-stack, and feature-flag
+# indistinguishable from real Google Chrome stable. We deliberately do NOT
+# strip Google integrations (Safe Browsing, FRE, omnibox suggestions, etc.) —
+# stripping them changes outbound network signature in ways anti-bot vendors
+# correlate.
+#
+# Tune `is_official_build` and `chrome_pgo_phase` for release builds. For
+# patch development, leave them off — full PGO+LTO triples build time.
+
+# ---- Build mode ----
+is_debug = false
+is_component_build = false        # one fat binary, like real Chrome ships
+symbol_level = 1                  # 0 = no symbols (smaller); 1 = minimal (good for crash reports); 2 = full debug
+blink_symbol_level = 0
+v8_symbol_level = 0
+
+# Toggle these for release vs dev.
+is_official_build = false         # release: true (enables LTO, takes ~2x longer)
+chrome_pgo_phase = 0              # release: 2 (uses official PGO profiles; requires download)
+dcheck_always_on = false
+
+# ---- Branding ----
+# Keep "Chromium" branding in the binary (avoids Google trademark issues), but
+# the cosmium runtime overrides UA, ClientHints, and product strings via the
+# profile system, so this is invisible to scraped sites.
+is_chrome_branded = false
+
+# ---- Codecs ----
+# Match real Chrome exactly. Without these, MSE/EME tests on detection sites
+# fail in patterns that distinguish Chromium-from-source vs Chrome-from-Google.
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+# ---- Toolchain ----
+use_lld = true
+treat_warnings_as_errors = false  # patches will trip warnings; don't let that fail the build
+clang_use_chrome_plugins = true
+use_sysroot = true                # use Chromium's pinned sysroot for reproducibility
+use_custom_libcxx = true
+
+# ---- GPU / rendering ----
+# Keep SwiftShader available as a fallback even on the GPU variant — some
+# sites probe both backends and a missing fallback is itself a tell.
+angle_enable_swiftshader = true
+enable_swiftshader = true
+
+# ---- Stripped: things that bloat or leak ----
+enable_nacl = false               # legacy; Chrome stable still bundles but it's optional
+enable_remoting = false           # Chrome Remote Desktop — datacenter-only signal if probed
+enable_reporting = false          # Reporting API — controllable per-site, but cleaner without
+
+# ---- Linux specific ----
+target_os = "linux"
+target_cpu = "x64"
+
+# Use the pinned sysroot Debian for build reproducibility.
+# (Set by gclient sync.)
+
+# ---- Cosmium build identifier ----
+# Surfaced in chrome://version. Useful for debugging which cosmium build is
+# running in a container.
+extra_cflags = "-DCOSMIUM_BUILD=1"

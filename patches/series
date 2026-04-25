@@ -1,0 +1,23 @@
+0001-strip-navigator-webdriver.patch
+0002-spoof-webgl-vendor-renderer.patch
+0003-spoof-client-hints-platform.patch
+
+# Conventional ordering (when patches are written):
+#
+#   0001-cosmium-profile-loader.patch      core: --cosmium-profile flag + JSON loader
+#   0002-strip-automation-controlled.patch nav.webdriver, AutomationControlled
+#   0003-spoof-client-hints.patch          Sec-CH-UA-* headers from profile
+#   0004-spoof-navigator-platform.patch    nav.platform/appVersion/vendor from profile
+#   0005-spoof-navigator-languages.patch   nav.languages/Accept-Language from profile
+#   0006-spoof-hardware-concurrency.patch  nav.hardwareConcurrency from profile
+#   0007-spoof-device-memory.patch         nav.deviceMemory from profile
+#   0008-spoof-screen-properties.patch     screen.* + DPR from profile
+#   0009-spoof-webgl-vendor-renderer.patch UNMASKED_VENDOR/RENDERER_WEBGL from profile
+#   0010-spoof-mediadevices-enumerate.patch enumerateDevices() from profile
+#   0011-spoof-speech-synthesis-voices.patch getVoices() from profile
+#   0012-spoof-audio-context.patch         AudioContext baseLatency/outputLatency from profile
+#   0013-canvas-deterministic-noise.patch  per-profile canvas/audio noise injection
+#   0014-spoof-font-enumeration.patch      document.fonts.check() whitelist from profile
+#   0015-webrtc-ip-policy.patch            force public-interface-only + drop host candidates
+#   0016-strip-cdp-runtime-leaks.patch     remove Runtime.enable side effects
+#   0017-strip-headless-new-tells.patch    fix --headless=new residual mismatches

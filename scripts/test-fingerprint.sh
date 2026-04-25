@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# Run cosmium against a battery of fingerprint probes and produce a pass/fail
+# report. Each probe is a self-contained JS expression that should evaluate
+# to a known-clean value when the corresponding patch is in place.
+#
+# Usage:
+#   ./scripts/test-fingerprint.sh [path/to/cosmium/binary] [path/to/profile.json]
+#
+# Defaults:
+#   binary  → out/cosmium/chrome
+#   profile → profiles/win11_rtx3060_en-us.json
+
+set -euo pipefail
+source "$(dirname "$0")/_lib.sh"
+
+BIN="${1:-${BUILD_OUT}/chrome}"
+PROFILE="${2:-${COSMIUM_ROOT}/profiles/win11_rtx3060_en-us.json}"
+
+if [[ ! -x "${BIN}" ]]; then
+  log_error "Binary not executable: ${BIN}"
+  exit 1
+fi
+if [[ ! -f "${PROFILE}" ]]; then
+  log_error "Profile not found: ${PROFILE}"
+  exit 1
+fi
+
+log_info "Binary:  ${BIN}"
+log_info "Profile: ${PROFILE}"
+
+# Probe definitions. Each probe is:
+#   id|description|js-expression|expected-pattern (regex)
+#
+# A probe passes when the evaluated expression matches expected-pattern.
+# Expected values reference profile fields by `${profile.path}` — substituted
+# from the profile JSON before evaluation.
+
+probes=(
+  "webdriver|navigator.webdriver === false|String(navigator.webdriver)|^false$"
+  "webdriver_in|'webdriver' in navigator (still true, just value is false)|String('webdriver' in navigator)|^true$"
+  "platform|navigator.platform matches profile|navigator.platform|^\${identity.navigator_platform}$"
+  "languages|navigator.languages matches profile|JSON.stringify(navigator.languages)|^\${identity_languages_json}$"
+  "hwconcurrency|hardwareConcurrency matches profile|String(navigator.hardwareConcurrency)|^\${hardware.hardware_concurrency}$"
+  "devicememory|deviceMemory matches profile|String(navigator.deviceMemory)|^\${hardware.device_memory_gb}$"
+  "ua_platform|userAgentData.platform matches profile|(await navigator.userAgentData.getHighEntropyValues(['platform'])).platform|^\${identity.client_hints.platform}$"
+  "ua_arch|userAgentData.architecture matches profile|(await navigator.userAgentData.getHighEntropyValues(['architecture'])).architecture|^\${identity.client_hints.architecture}$"
+  "webgl_vendor|UNMASKED_VENDOR_WEBGL matches profile|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_VENDOR_WEBGL);})()|^\${gpu.vendor}$"
+  "webgl_renderer|UNMASKED_RENDERER_WEBGL matches profile|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()|^\${gpu.renderer}$"
+  "webgl_no_swiftshader|WebGL renderer must NOT contain SwiftShader|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()|^(?!.*SwiftShader).*$"
+  "media_devices|enumerateDevices returns >0 entries|(await navigator.mediaDevices.enumerateDevices()).length > 0 ? 'true' : 'false'|^true$"
+  "voices|speechSynthesis returns >0 voices|String(speechSynthesis.getVoices().length > 0)|^true$"
+  "timezone|Intl timezone matches profile|Intl.DateTimeFormat().resolvedOptions().timeZone|^\${locale.timezone}$"
+  "screen_dpr|devicePixelRatio matches profile|String(window.devicePixelRatio)|^\${screen.device_pixel_ratio}$"
+  "screen_w|screen.width matches profile|String(screen.width)|^\${screen.width}$"
+  "screen_h|screen.height matches profile|String(screen.height)|^\${screen.height}$"
+  "color_depth|screen.colorDepth matches profile|String(screen.colorDepth)|^\${screen.color_depth}$"
+  "audio_sr|AudioContext sampleRate matches profile|String(new AudioContext().sampleRate)|^\${audio.sample_rate}$"
+)
+
+# Resolve profile field interpolations.
+resolve() {
+  local expr="$1"
+  # Special-case array → JSON.
+  local langs_json
+  langs_json=$(jq -c '.locale.languages' "${PROFILE}")
+  expr="${expr//\$\{identity_languages_json\}/${langs_json}}"
+
+  # Generic ${a.b.c} → jq path.
+  while [[ "${expr}" =~ \$\{([a-z_]+(\.[a-z_]+)*)\} ]]; do
+    local path="${BASH_REMATCH[1]}"
+    local val
+    val=$(jq -r ".${path}" "${PROFILE}")
+    expr="${expr//\$\{${path}\}/${val}}"
+  done
+  echo "${expr}"
+}
+
+# Build a single HTML page that evaluates every probe and prints results.
+tmp=$(mktemp -d)
+trap 'rm -rf "${tmp}"' EXIT
+
+cat > "${tmp}/probes.html" <<'EOF'
+<!doctype html>
+<html><head><meta charset="utf-8"><title>cosmium probes</title></head>
+<body><pre id="out">running…</pre>
+<script>
+async function run(probes) {
+  const out = [];
+  for (const [id, desc, expr] of probes) {
+    try {
+      const fn = new Function('return (async () => (' + expr + '))()');
+      const v = await fn();
+      out.push(JSON.stringify({id, desc, value: String(v), error: null}));
+    } catch (e) {
+      out.push(JSON.stringify({id, desc, value: null, error: String(e)}));
+    }
+  }
+  document.getElementById('out').textContent = out.join('\n');
+}
+run(__PROBES__);
+</script>
+</body></html>
+EOF
+
+# Build the JS array of probes.
+js_probes="["
+sep=""
+for p in "${probes[@]}"; do
+  IFS='|' read -r id desc expr expected <<< "${p}"
+  expr_resolved=$(resolve "${expr}")
+  js_probes+="${sep}[$(jq -Rn --arg s "${id}" '$s'),$(jq -Rn --arg s "${desc}" '$s'),$(jq -Rn --arg s "${expr_resolved}" '$s')]"
+  sep=","
+done
+js_probes+="]"
+
+sed -i.bak "s|__PROBES__|${js_probes}|" "${tmp}/probes.html"
+
+# Run cosmium headlessly and capture the rendered <pre> contents.
+out_dump="${tmp}/dump.html"
+"${BIN}" \
+  --cosmium-profile="${PROFILE}" \
+  --headless=new \
+  --disable-gpu-sandbox \
+  --no-sandbox \
+  --dump-dom \
+  "file://${tmp}/probes.html" > "${out_dump}" 2>/dev/null
+
+# Extract the JSON-per-line probe results.
+results=$(grep -oP '\{"id":[^}]+\}' "${out_dump}" || true)
+if [[ -z "${results}" ]]; then
+  log_error "No probe results captured. Dump:"
+  cat "${out_dump}" >&2
+  exit 1
+fi
+
+# Compare each result against expected pattern.
+pass=0
+fail=0
+echo
+printf '%-22s %-8s %s\n' "PROBE" "RESULT" "VALUE"
+printf '%-22s %-8s %s\n' "----------------------" "--------" "-----"
+
+for p in "${probes[@]}"; do
+  IFS='|' read -r id desc expr expected <<< "${p}"
+  expected_resolved=$(resolve "${expected}")
+  line=$(echo "${results}" | grep "\"id\":\"${id}\"" || true)
+  if [[ -z "${line}" ]]; then
+    printf '%-22s %s%-8s%s %s\n' "${id}" "${C_ERR}" "MISSING" "${C_RESET}" ""
+    fail=$((fail + 1))
+    continue
+  fi
+  value=$(echo "${line}" | jq -r '.value // ""')
+  err=$(echo "${line}" | jq -r '.error // ""')
+  if [[ -n "${err}" ]]; then
+    printf '%-22s %s%-8s%s %s\n' "${id}" "${C_ERR}" "ERROR" "${C_RESET}" "${err}"
+    fail=$((fail + 1))
+  elif [[ "${value}" =~ ${expected_resolved} ]]; then
+    printf '%-22s %s%-8s%s %s\n' "${id}" "${C_OK}" "PASS" "${C_RESET}" "${value}"
+    pass=$((pass + 1))
+  else
+    printf '%-22s %s%-8s%s got=%s expected=%s\n' "${id}" "${C_ERR}" "FAIL" "${C_RESET}" "${value}" "${expected_resolved}"
+    fail=$((fail + 1))
+  fi
+done
+
+echo
+log_info "passed=${pass} failed=${fail}"
+if [[ ${fail} -gt 0 ]]; then
+  exit 1
+fi

@@ -1,0 +1,72 @@
+# Compose for local cosmium development.
+#
+# - `build` service: long-running container with the full Chromium build env.
+#   Use it for fetch / patch / build cycles.
+#     docker compose run --rm build ./scripts/04-build.sh
+#
+# - `gpu` and `cpu` services: runtime containers consuming a packaged tarball
+#   from dist/. Use for fingerprint testing and integration with mrscraper-rs.
+#     docker compose run --rm gpu --cosmium-profile=/profiles/win11_rtx3060_en-us.json https://creepjs.example/
+#
+# Volumes preserve the Chromium source tree and build outputs across runs —
+# losing them costs ~30min refetch and several hours of rebuild.
+
+services:
+  build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.build
+    image: cosmium-build:latest
+    volumes:
+      - ..:/cosmium
+      - cosmium-src:/cosmium/src
+      - cosmium-out:/cosmium/out
+      - cosmium-depot:/cosmium/depot_tools
+      - cosmium-cache:/cosmium/.git-cache
+    working_dir: /cosmium
+    # Sysctl bump for Chromium's namespace-heavy build.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.runtime.gpu
+      args:
+        COSMIUM_TARBALL: dist/cosmium-${CHROMIUM_TAG:-135.0.7049.84}.tar.zst
+    image: cosmium:gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    cap_add:
+      - SYS_ADMIN  # required for Chromium's seccomp/userns sandbox
+    volumes:
+      - ../profiles:/profiles:ro
+    environment:
+      COSMIUM_PROFILE_NAME: ${PROFILE:-win11_rtx3060_en-us}
+
+  cpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.runtime.cpu
+      args:
+        COSMIUM_TARBALL: dist/cosmium-${CHROMIUM_TAG:-135.0.7049.84}.tar.zst
+    image: cosmium:cpu
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - ../profiles:/profiles:ro
+    environment:
+      COSMIUM_PROFILE_NAME: ${PROFILE:-win11_rtx3060_en-us}
+
+volumes:
+  cosmium-src:
+  cosmium-out:
+  cosmium-depot:
+  cosmium-cache:

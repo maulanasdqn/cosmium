@@ -1,0 +1,19 @@
+[package]
+name = "cosmium-cli"
+description = "cosmium command-line interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "cosmium"
+path = "src/main.rs"
+
+[dependencies]
+config = { workspace = true }
+engine = { workspace = true }
+
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
