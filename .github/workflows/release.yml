@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.2.0)"
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: cosmium-linux-x86_64
+            ext: ""
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: cosmium-linux-aarch64
+            ext: ""
+            cross: true
+          - os: macos-13
+            target: x86_64-apple-darwin
+            name: cosmium-macos-x86_64
+            ext: ""
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: cosmium-macos-aarch64
+            ext: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: cosmium-windows-x86_64
+            ext: ".exe"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.target }}
+
+      - name: Install cross-compile toolchain (aarch64 linux)
+        if: matrix.cross == true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build
+        shell: bash
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }} -p cosmium-cli
+
+      - name: Stage binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          src="target/${{ matrix.target }}/release/cosmium${{ matrix.ext }}"
+          dst="dist/${{ matrix.name }}${{ matrix.ext }}"
+          cp "$src" "$dst"
+          cd dist && tar -czf "${{ matrix.name }}.tar.gz" "${{ matrix.name }}${{ matrix.ext }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/${{ matrix.name }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: publish github release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: cosmium ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          body: |
+            ## cosmium ${{ steps.tag.outputs.tag }}
+
+            Pre-built `cosmium` CLI binaries for Linux, macOS, and Windows.
+
+            **The patched Chromium binary is NOT included** — it is too large to
+            distribute and must be built locally with `cosmium build` (see
+            `patches/README.md`).
+
+            ### Install
+
+            ```bash
+            # Linux x86_64
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/cosmium-linux-x86_64.tar.gz \
+              | tar xz
+            sudo install -m 755 cosmium-linux-x86_64 /usr/local/bin/cosmium
+            cosmium --version
+            ```
+
+            ### Verify
+
+            ```bash
+            sha256sum -c SHA256SUMS
+            ```
