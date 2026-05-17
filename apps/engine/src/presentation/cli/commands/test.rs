@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand};
 
-use crate::application::use_cases::test_fingerprint::{
-    TestFingerprint, TestFingerprintInput,
-};
+use crate::application::use_cases::test_fingerprint::{TestFingerprint, TestFingerprintInput};
 use crate::presentation::cli::state::CliState;
 
 #[derive(Debug, Subcommand)]
@@ -36,14 +34,12 @@ async fn run_fingerprint(args: FingerprintArgs, state: &CliState) -> Result<()> 
     let binary = args.binary.unwrap_or_else(|| state.binary.clone());
 
     let uc = TestFingerprint::new();
-    let out = uc
-        .execute(TestFingerprintInput { binary, profile })
-        .await?;
+    let out = uc.execute(TestFingerprintInput { binary, profile }).await?;
 
     let mut passed = 0usize;
     let mut failed = 0usize;
-    println!("{:<22} {:<8} {}", "PROBE", "RESULT", "VALUE");
-    println!("{:-<22} {:-<8} {:-<40}", "", "", "");
+    println!("{:<22} {:<8} VALUE", "PROBE", "RESULT");
+    println!("{} {} {}", "-".repeat(22), "-".repeat(8), "-".repeat(40));
     for r in &out.probes {
         let tag = match (&r.error, r.passed) {
             (Some(e), _) => format!("ERROR  ({e})"),

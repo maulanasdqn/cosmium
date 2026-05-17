@@ -47,8 +47,12 @@ impl RepairProfile {
             json_mode: true,
         };
         let resp = self.llm.chat(req).await.context("openrouter chat call")?;
-        let profile: Profile = serde_json::from_str(&resp.content)
-            .with_context(|| format!("parsing LLM JSON: {}", &resp.content[..resp.content.len().min(400)]))?;
+        let profile: Profile = serde_json::from_str(&resp.content).with_context(|| {
+            format!(
+                "parsing LLM JSON: {}",
+                &resp.content[..resp.content.len().min(400)]
+            )
+        })?;
         let diagnostics = validation::validate(&profile);
         Ok(RepairProfileOutput {
             profile,

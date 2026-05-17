@@ -4,7 +4,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 
 use crate::domain::profile::ProfileRepository;
-use crate::domain::runtime::{BrowserRuntime, browser::LaunchSpec, profile_to_flags};
+use crate::domain::runtime::{
+    BrowserRuntime, browser::LaunchSpec, profile_to_env, profile_to_flags, user_data_dir,
+};
 
 pub struct RunBrowser {
     profile_repo: Arc<dyn ProfileRepository>,
@@ -35,6 +37,8 @@ impl RunBrowser {
 
         let mut flags = profile_to_flags(&profile);
         flags.extend(input.extra_flags);
+        let env = profile_to_env(&profile);
+        let data_dir = user_data_dir(&profile.name);
 
         self.runtime
             .launch(
@@ -42,6 +46,8 @@ impl RunBrowser {
                 LaunchSpec {
                     flags,
                     urls: input.urls,
+                    env,
+                    user_data_dir: Some(data_dir),
                 },
             )
             .await

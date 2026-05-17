@@ -25,19 +25,16 @@ pub fn extract(dom: &str, probes: &[ProbeDef]) -> Result<Vec<ProbeResult>> {
     for p in probes {
         let entry = by_id.get(p.id);
         match entry {
-            Some(Raw {
-                error: Some(e), ..
-            }) => results.push(ProbeResult {
+            Some(Raw { error: Some(e), .. }) => results.push(ProbeResult {
                 id: p.id.to_owned(),
                 passed: false,
                 got: String::new(),
                 expected: p.expected_display.clone(),
                 error: Some(e.clone()),
             }),
-            Some(Raw {
-                value: Some(v), ..
-            }) => {
-                let passed = p.expected.is_match(v);
+            Some(Raw { value: Some(v), .. }) => {
+                let m = p.expected.is_match(v);
+                let passed = if p.negate { !m } else { m };
                 results.push(ProbeResult {
                     id: p.id.to_owned(),
                     passed,
