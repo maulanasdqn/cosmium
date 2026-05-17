@@ -7,6 +7,7 @@ pub struct ProbeDef {
     pub expression: String,
     pub expected: Regex,
     pub expected_display: String,
+    pub negate: bool,
 }
 
 pub struct ProbeResult {
@@ -28,59 +29,61 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             .collect::<Vec<_>>()
             .join(",")
     );
-    let mut probes = vec![];
-    probes.push(simple("webdriver", "String(navigator.webdriver)", "false"));
-    probes.push(simple("platform", "navigator.platform", &p.identity.navigator_platform));
-    probes.push(simple("language", "navigator.language", &lang0));
-    probes.push(simple(
-        "languages",
-        "JSON.stringify(navigator.languages)",
-        &lang_array,
-    ));
-    probes.push(simple(
-        "hardware_concurrency",
-        "String(navigator.hardwareConcurrency)",
-        &p.hardware.hardware_concurrency.to_string(),
-    ));
-    probes.push(simple(
-        "device_memory",
-        "String(navigator.deviceMemory)",
-        &p.hardware.device_memory_gb.to_string(),
-    ));
-    probes.push(simple(
-        "color_depth",
-        "String(screen.colorDepth)",
-        &p.screen.color_depth.to_string(),
-    ));
-    probes.push(simple(
-        "ua_data_platform",
-        "(await navigator.userAgentData.getHighEntropyValues(['platform'])).platform",
-        &p.identity.client_hints.platform,
-    ));
-    probes.push(simple(
-        "webgl_vendor",
-        "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_VENDOR_WEBGL);})()",
-        &p.gpu.vendor,
-    ));
-    probes.push(simple(
-        "webgl_renderer",
-        "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()",
-        &p.gpu.renderer,
-    ));
-    probes.push(ProbeDef {
-        id: "no_swiftshader",
-        expression: probes
-            .last()
-            .map(|p| p.expression.clone())
-            .unwrap_or_default(),
-        expected: Regex::new(r"^(?!.*SwiftShader).*$").expect("compile regex"),
-        expected_display: "(no SwiftShader)".into(),
-    });
-    probes.push(simple(
-        "timezone",
-        "Intl.DateTimeFormat().resolvedOptions().timeZone",
-        &p.locale.timezone,
-    ));
+    let webgl_renderer_expr = "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()";
+
+    let mut probes = vec![
+        simple("webdriver", "String(navigator.webdriver)", "false"),
+        simple(
+            "platform",
+            "navigator.platform",
+            &p.identity.navigator_platform,
+        ),
+        simple("language", "navigator.language", &lang0),
+        simple(
+            "languages",
+            "JSON.stringify(navigator.languages)",
+            &lang_array,
+        ),
+        simple(
+            "hardware_concurrency",
+            "String(navigator.hardwareConcurrency)",
+            &p.hardware.hardware_concurrency.to_string(),
+        ),
+        simple(
+            "device_memory",
+            "String(navigator.deviceMemory)",
+            &p.hardware.device_memory_gb.to_string(),
+        ),
+        simple(
+            "color_depth",
+            "String(screen.colorDepth)",
+            &p.screen.color_depth.to_string(),
+        ),
+        simple(
+            "ua_data_platform",
+            "(await navigator.userAgentData.getHighEntropyValues(['platform'])).platform",
+            &p.identity.client_hints.platform,
+        ),
+        simple(
+            "webgl_vendor",
+            "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_VENDOR_WEBGL);})()",
+            &p.gpu.vendor,
+        ),
+        simple("webgl_renderer", webgl_renderer_expr, &p.gpu.renderer),
+        ProbeDef {
+            id: "no_swiftshader",
+            expression: webgl_renderer_expr.to_owned(),
+            expected: Regex::new("SwiftShader").expect("compile regex"),
+            expected_display: "(no SwiftShader)".into(),
+            negate: true,
+        },
+        simple(
+            "timezone",
+            "Intl.DateTimeFormat().resolvedOptions().timeZone",
+            &p.locale.timezone,
+        ),
+    ];
+    probes.shrink_to_fit();
     probes
 }
 
@@ -90,6 +93,7 @@ fn simple(id: &'static str, expr: &str, expected: &str) -> ProbeDef {
         expression: expr.to_owned(),
         expected: Regex::new(&format!("^{}$", regex::escape(expected))).expect("compile regex"),
         expected_display: expected.to_owned(),
+        negate: false,
     }
 }
 

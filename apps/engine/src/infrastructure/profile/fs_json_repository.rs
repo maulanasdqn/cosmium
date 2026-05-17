@@ -48,16 +48,22 @@ impl ProfileRepository for FsJsonProfileRepository {
     }
 
     async fn list(&self) -> ProfileResult<Vec<String>> {
-        let mut entries = fs::read_dir(&self.root).await.map_err(|source| ProfileError::Io {
-            path: self.root.clone(),
-            source,
-        })?;
+        let mut entries = fs::read_dir(&self.root)
+            .await
+            .map_err(|source| ProfileError::Io {
+                path: self.root.clone(),
+                source,
+            })?;
 
         let mut out = Vec::new();
-        while let Some(entry) = entries.next_entry().await.map_err(|source| ProfileError::Io {
-            path: self.root.clone(),
-            source,
-        })? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|source| ProfileError::Io {
+                path: self.root.clone(),
+                source,
+            })?
+        {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) != Some("json") {
                 continue;

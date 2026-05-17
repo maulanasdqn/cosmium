@@ -1,4 +1,5 @@
 mod device;
+mod fonts;
 mod identity;
 mod locale;
 mod media;
@@ -54,6 +55,11 @@ pub fn validate(profile: &Profile) -> Vec<Diagnostic> {
     out.extend(device::device_memory(profile));
     out.extend(device::webgl_renderer(profile));
     out.extend(device::canvas_noise_seed(profile));
+    out.extend(device::gpu_vendor_matches_platform(profile));
+    out.extend(device::touch_points_match_form_factor(profile));
+    out.extend(device::ram_cores_plausible(profile));
+    out.extend(fonts::platform_staples_present(profile));
+    out.extend(fonts::no_cross_platform_leak(profile));
     out.extend(media::media_devices(profile));
     out
 }

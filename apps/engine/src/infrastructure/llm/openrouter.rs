@@ -3,8 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::llm::{
-    ChatMessage, ChatRequest, ChatResponse, LlmClient, LlmError, LlmResult, Role,
-    messages::Usage,
+    ChatMessage, ChatRequest, ChatResponse, LlmClient, LlmError, LlmResult, Role, messages::Usage,
 };
 
 pub struct OpenRouterClient {
@@ -44,7 +43,9 @@ impl LlmClient for OpenRouterClient {
             model: &request.model,
             messages: request.messages.iter().map(WireMessage::from).collect(),
             temperature: request.temperature,
-            response_format: request.json_mode.then_some(WireFormat { kind: "json_object" }),
+            response_format: request.json_mode.then_some(WireFormat {
+                kind: "json_object",
+            }),
         };
 
         let mut req = self
@@ -70,7 +71,11 @@ impl LlmClient for OpenRouterClient {
         }
 
         let parsed: WireResponse = resp.json().await?;
-        let choice = parsed.choices.into_iter().next().ok_or(LlmError::EmptyResponse)?;
+        let choice = parsed
+            .choices
+            .into_iter()
+            .next()
+            .ok_or(LlmError::EmptyResponse)?;
         Ok(ChatResponse {
             content: choice.message.content,
             model: parsed.model,

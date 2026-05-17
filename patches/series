@@ -6,3 +6,5 @@
 0006-spoof-hardware-concurrency.patch
 0007-spoof-device-memory.patch
 0008-spoof-screen-color-depth.patch
+0009-spoof-max-touch-points.patch
+0010-spoof-audio-context-latency.patch

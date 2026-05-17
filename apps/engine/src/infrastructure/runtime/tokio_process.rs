@@ -25,9 +25,24 @@ impl BrowserRuntime for TokioProcessRuntime {
         if !binary.exists() {
             return Err(RuntimeError::BinaryNotFound(binary.to_path_buf()));
         }
+
+        if let Some(dir) = spec.user_data_dir.as_ref() {
+            std::fs::create_dir_all(dir).map_err(|source| RuntimeError::Spawn {
+                binary: binary.to_path_buf(),
+                source,
+            })?;
+        }
+
         let mut cmd = Command::new(binary);
+        for (k, v) in &spec.env {
+            cmd.env(k, v);
+        }
         cmd.args(&spec.flags);
+        if let Some(dir) = spec.user_data_dir.as_ref() {
+            cmd.arg(format!("--user-data-dir={}", dir.display()));
+        }
         cmd.args(&spec.urls);
+
         let mut child = cmd.spawn().map_err(|source| RuntimeError::Spawn {
             binary: binary.to_path_buf(),
             source,

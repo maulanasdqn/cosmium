@@ -138,7 +138,13 @@ pub async fn compile(c: &BuildConfig) -> Result<()> {
     }
     autoninja_args.push("chrome".into());
     let autoninja_refs: Vec<&str> = autoninja_args.iter().map(String::as_str).collect();
-    exec::run(&c.chromium_src, "autoninja", &autoninja_refs, &c.depot_tools).await?;
+    exec::run(
+        &c.chromium_src,
+        "autoninja",
+        &autoninja_refs,
+        &c.depot_tools,
+    )
+    .await?;
     Ok(())
 }
 

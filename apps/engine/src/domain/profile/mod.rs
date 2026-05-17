@@ -1,3 +1,4 @@
+pub mod aggregate;
 pub mod audio;
 pub mod canvas_noise;
 pub mod error;
@@ -7,13 +8,13 @@ pub mod hardware;
 pub mod identity;
 pub mod locale;
 pub mod media_devices;
-pub mod profile;
 pub mod repository;
 pub mod screen;
 pub mod validation;
 pub mod voices;
 pub mod webrtc;
 
+pub use aggregate::Profile;
 pub use audio::Audio;
 pub use canvas_noise::CanvasNoise;
 pub use error::{ProfileError, ProfileResult};
@@ -23,7 +24,6 @@ pub use hardware::{Battery, Hardware};
 pub use identity::{Brand, ClientHints, Identity};
 pub use locale::Locale;
 pub use media_devices::{MediaDevice, MediaDeviceKind};
-pub use profile::Profile;
 pub use repository::ProfileRepository;
 pub use screen::Screen;
 pub use validation::{Diagnostic, Severity};
