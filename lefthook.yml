@@ -1,0 +1,80 @@
+# Lefthook config — Git hooks for cosmium.
+# Install once per clone:  lefthook install
+# Skip ad-hoc:             LEFTHOOK=0 git commit ...
+# Skip a single hook:      LEFTHOOK_EXCLUDE=clippy git commit ...
+
+min_version: 1.5.0
+
+pre-commit:
+  parallel: false  # cargo cache lock — serial is faster + reliable
+  commands:
+    fmt:
+      run: cargo fmt --all -- --check
+      fail_text: "Run `cargo fmt` and re-stage."
+
+    clippy:
+      run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      fail_text: "Clippy denies warnings. Fix and re-stage."
+
+    test:
+      run: cargo test --workspace --locked --quiet
+      fail_text: "Tests fail locally. Fix before committing."
+
+    loc-limit:
+      # Enforce per-FILE size cap. Any staged source file >200 lines blocks.
+      # Scoped to .rs source; design docs / patches / lockfiles / profiles
+      # are exempt because they're legitimately large.
+      glob: "*.rs"
+      run: |
+        bad=""
+        for f in {staged_files}; do
+          [ -f "$f" ] || continue
+          n=$(wc -l < "$f")
+          if [ "$n" -gt 200 ]; then
+            bad="$bad\n  $f ($n lines)"
+          fi
+        done
+        if [ -n "$bad" ]; then
+          printf "Files exceed 200 LOC:%b\n" "$bad"
+          echo "Split into smaller modules, or set LEFTHOOK_EXCLUDE=loc-limit to override."
+          exit 1
+        fi
+      fail_text: "One or more files exceed 200 LOC. Split them."
+
+pre-push:
+  parallel: false  # cargo cache lock — serial is faster + reliable
+  commands:
+    fmt:
+      run: cargo fmt --all -- --check
+      fail_text: "Run `cargo fmt` before pushing."
+
+    clippy:
+      run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      fail_text: "Clippy denies warnings. Fix before pushing."
+
+    test:
+      run: cargo test --workspace --locked
+      fail_text: "Tests fail locally. Don't push red."
+
+    loc-limit:
+      # Per-FILE cap on every .rs touched between upstream..HEAD.
+      run: |
+        if ! upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null); then
+          echo "No upstream — skipping LOC gate."
+          exit 0
+        fi
+        bad=""
+        files=$(git diff --name-only "$upstream"..HEAD -- '*.rs')
+        for f in $files; do
+          [ -f "$f" ] || continue
+          n=$(wc -l < "$f")
+          if [ "$n" -gt 200 ]; then
+            bad="$bad\n  $f ($n lines)"
+          fi
+        done
+        if [ -n "$bad" ]; then
+          printf "Files exceed 200 LOC:%b\n" "$bad"
+          echo "Split or set LEFTHOOK_EXCLUDE=loc-limit to override."
+          exit 1
+        fi
+      fail_text: "One or more files exceed 200 LOC. Split them."

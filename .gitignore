@@ -28,3 +28,9 @@ Thumbs.db
 /patches/.scratch/
 /patches/*.rej
 /patches/*.orig
+
+# Graphify outputs
+/graphify-out/
+
+# Lefthook local overrides
+/lefthook-local.yml
