@@ -50,6 +50,11 @@ navigator.permissions.query({ name: 'notifications' }).then(p => {
 
 None — this is a "strip" patch, no profile data needed. Add a single boolean switch `--cosmium-strip-automation-tells` that the patch checks; default off so non-automation users don't lose CDP entirely.
 
+**Rust side now wired:** the optional profile field `strip_automation_tells`
+(`apps/engine/src/domain/profile/aggregate.rs`, default `false`) makes `switches.rs`
+emit `--cosmium-strip-automation-tells`. Gate the C++ patch on
+`base::CommandLine::ForCurrentProcess()->HasSwitch("cosmium-strip-automation-tells")`.
+
 ## Implementation notes
 
 - **`cdc_` rename or remove.** ChromeDriver injects ~7 properties named `cdc_<random>_Array`, `cdc_<random>_Promise`, etc. They're used to keep references during page navigations. Option A: rename to less-distinctive names (still detectable by pattern). Option B: use closure-based references instead of globals (best). Patch should choose B but is a real undertaking.

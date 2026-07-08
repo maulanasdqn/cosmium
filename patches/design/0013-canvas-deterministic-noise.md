@@ -42,6 +42,11 @@ canvas_noise.seed → 32-hex-char (16-byte) PRNG seed
 
 Single field. Validator already enforces 32 hex chars.
 
+**Switch (now wired in `apps/engine/src/domain/runtime/flags/switches.rs`):**
+`--cosmium-canvas-seed=<32-hex>`. Read it in C++ via
+`base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII("cosmium-canvas-seed")`,
+mirroring the shipped `0002`/`0010` pattern.
+
 ## Implementation notes
 
 - **Where to apply noise.** *After* compositing, *before* the readback returns to JS. The actual rendered pixels on screen stay untouched — only readback APIs see noise. Visual output is identical to vanilla Chrome.

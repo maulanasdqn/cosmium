@@ -42,6 +42,7 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         "--cosmium-audio-output-latency={}",
         p.audio.output_latency
     ));
+    f.push(format!("--cosmium-canvas-seed={}", p.canvas_noise.seed));
     f.push(format!(
         "--window-size={},{}",
         p.screen.width, p.screen.height
@@ -51,6 +52,9 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         p.screen.device_pixel_ratio
     ));
     f.push("--disable-blink-features=AutomationControlled".into());
+    if p.strip_automation_tells {
+        f.push("--cosmium-strip-automation-tells".into());
+    }
     f.push(format!("--disable-features={}", disable_features_list()));
     f.push("--no-default-browser-check".into());
     f.push("--no-first-run".into());
@@ -152,6 +156,36 @@ mod tests {
             flags
                 .iter()
                 .any(|f| f.starts_with("--cosmium-audio-output-latency="))
+        );
+    }
+
+    #[test]
+    fn canvas_seed_switch_present() {
+        let flags = profile_to_flags(&fixture());
+        assert!(
+            flags.iter().any(|f| f.starts_with("--cosmium-canvas-seed=")),
+            "canvas seed must be emitted so the deterministic-noise patch can read it"
+        );
+    }
+
+    #[test]
+    fn strip_automation_tells_is_opt_in() {
+        let mut p = fixture();
+
+        p.strip_automation_tells = false;
+        assert!(
+            !profile_to_flags(&p)
+                .iter()
+                .any(|f| f == "--cosmium-strip-automation-tells"),
+            "flag must be absent when not opted in"
+        );
+
+        p.strip_automation_tells = true;
+        assert!(
+            profile_to_flags(&p)
+                .iter()
+                .any(|f| f == "--cosmium-strip-automation-tells"),
+            "flag must be emitted when opted in"
         );
     }
 

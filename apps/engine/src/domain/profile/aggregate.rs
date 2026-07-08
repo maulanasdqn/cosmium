@@ -30,6 +30,12 @@ pub struct Profile {
     pub fonts: Fonts,
     pub webrtc: WebRtc,
     pub canvas_noise: CanvasNoise,
+
+    /// Opt-in: emit `--cosmium-strip-automation-tells`, which the CDP-leak
+    /// strip patch (0013) consults to hide Runtime.evaluate / chrome.runtime
+    /// tells. Off by default so non-automation use keeps full CDP behavior.
+    #[serde(default)]
+    pub strip_automation_tells: bool,
 }
 
 const fn default_version() -> u32 {

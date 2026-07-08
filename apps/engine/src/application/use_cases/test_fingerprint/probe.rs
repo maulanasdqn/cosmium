@@ -33,6 +33,14 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
 
     let mut probes = vec![
         simple("webdriver", "String(navigator.webdriver)", "false"),
+        // WorkerNavigator has its own automation-information surface; a common
+        // bot probe reads navigator.webdriver from inside a Worker. Must also be
+        // false (acceptance test for the strip-automation-controlled patch).
+        simple(
+            "webdriver_worker",
+            r#"await new Promise((res)=>{const b=new Blob(["onmessage=()=>postMessage(String(navigator.webdriver))"],{type:"application/javascript"});const w=new Worker(URL.createObjectURL(b));w.onmessage=(e)=>res(e.data);w.postMessage(0);})"#,
+            "false",
+        ),
         simple(
             "platform",
             "navigator.platform",

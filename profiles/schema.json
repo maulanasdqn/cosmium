@@ -207,6 +207,11 @@
           "description": "Hex string, deterministic per-profile. Drives reproducible-but-unique canvas/audio fingerprints. Same profile → same fingerprint across sessions (which sites expect for stability)."
         }
       }
+    },
+    "strip_automation_tells": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt-in. Emits --cosmium-strip-automation-tells, which the CDP-leak strip patch consults to hide Runtime.evaluate / chrome.runtime / Error.stack automation markers. Off by default so non-automation use keeps full CDP."
     }
   }
 }
