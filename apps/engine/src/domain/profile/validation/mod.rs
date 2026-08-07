@@ -7,6 +7,9 @@ mod media;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod tests_voice;
+
 use super::Profile;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +52,7 @@ pub fn validate(profile: &Profile) -> Vec<Diagnostic> {
     out.extend(locale::languages(profile));
     out.extend(locale::timezone(profile));
     out.extend(locale::voices(profile));
+    out.extend(locale::voice_defaults(profile));
     out.extend(device::screen_dimensions(profile));
     out.extend(device::pixel_depth(profile));
     out.extend(device::hardware_concurrency(profile));

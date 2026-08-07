@@ -9,4 +9,8 @@ pub struct Screen {
     pub color_depth: u32,
     pub pixel_depth: u32,
     pub device_pixel_ratio: f32,
+    #[serde(default)]
+    pub avail_left: u32,
+    #[serde(default)]
+    pub avail_top: u32,
 }

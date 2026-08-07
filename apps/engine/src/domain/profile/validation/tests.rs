@@ -184,9 +184,5 @@ fn detects_implausible_hardware_combo() {
     p.hardware.hardware_concurrency = 16;
     p.hardware.device_memory_gb = 0.5;
     let diags = validate(&p);
-    assert!(
-        diags
-            .iter()
-            .any(|d| d.severity == Severity::Warning && d.field == "hardware"),
-    );
+    assert!(diags.iter().any(|d| d.severity == Severity::Warning && d.field == "hardware"));
 }

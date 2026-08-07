@@ -73,3 +73,28 @@ pub(super) fn voices(p: &Profile) -> Vec<Diagnostic> {
         vec![]
     }
 }
+
+pub(super) fn voice_defaults(p: &Profile) -> Vec<Diagnostic> {
+    let default_count = p.voices.iter().filter(|v| v.default).count();
+    if p.voices.is_empty() {
+        return vec![Diagnostic::warn(
+            "voices",
+            "voices array is empty — real systems have 10-50 voices",
+        )];
+    }
+    if default_count == 0 {
+        return vec![Diagnostic::err(
+            "voices",
+            "no voice has default=true — exactly one must be the default",
+        )];
+    }
+    if default_count > 1 {
+        return vec![Diagnostic::err(
+            "voices",
+            format!(
+                "{default_count} voices have default=true — exactly one must be the default"
+            ),
+        )];
+    }
+    vec![]
+}

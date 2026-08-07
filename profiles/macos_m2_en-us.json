@@ -59,7 +59,9 @@
     "avail_height": 919,
     "color_depth": 30,
     "pixel_depth": 30,
-    "device_pixel_ratio": 2
+    "device_pixel_ratio": 2,
+    "avail_left": 0,
+    "avail_top": 25
   },
   "audio": {
     "sample_rate": 48000,

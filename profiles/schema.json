@@ -130,7 +130,9 @@
         "avail_height": { "type": "integer" },
         "color_depth": { "type": "integer", "enum": [24, 30] },
         "pixel_depth": { "type": "integer", "enum": [24, 30] },
-        "device_pixel_ratio": { "type": "number", "enum": [1, 1.25, 1.5, 1.75, 2, 2.5, 3] }
+        "device_pixel_ratio": { "type": "number", "enum": [1, 1.25, 1.5, 1.75, 2, 2.5, 3] },
+        "avail_left": { "type": "integer", "default": 0, "description": "screen.availLeft — 0 for Windows, varies for macOS (menu bar offset)" },
+        "avail_top": { "type": "integer", "default": 0, "description": "screen.availTop — 0 for Windows, 25 for macOS (menu bar height)" }
       }
     },
     "audio": {

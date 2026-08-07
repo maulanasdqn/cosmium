@@ -90,6 +90,46 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             "Intl.DateTimeFormat().resolvedOptions().timeZone",
             &p.locale.timezone,
         ),
+        simple(
+            "max_touch_points",
+            "String(navigator.maxTouchPoints)",
+            &p.hardware.max_touch_points.to_string(),
+        ),
+        simple(
+            "audio_sample_rate",
+            "String(new AudioContext().sampleRate)",
+            &p.audio.sample_rate.to_string(),
+        ),
+        simple(
+            "audio_base_latency",
+            "String(new AudioContext().baseLatency)",
+            &p.audio.base_latency.to_string(),
+        ),
+        simple(
+            "audio_max_channel_count",
+            "String(new AudioContext().destination.maxChannelCount)",
+            &p.audio.max_channel_count.to_string(),
+        ),
+        simple(
+            "screen_avail_width",
+            "String(screen.availWidth)",
+            &p.screen.avail_width.to_string(),
+        ),
+        simple(
+            "screen_avail_height",
+            "String(screen.availHeight)",
+            &p.screen.avail_height.to_string(),
+        ),
+        simple(
+            "device_pixel_ratio",
+            "String(window.devicePixelRatio)",
+            &p.screen.device_pixel_ratio.to_string(),
+        ),
+        simple(
+            "user_agent",
+            "navigator.userAgent",
+            &p.identity.user_agent,
+        ),
     ];
     probes.shrink_to_fit();
     probes

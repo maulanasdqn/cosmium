@@ -44,6 +44,22 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     ));
     f.push(format!("--cosmium-canvas-seed={}", p.canvas_noise.seed));
     f.push(format!(
+        "--cosmium-audio-sample-rate={}",
+        p.audio.sample_rate
+    ));
+    f.push(format!(
+        "--cosmium-audio-max-channels={}",
+        p.audio.max_channel_count
+    ));
+    let voices_json = serde_json::to_string(&p.voices).unwrap_or_default();
+    f.push(format!("--cosmium-voices={voices_json}"));
+    f.push(format!("--cosmium-fonts={}", p.fonts.installed.join(",")));
+    let devices_json =
+        serde_json::to_string(&p.media_devices).unwrap_or_default();
+    f.push(format!("--cosmium-media-devices={devices_json}"));
+    f.push(format!("--cosmium-avail-left={}", p.screen.avail_left));
+    f.push(format!("--cosmium-avail-top={}", p.screen.avail_top));
+    f.push(format!(
         "--window-size={},{}",
         p.screen.width, p.screen.height
     ));
@@ -73,129 +89,9 @@ pub(super) fn primary_lang(langs: &[String]) -> &str {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[path = "switches_core_tests.rs"]
+mod core_tests;
 
-    fn fixture() -> Profile {
-        let raw = include_str!("../../../../../../profiles/win11_rtx3060_en-us.json");
-        serde_json::from_str(raw).expect("fixture parses")
-    }
-
-    fn mac_fixture() -> Profile {
-        let raw = include_str!("../../../../../../profiles/macos_m2_en-us.json");
-        serde_json::from_str(raw).expect("fixture parses")
-    }
-
-    #[test]
-    fn emits_all_cosmium_switches() {
-        let flags = profile_to_flags(&fixture());
-        let want = [
-            "--cosmium-platform=Win32",
-            "--cosmium-ua-platform=Windows",
-            "--cosmium-languages=en-US,en",
-            "--cosmium-hardware-concurrency=12",
-            "--cosmium-device-memory=8",
-            "--cosmium-color-depth=24",
-            "--cosmium-max-touch-points=0",
-            "--cosmium-webgl-vendor=Google Inc. (NVIDIA)",
-        ];
-        for w in want {
-            assert!(flags.iter().any(|f| f == w), "missing flag: {w}");
-        }
-    }
-
-    #[test]
-    fn webgl_renderer_passed_through() {
-        let flags = profile_to_flags(&fixture());
-        assert!(
-            flags
-                .iter()
-                .any(|f| f.starts_with("--cosmium-webgl-renderer=ANGLE (NVIDIA"))
-        );
-    }
-
-    #[test]
-    fn hygiene_flags_present() {
-        let flags = profile_to_flags(&fixture());
-        for w in [
-            "--no-default-browser-check",
-            "--no-first-run",
-            "--no-pings",
-            "--disable-domain-reliability",
-            "--disable-component-update",
-            "--disable-search-engine-choice-screen",
-            "--password-store=basic",
-            "--use-mock-keychain",
-            "--disable-blink-features=AutomationControlled",
-        ] {
-            assert!(flags.iter().any(|f| f == w), "missing flag: {w}");
-        }
-    }
-
-    #[test]
-    fn disable_features_includes_telemetry_surfaces() {
-        let flags = profile_to_flags(&fixture());
-        let df = flags
-            .iter()
-            .find(|f| f.starts_with("--disable-features="))
-            .expect("--disable-features flag present");
-        for feat in ["Translate", "PrivacySandboxAdsAPIs", "AcceptCHFrame"] {
-            assert!(df.contains(feat), "--disable-features missing {feat}: {df}");
-        }
-    }
-
-    #[test]
-    fn audio_latency_switches_present() {
-        let flags = profile_to_flags(&fixture());
-        assert!(
-            flags
-                .iter()
-                .any(|f| f.starts_with("--cosmium-audio-base-latency="))
-        );
-        assert!(
-            flags
-                .iter()
-                .any(|f| f.starts_with("--cosmium-audio-output-latency="))
-        );
-    }
-
-    #[test]
-    fn canvas_seed_switch_present() {
-        let flags = profile_to_flags(&fixture());
-        assert!(
-            flags.iter().any(|f| f.starts_with("--cosmium-canvas-seed=")),
-            "canvas seed must be emitted so the deterministic-noise patch can read it"
-        );
-    }
-
-    #[test]
-    fn strip_automation_tells_is_opt_in() {
-        let mut p = fixture();
-
-        p.strip_automation_tells = false;
-        assert!(
-            !profile_to_flags(&p)
-                .iter()
-                .any(|f| f == "--cosmium-strip-automation-tells"),
-            "flag must be absent when not opted in"
-        );
-
-        p.strip_automation_tells = true;
-        assert!(
-            profile_to_flags(&p)
-                .iter()
-                .any(|f| f == "--cosmium-strip-automation-tells"),
-            "flag must be emitted when opted in"
-        );
-    }
-
-    #[test]
-    fn webrtc_policy_passed_through() {
-        let flags = profile_to_flags(&mac_fixture());
-        assert!(
-            flags
-                .iter()
-                .any(|f| f == "--force-webrtc-ip-handling-policy=default_public_interface_only")
-        );
-    }
-}
+#[cfg(test)]
+#[path = "switches_serial_tests.rs"]
+mod serial_tests;
