@@ -8,3 +8,6 @@
 0008-spoof-screen-color-depth.patch
 0009-spoof-max-touch-points.patch
 0010-spoof-audio-context-latency.patch
+0011-spoof-sec-ch-ua-branding.patch
+0012-fix-pdf-plugin-branding.patch
+0013-disable-automation-controlled.patch

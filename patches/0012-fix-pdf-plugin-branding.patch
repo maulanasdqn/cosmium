@@ -1,0 +1,17 @@
+diff --git a/chrome/common/chrome_content_client.cc b/chrome/common/chrome_content_client.cc
+index cfcc7281be..c60117270f 100644
+--- a/chrome/common/chrome_content_client.cc
++++ b/chrome/common/chrome_content_client.cc
+@@ -142,11 +142,8 @@ void ChromeContentClient::SetGpuInfo(const gpu::GPUInfo& gpu_info) {
+ void ChromeContentClient::AddPlugins(
+     std::vector<content::ContentPluginInfo>* plugins) {
+ #if BUILDFLAG(ENABLE_PDF)
+-#if BUILDFLAG(GOOGLE_CHROME_BRANDING)
++  // Cosmium: always use "Chrome PDF Plugin" to match real Chrome.
+   static constexpr char kPDFPluginName[] = "Chrome PDF Plugin";
+-#else
+-  static constexpr char kPDFPluginName[] = "Chromium PDF Plugin";
+-#endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
+   static constexpr char kPDFPluginExtension[] = "pdf";
+   static constexpr char kPDFPluginDescription[] = "Portable Document Format";
+ 

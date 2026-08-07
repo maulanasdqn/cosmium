@@ -1,0 +1,44 @@
+diff --git a/content/child/runtime_features.cc b/content/child/runtime_features.cc
+index ce9f2e0b5e..1e785ec123 100644
+--- a/content/child/runtime_features.cc
++++ b/content/child/runtime_features.cc
+@@ -447,9 +447,11 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
+       {wrf::EnableTimerThrottlingForBackgroundTabs,
+        switches::kDisableBackgroundTimerThrottling, false},
+       // End of Stable Features
+-      {wrf::EnableAutomationControlled, switches::kEnableAutomation, true},
+-      {wrf::EnableAutomationControlled, switches::kHeadless, true},
+-      {wrf::EnableAutomationControlled, switches::kRemoteDebuggingPipe, true},
++      // Cosmium: never enable AutomationControlled — bot detectors probe
++      // the downstream side effects (suppressed prompts, focus changes).
++      // {wrf::EnableAutomationControlled, switches::kEnableAutomation, true},
++      // {wrf::EnableAutomationControlled, switches::kHeadless, true},
++      // {wrf::EnableAutomationControlled, switches::kRemoteDebuggingPipe, true},
+       {wrf::EnableDatabase, switches::kDisableDatabases, false},
+       {wrf::EnableFileSystem, switches::kDisableFileSystem, false},
+       {wrf::EnableNetInfoDownlinkMax,
+@@ -496,22 +498,8 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
+     }
+   }
+ 
+-  // Set EnableAutomationControlled if the caller passes
+-  // --remote-debugging-port=0 on the command line. This means
+-  // the caller has requested an ephemeral port which is how ChromeDriver
+-  // launches the browser by default.
+-  // If the caller provides a specific port number, this is
+-  // more likely for attaching a debugger, so we should leave
+-  // EnableAutomationControlled unset to ensure the browser behaves as it does
+-  // when not under automation control.
+-  if (command_line.HasSwitch(switches::kRemoteDebuggingPort)) {
+-    std::string port_str =
+-        command_line.GetSwitchValueASCII(::switches::kRemoteDebuggingPort);
+-    int port;
+-    if (base::StringToInt(port_str, &port) && port == 0) {
+-      WebRuntimeFeatures::EnableAutomationControlled(true);
+-    }
+-  }
++  // Cosmium: disabled AutomationControlled for --remote-debugging-port=0
++  // to prevent bot detection via downstream side effects.
+ }
+ 
+ // Sets blink runtime features that depend on a combination
