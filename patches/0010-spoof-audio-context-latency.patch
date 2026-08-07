@@ -12,17 +12,15 @@
 diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/third_party/blink/renderer/modules/webaudio/audio_context.cc
 --- a/third_party/blink/renderer/modules/webaudio/audio_context.cc
 +++ b/third_party/blink/renderer/modules/webaudio/audio_context.cc
-@@ -1,5 +1,7 @@
+@@ -5,5 +5,7 @@
  #include "third_party/blink/renderer/modules/webaudio/audio_context.h"
-
+ 
 +#include "base/command_line.h"
 +#include "base/strings/string_number_conversions.h"
- #include "base/feature_list.h"
  #include "base/metrics/histogram_functions.h"
- #include "third_party/blink/public/common/features.h"
-@@ -540,11 +542,29 @@ AudioContext::AudioContext(LocalDOMWindow& window,
- }
-
+ #include "base/metrics/histogram_macros.h"
+ #include "base/strings/to_string.h"
+@@ -638,4 +640,13 @@
  double AudioContext::baseLatency() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-audio-base-latency")) {
@@ -33,10 +31,10 @@ diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/thir
 +      return cosmium_value;
 +    }
 +  }
-   DCHECK(IsMainThread());
-   return base_latency_;
- }
-
+   DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
+   DCHECK(destination());
+ 
+@@ -645,4 +656,13 @@
  double AudioContext::outputLatency() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-audio-output-latency")) {
@@ -47,6 +45,6 @@ diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/thir
 +      return cosmium_value;
 +    }
 +  }
-   DCHECK(IsMainThread());
-   GraphAutoLocker locker(this);
-   return output_latency_;
+   DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
+   DCHECK(destination());
+ 

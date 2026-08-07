@@ -2,17 +2,17 @@ diff --git a/third_party/blink/renderer/core/frame/screen.cc b/third_party/blink
 --- a/third_party/blink/renderer/core/frame/screen.cc
 +++ b/third_party/blink/renderer/core/frame/screen.cc
 @@ -28,6 +28,8 @@
-
+ 
  #include "third_party/blink/renderer/core/frame/screen.h"
-
+ 
 +#include "base/command_line.h"
 +#include "base/strings/string_number_conversions.h"
  #include "base/numerics/safe_conversions.h"
  #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-blink.h"
  #include "third_party/blink/renderer/core/event_target_names.h"
-@@ -110,6 +112,14 @@ int Screen::width() const {
+@@ -110,6 +112,15 @@ int Screen::width() const {
  }
-
+ 
  unsigned Screen::colorDepth() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-color-depth")) {

@@ -1,16 +1,16 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
 --- a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
-@@ -4,11 +4,19 @@
-
+@@ -4,12 +4,23 @@
+ 
  #include "third_party/blink/renderer/core/frame/navigator_concurrent_hardware.h"
-
+ 
 +#include "base/command_line.h"
 +#include "base/strings/string_number_conversions.h"
  #include "base/system/sys_info.h"
-
+ 
  namespace blink {
-
+ 
  unsigned NavigatorConcurrentHardware::hardwareConcurrency() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-hardware-concurrency")) {
@@ -23,5 +23,5 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware
 +  }
    return static_cast<unsigned>(base::SysInfo::NumberOfProcessors());
  }
-
+ 
  }  // namespace blink

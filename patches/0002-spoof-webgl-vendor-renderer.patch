@@ -4,12 +4,12 @@ diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_ba
 @@ -33,6 +33,7 @@
  #include <memory>
  #include <utility>
-
+ 
 +#include "base/command_line.h"
  #include "base/bit_cast.h"
  #include "base/containers/contains.h"
  #include "base/feature_list.h"
-@@ -3855,6 +3856,11 @@
+@@ -3855,5 +3856,10 @@
      case WebGLDebugRendererInfo::kUnmaskedRendererWebgl:
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 +        const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
@@ -20,7 +20,7 @@ diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_ba
          if (IdentifiabilityStudySettings::Get()->ShouldSampleType(
                  blink::IdentifiableSurface::Type::kWebGLParameter)) {
            RecordIdentifiableGLParameterDigest(
-@@ -3870,6 +3876,11 @@
+@@ -3870,5 +3876,10 @@
      case WebGLDebugRendererInfo::kUnmaskedVendorWebgl:
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 +        const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
