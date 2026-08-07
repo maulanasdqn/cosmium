@@ -1,0 +1,46 @@
+# cosmium gn build configuration — macOS ARM64 (Apple Silicon)
+#
+# Same philosophy as args.gn: produce a binary indistinguishable from
+# real Google Chrome stable on macOS.
+
+# ---- Build mode ----
+is_debug = false
+is_component_build = false
+symbol_level = 1
+blink_symbol_level = 0
+v8_symbol_level = 0
+
+is_official_build = false
+chrome_pgo_phase = 0
+dcheck_always_on = false
+
+# ---- Branding ----
+is_chrome_branded = false
+
+# ---- Codecs ----
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+# ---- Toolchain ----
+treat_warnings_as_errors = false
+clang_use_chrome_plugins = true
+use_custom_libcxx = true
+
+# ---- GPU / rendering ----
+angle_enable_swiftshader = true
+enable_swiftshader = true
+
+# ---- Stripped: things that bloat or leak ----
+enable_nacl = false
+enable_remoting = false
+enable_reporting = false
+
+# ---- macOS ARM64 specific ----
+target_os = "mac"
+target_cpu = "arm64"
+use_lld = false
+use_sysroot = false
+mac_deployment_target = "13.0"
+
+# ---- Cosmium build identifier ----
+extra_cflags = "-DCOSMIUM_BUILD=1"

@@ -21,6 +21,9 @@ pub async fn prereqs(c: &BuildConfig) -> Result<()> {
         )
         .await?;
     }
+    if cfg!(target_os = "macos") {
+        verify_xcode().await?;
+    }
     Ok(())
 }
 
@@ -43,7 +46,7 @@ pub async fn fetch(c: &BuildConfig) -> Result<()> {
         )
         .await?;
     }
-    if c.install_build_deps {
+    if c.install_build_deps && cfg!(target_os = "linux") {
         exec::run(
             &c.chromium_src,
             "./build/install-build-deps.sh",
@@ -137,17 +140,25 @@ pub async fn compile(c: &BuildConfig) -> Result<()> {
         autoninja_args.push(j.to_string());
     }
     autoninja_args.push("chrome".into());
-    let autoninja_refs: Vec<&str> = autoninja_args.iter().map(String::as_str).collect();
-    exec::run(
-        &c.chromium_src,
-        "autoninja",
-        &autoninja_refs,
-        &c.depot_tools,
-    )
-    .await?;
+    let refs: Vec<&str> = autoninja_args.iter().map(String::as_str).collect();
+    exec::run(&c.chromium_src, "autoninja", &refs, &c.depot_tools).await?;
     Ok(())
 }
 
 pub async fn package(c: &BuildConfig) -> Result<()> {
     pkg::run(c).await
+}
+
+async fn verify_xcode() -> Result<()> {
+    let out = tokio::process::Command::new("xcode-select")
+        .arg("-p")
+        .output()
+        .await?;
+    if !out.status.success() {
+        anyhow::bail!(
+            "Xcode not found — install via: xcode-select --install"
+        );
+    }
+    tracing::info!("Xcode detected");
+    Ok(())
 }

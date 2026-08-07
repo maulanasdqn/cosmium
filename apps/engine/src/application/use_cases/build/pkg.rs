@@ -6,7 +6,7 @@ use tokio::fs;
 use super::BuildConfig;
 use super::exec;
 
-const STAGED_FILES: &[&str] = &[
+const LINUX_FILES: &[&str] = &[
     "chrome",
     "chrome_100_percent.pak",
     "chrome_200_percent.pak",
@@ -23,10 +23,26 @@ const STAGED_FILES: &[&str] = &[
     "locales",
 ];
 
+const MAC_FILES: &[&str] = &[
+    "Chromium.app",
+    "icudtl.dat",
+    "v8_context_snapshot.arm64.bin",
+    "v8_context_snapshot.x86_64.bin",
+];
+
 pub async fn run(c: &BuildConfig) -> Result<()> {
-    let chrome = c.build_out.join("chrome");
-    if !chrome.exists() {
-        bail!("{} not found — run compile first", chrome.display());
+    let staged = if cfg!(target_os = "macos") {
+        MAC_FILES
+    } else {
+        LINUX_FILES
+    };
+    let probe = if cfg!(target_os = "macos") {
+        c.build_out.join("Chromium.app")
+    } else {
+        c.build_out.join("chrome")
+    };
+    if !probe.exists() {
+        bail!("{} not found — run compile first", probe.display());
     }
     fs::create_dir_all(&c.dist_dir).await.ok();
     let stage = c.dist_dir.join(format!("cosmium-{}", c.chromium_tag));
@@ -35,7 +51,7 @@ pub async fn run(c: &BuildConfig) -> Result<()> {
     }
     fs::create_dir_all(&stage).await?;
 
-    for f in STAGED_FILES {
+    for f in staged {
         let src = c.build_out.join(f);
         if !src.exists() {
             tracing::warn!(file = %f, "missing — skipped");

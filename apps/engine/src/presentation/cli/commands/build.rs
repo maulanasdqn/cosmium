@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -21,11 +21,6 @@ pub struct BuildCmd {
 }
 
 pub async fn execute(cmd: BuildCmd) -> Result<()> {
-    if !cfg!(target_os = "linux") {
-        anyhow::bail!(
-            "cosmium build runs on Linux only — use docker compose run --rm build cosmium build"
-        );
-    }
     let env = Env::init()?;
     let cosmium_root = std::env::var("COSMIUM_ROOT")
         .map(PathBuf::from)
@@ -33,7 +28,7 @@ pub async fn execute(cmd: BuildCmd) -> Result<()> {
     let chromium_src = cosmium_root.join("src");
     let depot_tools = cosmium_root.join("depot_tools");
     let dist_dir = cosmium_root.join("dist");
-    let args_gn = cosmium_root.join("config/args.gn");
+    let args_gn = select_args_gn(&cosmium_root);
     let patches_dir = cosmium_root.join("patches");
     let patches_series = patches_dir.join("series");
 
@@ -49,6 +44,7 @@ pub async fn execute(cmd: BuildCmd) -> Result<()> {
         (None, None) => BuildPhase::all().to_vec(),
     };
 
+    tracing::info!(args_gn = %args_gn.display(), "selected gn config");
     let config = BuildConfig {
         cosmium_root,
         chromium_src,
@@ -63,4 +59,12 @@ pub async fn execute(cmd: BuildCmd) -> Result<()> {
         install_build_deps: cmd.install_build_deps,
     };
     BuildChromium::new(config).execute(&phases).await
+}
+
+fn select_args_gn(root: &Path) -> PathBuf {
+    let candidate = match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "config/args.mac-arm64.gn",
+        _ => "config/args.gn",
+    };
+    root.join(candidate)
 }
