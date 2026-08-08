@@ -99,8 +99,12 @@ src = sys.argv[1]
 with open(os.path.join(src, 'DEPS')) as f:
     content = f.read()
 
-paths = set(re.findall(r"'(src/[^']+)':\s*(?:\{|'https?://)", content))
-paths |= set(re.findall(r'"(src/[^"]+)":\s*(?:\{|"https?://)', content))
+# Match every `'src/...':` dep key regardless of how its value is spelled —
+# a dict, a bare URL, or `Var('chromium_git') + '/foo.git'`. The narrower
+# value-shape match missed ~120 dirs (angle, boringssl, quiche, …) and
+# `gclient runhooks` then failed on the first one that was not a git repo.
+paths = set(re.findall(r"^\s*'(src/[^']+)'\s*:", content, re.M))
+paths |= set(re.findall(r'^\s*"(src/[^"]+)"\s*:', content, re.M))
 
 count = 0
 for p in sorted(paths):
