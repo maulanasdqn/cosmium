@@ -18,3 +18,4 @@
 0018-neuter-cdp-detection-signals.patch
 0019-canvas-fingerprint-noise-injection.patch
 0020-inject-audio-fingerprint-noise.patch
+0021-spoof-chrome-version-in-ua-headers.patch
