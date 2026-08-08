@@ -8,6 +8,19 @@
 # override via `nixpkgs` pin or `--arg pkgs '...'`.
 { pkgs ? import <nixpkgs> {} }:
 
+let
+  # Libraries that host-side build tools (wayland_scanner, protoc-alikes,
+  # mojo/blink generators) link against. use_sysroot only governs the *target*
+  # toolchain; host tools link the Nix libs above and are emitted without an
+  # rpath, so they need an explicit LD_LIBRARY_PATH to run during the build.
+  hostToolLibs = with pkgs; [
+    expat glib nss nspr zlib bzip2 icu libpng freetype fontconfig
+    dbus atk at-spi2-atk at-spi2-core cairo pango gtk3 alsa-lib
+    libxkbcommon libdrm mesa cups flac harfbuzz libva libglvnd
+    stdenv.cc.cc.lib
+  ];
+in
+
 pkgs.mkShell {
   name = "cosmium-build";
 
@@ -96,6 +109,13 @@ pkgs.mkShell {
     # Clearing these lets the sysroot's own .pc files resolve.
     unset PKG_CONFIG_PATH
     unset PKG_CONFIG_LIBDIR
+
+    # Host build tools are linked against the Nix libs without an rpath, so
+    # ninja actions that execute them fail at runtime, e.g.
+    #   ./wayland_scanner: error while loading shared libraries:
+    #     libexpat.so.1: cannot open shared object file
+    # (exit 127, surfacing as a failed wayland_scanner_wrapper.py action).
+    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath hostToolLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     echo "🛠  cosmium build shell ready ($(nproc) cores, $(free -g | awk '/Mem/{print $2}')G RAM)"
     echo "   run: ./scripts/build-linux.sh"
   '';
