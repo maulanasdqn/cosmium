@@ -84,6 +84,18 @@ pkgs.mkShell {
   shellHook = ''
     export CHROMIUM_BUILDTOOLS_PATH="$PWD/src/buildtools"
     export PATH="$PWD/depot_tools:$PATH"
+
+    # Chromium compiles against its own pinned sysroot (use_sysroot = true in
+    # config/args.gn), so system library headers must NOT leak in. Nix points
+    # PKG_CONFIG_PATH at nix-store .pc files; Chromium's
+    # build/config/linux/pkg-config.py would then resolve glib/gtk/nss from
+    # the store and blindly prefix the sysroot onto those absolute paths,
+    # emitting include dirs like
+    #   build/linux/debian_bullseye_amd64-sysroot/nix/store/…/include/glib-2.0
+    # which cannot exist — the build dies on "'glib.h' file not found".
+    # Clearing these lets the sysroot's own .pc files resolve.
+    unset PKG_CONFIG_PATH
+    unset PKG_CONFIG_LIBDIR
     echo "🛠  cosmium build shell ready ($(nproc) cores, $(free -g | awk '/Mem/{print $2}')G RAM)"
     echo "   run: ./scripts/build-linux.sh"
   '';

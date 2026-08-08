@@ -167,6 +167,15 @@ fi
 # ── 3. Build ────────────────────────────────────────────
 if should_run "build"; then
   export PATH="$COSMIUM_ROOT/depot_tools:$PATH"
+
+  # args.gn sets use_sysroot = true, so the pinned Debian sysroot must be the
+  # only source of library headers. A host PKG_CONFIG_PATH (Nix sets one) makes
+  # build/config/linux/pkg-config.py resolve packages from the host and then
+  # prefix the sysroot onto those absolute paths — producing include dirs that
+  # do not exist, e.g. "'glib.h' file not found". Safety net for runs that do
+  # not go through shell.nix (Docker, an already-entered shell).
+  unset PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
+
   cd "$SRC_DIR"
 
   info "Running gn gen..."
