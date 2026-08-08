@@ -67,10 +67,13 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         "--force-device-scale-factor={}",
         p.screen.device_pixel_ratio
     ));
-    f.push("--disable-blink-features=AutomationControlled".into());
+    // AutomationControlled is now disabled at source level (patch 0013),
+    // so the --disable-blink-features flag is no longer needed and would
+    // trigger a "bad flags" infobar that leaks in the DOM.
     if p.strip_automation_tells {
         f.push("--cosmium-strip-automation-tells".into());
     }
+    f.push(format!("--cosmium-timezone={}", p.locale.timezone));
     f.push(format!("--disable-features={}", disable_features_list()));
     f.push("--no-default-browser-check".into());
     f.push("--no-first-run".into());

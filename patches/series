@@ -11,3 +11,8 @@
 0011-spoof-sec-ch-ua-branding.patch
 0012-fix-pdf-plugin-branding.patch
 0013-disable-automation-controlled.patch
+0014-suppress-detection-infobars.patch
+0015-default-webrtc-ip-handling-public-only.patch
+0016-cosmium-timezone-override.patch
+0017-strip-headless-ua-prefix.patch
+0018-neuter-cdp-detection-signals.patch

@@ -1,0 +1,341 @@
+diff --git a/chrome/browser/devtools/protocol/emulation_handler.cc b/chrome/browser/devtools/protocol/emulation_handler.cc
+index 4dabbbeb7d..c30dc9ee7c 100644
+--- a/chrome/browser/devtools/protocol/emulation_handler.cc
++++ b/chrome/browser/devtools/protocol/emulation_handler.cc
+@@ -23,31 +23,12 @@ protocol::Response EmulationHandler::Disable() {
+ }
+ 
+ protocol::Response EmulationHandler::SetAutomationOverride(bool enabled) {
+-  if (!enabled) {
+-    if (automation_info_bar_) {
+-      automation_info_bar_->RemoveSelf();
+-    }
+-    return protocol::Response::FallThrough();
+-  }
+-  if (automation_info_bar_) {
+-    return protocol::Response::FallThrough();
+-  }
+-
+-  infobars::ContentInfoBarManager* info_bar_manager =
+-      GetContentInfoBarManager();
+-  if (!info_bar_manager) {
+-    // Implies the web content cannot have an info bar attached. A priori, the
+-    // automation override doesn't matter on the chrome layer.
+-    return protocol::Response::FallThrough();
+-  }
+-
+-  // Note since the observer removes itself when the info bar is removed, the
+-  // observer is added at most once because of the info bar nullity check
+-  // above.
+-  automation_info_bar_ = AutomationInfoBarDelegate::Create(info_bar_manager);
+-  if (automation_info_bar_) {
+-    info_bar_manager->AddObserver(this);
+-  }
++  // Cosmium: silently ignore the Emulation.setAutomationOverride CDP
++  // command at the browser layer too.  The default implementation
++  // creates an AutomationInfoBarDelegate (DOM-visible "Chrome is being
++  // controlled..." bar) which is a primary DataDome detection signal.
++  // Fall through to the renderer layer (also neutered) without doing
++  // anything.
+   return protocol::Response::FallThrough();
+ }
+ 
+diff --git a/chrome/test/chromedriver/chrome/devtools_client_impl.cc b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+index 6373719857..77f5812f16 100644
+--- a/chrome/test/chromedriver/chrome/devtools_client_impl.cc
++++ b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+@@ -587,16 +587,22 @@ Status DevToolsClientImpl::SetUpDevTools() {
+     SendCommandAndIgnoreResponse("Page.enable", base::Value::Dict());
+ 
+     // This is a page or frame level DevToolsClient
++    // Cosmium: stash pristine builtins under a non-detectable Symbol key.
++    // Bot detectors (DataDome, etc.) enumerate window properties looking
++    // for the /^cdc_/ prefix that ChromeDriver normally uses.  A Symbol
++    // key is invisible to Object.keys / for-in / getOwnPropertyNames.
+     base::Value::Dict params;
+     std::string script =
+         "(function () {"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Array = window.Array;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Object = window.Object;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Promise = window.Promise;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy = window.Proxy;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol = window.Symbol;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_JSON = window.JSON;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Window = window.Window;"
++        "var k = Symbol.for('__cdc_stash');"
++        "var s = window[k] = Object.create(null);"
++        "s.Array = window.Array;"
++        "s.Object = window.Object;"
++        "s.Promise = window.Promise;"
++        "s.Proxy = window.Proxy;"
++        "s.Symbol = window.Symbol;"
++        "s.JSON = window.JSON;"
++        "s.Window = window.Window;"
+         "}) ();";
+     params.Set("source", script);
+     Status status = SendCommandAndIgnoreResponse(
+diff --git a/chrome/test/chromedriver/chrome_launcher.cc b/chrome/test/chromedriver/chrome_launcher.cc
+index 25969fe473..c01e35b4a0 100644
+--- a/chrome/test/chromedriver/chrome_launcher.cc
++++ b/chrome/test/chromedriver/chrome_launcher.cc
+@@ -84,7 +84,11 @@ namespace {
+ 
+ const char* const kCommonSwitches[] = {
+     embedder_support::kDisablePopupBlocking,
+-    "enable-automation",
++    // Cosmium: removed "enable-automation" -- it triggers the automation
++    // infobar, disables infobar animations, exposes the command line via
++    // Browser.getCommandLine, and sets navigator.webdriver = true in
++    // standard Chromium.  All of these are high-signal bot detection
++    // vectors.
+     "allow-pre-commit-input",
+ };
+ 
+@@ -99,7 +103,8 @@ const char* const kDesktopSwitches[] = {
+     "log-level=0",
+     "password-store=basic",
+     "use-mock-keychain",
+-    "test-type=webdriver",
++    // Cosmium: removed "test-type=webdriver" -- it labels the session
++    // as automation-driven and is probed by bot detection scripts.
+     "no-service-autorun",
+ };
+ 
+diff --git a/chrome/test/chromedriver/js/call_function.js b/chrome/test/chromedriver/js/call_function.js
+index 0f5c94fada..490400ff61 100644
+--- a/chrome/test/chromedriver/js/call_function.js
++++ b/chrome/test/chromedriver/js/call_function.js
+@@ -39,6 +39,10 @@ const W3C_ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
+ const FRAME_KEY = 'frame-075b-4da1-b6ba-e579c2d3230a';
+ const WINDOW_KEY = 'window-fcc6-11e5-b4f8-330a88ab9d7f';
+ 
++// Cosmium: retrieve pristine builtins from Symbol-keyed stash instead of
++// the detectable window.cdc_adoQpoasnfa76pfcZLmcfl_* properties.
++const __cdcStash = window[Symbol.for('__cdc_stash')] || {};
++
+ const REF_KEYS = [
+     W3C_ELEMENT_KEY,
+     SHADOW_ROOT_KEY,
+@@ -74,7 +78,7 @@ function newError(message, code) {
+ }
+ 
+ function isNodeReachable(node) {
+-  const Window = window.cdc_adoQpoasnfa76pfcZLmcfl_Window || window.Window;
++  const Window = __cdcStash.Window || window.Window;
+   const nodeRoot = getNodeRootThroughAnyShadows(node);
+   return (nodeRoot == document.documentElement.parentNode)
+       || (nodeRoot instanceof Window);
+@@ -138,7 +142,7 @@ function isElement(value) {
+  * @return {boolean} True if value is an iterable collection.
+  */
+ function isCollection(value) {
+-  const Symbol = window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol || window.Symbol;
++  const Symbol = __cdcStash.Symbol || window.Symbol;
+   return (typeof value[Symbol.iterator] === 'function') &&
+       ('length' in value) &&
+       (typeof value.length === 'number');
+@@ -167,7 +171,7 @@ function cloneWithAlgorithm(item, seen, algo, nodes) {
+   }
+ 
+   if (isCollection(item)) {
+-    const Array = window.cdc_adoQpoasnfa76pfcZLmcfl_Array || window.Array;
++    const Array = __cdcStash.Array || window.Array;
+     tmp = new Array(item.length);
+     for (let i = 0; i < item.length; ++i)
+       tmp[i] = maybeCopyProperty(i);
+@@ -214,7 +218,7 @@ function serializationGuard(object) {
+       return undefined;
+     }
+   }
+-  const Proxy = window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy || window.Proxy;
++  const Proxy = __cdcStash.Proxy || window.Proxy;
+   return new Proxy(object, handler);
+ }
+ 
+@@ -262,10 +266,12 @@ function preprocessResult(item, seen, nodes) {
+     return serializationGuard(ret);
+   }
+ 
+-  let WindowProxy = window.cdc_adoQpoasnfa76pfcZLmcfl_Window || window.Window;
++  let WindowProxy = __cdcStash.Window || window.Window;
+   let is_oopif = false;
+   try {
+-    WindowProxy = item.cdc_adoQpoasnfa76pfcZLmcfl_Window || item.Window
++    // Cosmium: cross-frame stash lookup via Symbol key
++    var itemStash = item[Symbol.for('__cdc_stash')];
++    WindowProxy = (itemStash && itemStash.Window) || item.Window
+         || WindowProxy;
+   } catch {
+     is_oopif = true;
+@@ -370,11 +376,11 @@ function callFunction(func, args, w3c, nodes) {
+       status: error.code || StatusCode.JAVA_SCRIPT_ERROR,
+       value: error.message || error
+     });
+-    const JSON = window.cdc_adoQpoasnfa76pfcZLmcfl_JSON || window.JSON;
++    const JSON = __cdcStash.JSON || window.JSON;
+     return [JSON.stringify(errorResponse)];
+   }
+ 
+-  const Promise = window.cdc_adoQpoasnfa76pfcZLmcfl_Promise || window.Promise;
++  const Promise = __cdcStash.Promise || window.Promise;
+   let unwrappedArgs = null;
+   try {
+     unwrappedArgs = resolveReferences(args, nodes);
+@@ -390,7 +396,7 @@ function callFunction(func, args, w3c, nodes) {
+         status: 0,
+         value: preprocessResult(result, [], ret_nodes)
+       };
+-      const JSON = window.cdc_adoQpoasnfa76pfcZLmcfl_JSON || window.JSON;
++      const JSON = __cdcStash.JSON || window.JSON;
+       return [JSON.stringify(response), ...ret_nodes];
+     }).catch(buildError);
+   } catch (error) {
+diff --git a/chrome/test/chromedriver/js/execute_async_script.js b/chrome/test/chromedriver/js/execute_async_script.js
+index 9fec859aae..527a860109 100644
+--- a/chrome/test/chromedriver/js/execute_async_script.js
++++ b/chrome/test/chromedriver/js/execute_async_script.js
+@@ -32,7 +32,9 @@ var StatusCode = {
+ * being garbage collected.
+ */
+ async function executeAsyncScript(script, args, isUserSupplied, timeout) {
+-  const Promise = window.cdc_adoQpoasnfa76pfcZLmcfl_Promise || window.Promise;
++  // Cosmium: use Symbol-keyed stash for pristine builtins
++  const __cdcStash = window[Symbol.for('__cdc_stash')] || {};
++  const Promise = __cdcStash.Promise || window.Promise;
+   function isThenable(value) {
+     return typeof value === 'object' && typeof value.then === 'function';
+   }
+diff --git a/chrome/test/chromedriver/js/execute_script.js b/chrome/test/chromedriver/js/execute_script.js
+index 52ec5b3ccc..7cb30f352b 100644
+--- a/chrome/test/chromedriver/js/execute_script.js
++++ b/chrome/test/chromedriver/js/execute_script.js
+@@ -14,7 +14,9 @@ function executeScript(script, args) {
+   try {
+     // Convert script (as a string) into an async function.
+     const f = (new Function('return async function(){' + script + '}'))();
+-    const Promise = window.cdc_adoQpoasnfa76pfcZLmcfl_Promise || window.Promise;
++    // Cosmium: use Symbol-keyed stash for pristine builtins
++    const __cdcStash = window[Symbol.for('__cdc_stash')] || {};
++    const Promise = __cdcStash.Promise || window.Promise;
+     return Promise.resolve(f.apply(null, args));
+   } catch (e) {
+     return Promise.reject(e);
+diff --git a/chrome/test/chromedriver/js/test.js b/chrome/test/chromedriver/js/test.js
+index f0ceeea68f..ceb9e8c5b3 100644
+--- a/chrome/test/chromedriver/js/test.js
++++ b/chrome/test/chromedriver/js/test.js
+@@ -94,6 +94,11 @@ window.addEventListener('load', function() {
+   runTests();
+ });
+ 
+-window.cdc_adoQpoasnfa76pfcZLmcfl_Array = window.Array;
+-window.cdc_adoQpoasnfa76pfcZLmcfl_Promise = window.Promise;
+-window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol = window.Symbol;
++// Cosmium: set up Symbol-keyed stash matching devtools_client_impl.cc
++(function() {
++  var k = Symbol.for('__cdc_stash');
++  var s = window[k] = Object.create(null);
++  s.Array = window.Array;
++  s.Promise = window.Promise;
++  s.Symbol = window.Symbol;
++})();
+diff --git a/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc b/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
+index 5698baa5f9..7baa0b5411 100644
+--- a/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
++++ b/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
+@@ -103,8 +103,9 @@ TEST_F(DevToolsClientImplTest, DeleteGlobalJSON) {
+     // global JSON object indeed can be accessed.
+     params.clear();
+     result.clear();
++    // Cosmium: access stashed JSON via Symbol key
+     params.Set("expression",
+-               "window.cdc_adoQpoasnfa76pfcZLmcfl_JSON.stringify(321)");
++               "(window[Symbol.for('__cdc_stash')] || {}).JSON.stringify(321)");
+     status = client->SendCommandAndGetResultWithTimeout(
+         "Runtime.evaluate", params, &timeout, &result);
+     EXPECT_TRUE(StatusOk(status));
+diff --git a/content/browser/devtools/protocol/browser_handler.cc b/content/browser/devtools/protocol/browser_handler.cc
+index f1d42bbb09..600582c540 100644
+--- a/content/browser/devtools/protocol/browser_handler.cc
++++ b/content/browser/devtools/protocol/browser_handler.cc
+@@ -566,22 +566,12 @@ Response BrowserHandler::GetHistogram(
+ Response BrowserHandler::GetBrowserCommandLine(
+     std::unique_ptr<protocol::Array<std::string>>* arguments) {
+   *arguments = std::make_unique<protocol::Array<std::string>>();
+-  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+-  // The commandline is potentially sensitive, only return it if it
+-  // contains kEnableAutomation.
+-  if (command_line->HasSwitch(switches::kEnableAutomation)) {
+-    for (const auto& arg : command_line->argv()) {
+-#if BUILDFLAG(IS_WIN)
+-      (*arguments)->emplace_back(base::WideToUTF8(arg));
+-#else
+-      (*arguments)->emplace_back(arg);
+-#endif
+-    }
+-    return Response::Success();
+-  } else {
+-    return Response::ServerError(
+-        "Command line not returned because --enable-automation not set.");
+-  }
++  // Cosmium: never expose the command line via CDP.  The full argv
++  // leaks switches like --remote-debugging-port, profile paths, and
++  // custom Cosmium flags -- all of which are high-signal automation
++  // fingerprints.
++  return Response::ServerError(
++      "Command line not returned because --enable-automation not set.");
+ }
+ 
+ Response BrowserHandler::Crash() {
+diff --git a/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc b/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
+index 2217e5013b..2a5db04fd5 100644
+--- a/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
++++ b/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
+@@ -857,14 +857,18 @@ protocol::Response InspectorEmulationAgent::setDisabledImageTypes(
+ 
+ protocol::Response InspectorEmulationAgent::setAutomationOverride(
+     bool enabled) {
+-  if (enabled)
+-    InnerEnable();
+-  automation_override_.Set(enabled);
++  // Cosmium: silently ignore the CDP Emulation.setAutomationOverride
++  // command.  Puppeteer, Playwright and ChromeDriver send this during
++  // session setup; honouring it would set navigator.webdriver = true
++  // (via the probe) and create the automation infobar -- both of which
++  // are high-signal detection vectors for DataDome and similar systems.
+   return protocol::Response::Success();
+ }
+ 
+ void InspectorEmulationAgent::ApplyAutomationOverride(bool& enabled) const {
+-  enabled |= automation_override_.Get();
++  // Cosmium: always report automation as disabled.
++  // The override flag is never set (see above), but belt-and-suspenders:
++  // never let this probe flip the enabled bit.
+ }
+ 
+ }  // namespace blink
+diff --git a/v8/src/runtime/runtime-debug.cc b/v8/src/runtime/runtime-debug.cc
+index 4e82bd38a8..c25d2d570d 100644
+--- a/v8/src/runtime/runtime-debug.cc
++++ b/v8/src/runtime/runtime-debug.cc
+@@ -134,14 +134,12 @@ RUNTIME_FUNCTION(Runtime_DebugBreakAtEntry) {
+ RUNTIME_FUNCTION(Runtime_HandleDebuggerStatement) {
+   SealHandleScope shs(isolate);
+   DCHECK_EQ(0, args.length());
+-  if (isolate->debug()->break_points_active()) {
+-    isolate->debug()->HandleDebugBreak(
+-        kIgnoreIfTopFrameBlackboxed,
+-        v8::debug::BreakReasons({v8::debug::BreakReason::kDebuggerStatement}));
+-    if (isolate->debug()->IsRestartFrameScheduled()) {
+-      return isolate->TerminateExecution();
+-    }
+-  }
++  // Cosmium: never pause on `debugger;` statements.  Bot detectors
++  // (DataDome, Kasada, etc.) inject `debugger;` and measure the wall-
++  // clock delta via performance.now().  Any pause > ~0 ms reveals that
++  // DevTools / CDP is attached.  Skipping the break here makes the
++  // statement a no-op regardless of whether a debugger is connected,
++  // eliminating this timing side-channel entirely.
+   return isolate->stack_guard()->HandleInterrupts();
+ }
+ 
