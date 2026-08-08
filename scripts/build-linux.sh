@@ -83,13 +83,6 @@ if should_run "fetch"; then
   cp "$COSMIUM_ROOT/config/gclient-linux.py" "$COSMIUM_ROOT/.gclient"
   ok "Set .gclient for linux"
 
-  # Download Chromium's clang
-  if [[ ! -f "$SRC_DIR/third_party/llvm-build/Release+Asserts/bin/clang" ]]; then
-    info "Downloading Clang toolchain..."
-    python3 "$SRC_DIR/tools/clang/scripts/update.py"
-    ok "Clang installed"
-  fi
-
   # Initialize DEPS sub-dirs as git repos so gclient doesn't re-clone
   info "Initializing DEPS sub-directories..."
   python3 - "$SRC_DIR" << 'PYEOF'
@@ -131,6 +124,27 @@ PYEOF
   cd "$COSMIUM_ROOT"
   gclient runhooks 2>&1 | tail -5
   ok "Hooks complete"
+
+  # Download Chromium's clang — MUST run after `gclient runhooks`.
+  # third_party/llvm-build/Release+Asserts is a `dep_type: 'gcs'` entry, and
+  # runhooks wipes that directory without re-fetching it (only `gclient sync`
+  # fetches GCS deps, and this tarball workflow never syncs). Fetching before
+  # hooks silently loses the toolchain and `gn gen` then fails with
+  # "the actual version is <blank>".
+  #
+  # Gate on the revision check, not on bin/clang existing: the release tarball
+  # ships that path with an EMPTY cr_build_revision stamp, so a file-existence
+  # guard would skip the real download.
+  if ! python3 "$SRC_DIR/tools/clang/scripts/update.py" --print-revision \
+       >/dev/null 2>&1; then
+    info "Downloading Clang toolchain..."
+    python3 "$SRC_DIR/tools/clang/scripts/update.py"
+  fi
+  # Verify rather than assume — this is the exact check gn gen runs, so
+  # failing here gives a clear error instead of a confusing GN backtrace.
+  CLANG_REV="$(python3 "$SRC_DIR/tools/clang/scripts/update.py" --print-revision 2>/dev/null)" \
+    || err "Clang toolchain still missing/invalid after update.py"
+  ok "Clang toolchain ready (${CLANG_REV})"
 fi
 
 # ── 2. Patch ────────────────────────────────────────────
