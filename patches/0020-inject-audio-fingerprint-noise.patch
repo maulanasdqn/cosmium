@@ -1,0 +1,122 @@
+# cosmium patch: 0020-inject-audio-fingerprint-noise
+# Authored: 2026-08-08
+# Chromium base: see ../VERSION
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/modules/webaudio/audio_buffer.{h,cc}
+# - what changed: AudioBuffer::getChannelData and AudioBuffer::copyFromChannel
+#                 inject subtle deterministic noise when --cosmium-canvas-seed is set.
+#                 Noise is seeded by the canvas seed value, applied once per buffer
+#                 on first data access. Magnitude ±1e-7 is inaudible but changes
+#                 the fingerprint hash computed by AudioContext fingerprinting scripts.
+# - profile fields read: canvas_seed (shared with canvas fingerprint protection)
+# - test: create OfflineAudioContext, render OscillatorNode through
+#         DynamicsCompressorNode, read getChannelData() — hash must change per seed.
+#         (DataDome / CreepJS "Audio" probe — rendered buffer hash is a key signal)
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_buffer.h b/third_party/blink/renderer/modules/webaudio/audio_buffer.h
+index ce75d7ab3a..4abe8f14be 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_buffer.h
++++ b/third_party/blink/renderer/modules/webaudio/audio_buffer.h
+@@ -122,8 +122,14 @@ class MODULES_EXPORT AudioBuffer final : public ScriptWrappable {
+ 
+   bool CreatedSuccessfully(unsigned desired_number_of_channels) const;
+ 
++  // Cosmium: inject deterministic noise into audio buffer for fingerprint
++  // protection. Applied once on first data access when --cosmium-canvas-seed
++  // is set.
++  void MaybeInjectCosmiumNoise();
++
+   float sample_rate_;
+   uint32_t length_;
++  bool cosmium_noise_injected_ = false;  // Cosmium: audio noise tracking
+ 
+   HeapVector<Member<DOMFloat32Array>> channels_;
+ };
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_buffer.cc b/third_party/blink/renderer/modules/webaudio/audio_buffer.cc
+index 541062a37e..20026cef72 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_buffer.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_buffer.cc
+@@ -35,7 +35,9 @@
+ 
+ #include <memory>
+ 
++#include "base/command_line.h"
+ #include "base/containers/span.h"
++#include "base/strings/string_number_conversions.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_audio_buffer_options.h"
+ #include "third_party/blink/renderer/modules/webaudio/base_audio_context.h"
+ #include "third_party/blink/renderer/platform/audio/audio_bus.h"
+@@ -202,6 +204,53 @@ AudioBuffer::AudioBuffer(AudioBus* bus)
+   }
+ }
+ 
++// Cosmium: deterministic hash for audio fingerprint noise injection
++static uint32_t CosmiumAudioHash(uint64_t seed,
++                                 unsigned channel,
++                                 size_t index) {
++  uint64_t h = seed;
++  h ^= static_cast<uint64_t>(channel) * 0x9E3779B97F4A7C15ULL;
++  h ^= static_cast<uint64_t>(index) * 0x517CC1B727220A95ULL;
++  h = (h ^ (h >> 30)) * 0xBF58476D1CE4E5B9ULL;
++  h = (h ^ (h >> 27)) * 0x94D049BB133111EBULL;
++  h = h ^ (h >> 31);
++  return static_cast<uint32_t>(h);
++}
++
++// Cosmium: apply subtle deterministic noise to all channels on first access.
++// Uses --cosmium-canvas-seed for consistent cross-session noise.
++void AudioBuffer::MaybeInjectCosmiumNoise() {
++  if (cosmium_noise_injected_) {
++    return;
++  }
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (!cosmium_cmd->HasSwitch("cosmium-canvas-seed")) {
++    return;
++  }
++  uint64_t cosmium_seed = 0;
++  if (!base::StringToUint64(
++          cosmium_cmd->GetSwitchValueASCII("cosmium-canvas-seed"),
++          &cosmium_seed)) {
++    return;
++  }
++  cosmium_noise_injected_ = true;
++  for (unsigned ch = 0; ch < channels_.size(); ++ch) {
++    DOMFloat32Array* channel_data = channels_[ch].Get();
++    if (!channel_data) {
++      continue;
++    }
++    float* data = channel_data->Data();
++    size_t len = channel_data->length();
++    for (size_t i = 0; i < len; ++i) {
++      uint32_t hash = CosmiumAudioHash(cosmium_seed, ch, i);
++      // Noise in [-1e-7, 1e-7]: inaudible but changes fingerprint hash
++      float noise =
++          (static_cast<float>(hash & 0xFFFF) / 65535.0f - 0.5f) * 2e-7f;
++      data[i] += noise;
++    }
++  }
++}
++
+ NotShared<DOMFloat32Array> AudioBuffer::getChannelData(
+     unsigned channel_index,
+     ExceptionState& exception_state) {
+@@ -222,6 +271,9 @@ NotShared<DOMFloat32Array> AudioBuffer::getChannelData(unsigned channel_index) {
+     return NotShared<DOMFloat32Array>(nullptr);
+   }
+ 
++  // Cosmium: inject deterministic noise for audio fingerprint protection
++  MaybeInjectCosmiumNoise();
++
+   return NotShared<DOMFloat32Array>(channels_[channel_index].Get());
+ }
+ 
+@@ -248,6 +300,9 @@ void AudioBuffer::copyFromChannel(NotShared<DOMFloat32Array> destination,
+     return;
+   }
+ 
++  // Cosmium: inject deterministic noise for audio fingerprint protection
++  MaybeInjectCosmiumNoise();
++
+   base::span<const float> src = channels_[channel_number].Get()->AsSpan();
+   base::span<float> dst = destination->AsSpan();
+ 
