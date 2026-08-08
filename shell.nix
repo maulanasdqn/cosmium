@@ -9,6 +9,29 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
+  # Blink's build/scripts/gperf.py massages gperf output for modern compilers:
+  # it rewrites gperf's `/*FALLTHROUGH*/` comment into a `[[fallthrough]];`
+  # statement. gperf >= 3.2 already emits its own annotation block *and* still
+  # emits the comment, so the massaging yields two annotations in a row and
+  # neither directly precedes the case label:
+  #
+  #     #if (...)
+  #           [[fallthrough]];        <- gperf's own
+  #     #endif
+  #             [[fallthrough]];      <- gperf.py's substitution
+  #           case 19:
+  #
+  # clang rejects that with "fallthrough annotation does not directly precede
+  # switch label". nixpkgs only carries 3.3, so pin the 3.1 that Chromium's
+  # post-processing is written against.
+  gperf31 = pkgs.gperf.overrideAttrs (old: rec {
+    version = "3.1";
+    src = pkgs.fetchurl {
+      url = "mirror://gnu/gperf/gperf-${version}.tar.gz";
+      sha256 = "1qispg6i508rq8pkajh26cznwimbnj06wq9sd85vg95v8nwld1aq";
+    };
+  });
+
   # Libraries that host-side build tools (wayland_scanner, protoc-alikes,
   # mojo/blink generators) link against. use_sysroot only governs the *target*
   # toolchain; host tools link the Nix libs above and are emitted without an
@@ -34,6 +57,14 @@ pkgs.mkShell {
     pkg-config
     which
     perl
+
+    # Code generators invoked by build actions. Chromium's install-build-deps
+    # requires all three; without gperf the Blink build dies part-way through
+    # on gen/third_party/blink/renderer/platform/color_data.cc. gperf is
+    # version-pinned — see gperf31 above.
+    gperf31
+    bison
+    flex
 
     # Compilers — Chromium ships its own clang, but system clang is
     # needed during bootstrap (cipd, gn, etc.)
