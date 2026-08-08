@@ -42,6 +42,9 @@ fn webgl_renderer_passed_through() {
 #[test]
 fn hygiene_flags_present() {
     let flags = profile_to_flags(&fixture());
+    // Note: --disable-blink-features=AutomationControlled was removed after
+    // patch 0013 disabled AutomationControlled at source level, and patch 0014
+    // suppresses the bad-flags infobar that the flag used to trigger.
     for w in [
         "--no-default-browser-check",
         "--no-first-run",
@@ -51,7 +54,6 @@ fn hygiene_flags_present() {
         "--disable-search-engine-choice-screen",
         "--password-store=basic",
         "--use-mock-keychain",
-        "--disable-blink-features=AutomationControlled",
     ] {
         assert!(flags.iter().any(|f| f == w), "missing flag: {w}");
     }
@@ -92,6 +94,47 @@ fn strip_automation_tells_is_opt_in() {
 fn webrtc_policy_passed_through() {
     let flags = profile_to_flags(&mac_fixture());
     assert!(flags.iter().any(|f| f == "--force-webrtc-ip-handling-policy=default_public_interface_only"));
+}
+
+#[test]
+fn chrome_version_switch_present_when_set() {
+    let p = mac_fixture();
+    assert!(p.chrome_version.is_some(), "fixture should have chrome_version");
+    let flags = profile_to_flags(&p);
+    assert!(
+        has(&flags, "--cosmium-chrome-version="),
+        "chrome version switch required"
+    );
+}
+
+#[test]
+fn chrome_version_rewrites_user_agent() {
+    let mut p = mac_fixture();
+    p.chrome_version = Some("151.0.7922.108".into());
+    let flags = profile_to_flags(&p);
+    let ua = flags.iter().find(|f| f.starts_with("--user-agent=")).unwrap();
+    assert!(
+        ua.contains("Chrome/151.0.0.0"),
+        "UA should contain spoofed Chrome/151.0.0.0, got: {ua}"
+    );
+    assert!(
+        !ua.contains("Chrome/135"),
+        "UA should not contain old Chrome/135, got: {ua}"
+    );
+}
+
+#[test]
+fn chrome_version_absent_when_none() {
+    let mut p = mac_fixture();
+    p.chrome_version = None;
+    let flags = profile_to_flags(&p);
+    assert!(
+        !has(&flags, "--cosmium-chrome-version="),
+        "no switch when chrome_version is None"
+    );
+    // UA should be unchanged
+    let ua = flags.iter().find(|f| f.starts_with("--user-agent=")).unwrap();
+    assert!(ua.contains("Chrome/135"), "UA unchanged when no override");
 }
 
 #[test]

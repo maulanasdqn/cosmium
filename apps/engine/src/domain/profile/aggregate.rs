@@ -36,6 +36,14 @@ pub struct Profile {
     /// tells. Off by default so non-automation use keeps full CDP behavior.
     #[serde(default)]
     pub strip_automation_tells: bool,
+
+    /// Override the Chrome version reported in User-Agent, Sec-CH-UA, and
+    /// high-entropy client hints.  Set this to a current Chrome stable full
+    /// version string (e.g. "151.0.7922.108") so bot detectors don't flag
+    /// the stale compiled version.  When present, `profile_to_flags` also
+    /// rewrites `identity.user_agent` on the fly to match.
+    #[serde(default)]
+    pub chrome_version: Option<String>,
 }
 
 const fn default_version() -> u32 {

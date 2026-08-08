@@ -106,5 +106,6 @@
   "canvas_noise": {
     "seed": "a1b2c3d4e5f607182939404152636475"
   },
-  "strip_automation_tells": false
+  "strip_automation_tells": false,
+  "chrome_version": "151.0.7922.108"
 }

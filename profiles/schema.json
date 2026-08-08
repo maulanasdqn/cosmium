@@ -214,6 +214,12 @@
       "type": "boolean",
       "default": false,
       "description": "Opt-in. Emits --cosmium-strip-automation-tells, which the CDP-leak strip patch consults to hide Runtime.evaluate / chrome.runtime / Error.stack automation markers. Off by default so non-automation use keeps full CDP."
+    },
+    "chrome_version": {
+      "type": "string",
+      "description": "Override the Chrome version reported in User-Agent, Sec-CH-UA, and high-entropy client hints. Set to a current Chrome stable full version (e.g. '151.0.7922.108'). When present, the engine also rewrites the User-Agent string to match. Omit to keep the compiled version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+\\.\\d+$",
+      "examples": ["151.0.7922.108"]
     }
   }
 }
