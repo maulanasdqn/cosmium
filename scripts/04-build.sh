@@ -16,7 +16,7 @@ cd "${CHROMIUM_SRC}"
 log_info "Generating build files at ${BUILD_OUT}"
 # Pass args.gn via --args="...inline..." so the file in our config dir wins
 # even if someone has stale args in out/cosmium/args.gn.
-gn_args=$(grep -v '^[[:space:]]*#' "${COSMIUM_ROOT}/config/args.gn" \
+gn_args=$(grep -v '^[[:space:]]*#' "${COSMIUM_ROOT}/.config/args.gn" \
   | grep -v '^[[:space:]]*$' \
   | tr '\n' ' ')
 

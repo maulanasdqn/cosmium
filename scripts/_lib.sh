@@ -9,8 +9,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
 COSMIUM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 export COSMIUM_ROOT
 
-# shellcheck source=../config/chromium.env
-source "${COSMIUM_ROOT}/config/chromium.env"
+# shellcheck source=../.config/chromium.env
+source "${COSMIUM_ROOT}/.config/chromium.env"
 
 # Logging helpers — colored if stdout is a tty, plain otherwise.
 if [[ -t 1 ]]; then

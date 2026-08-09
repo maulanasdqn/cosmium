@@ -63,8 +63,8 @@ pub async fn execute(cmd: BuildCmd) -> Result<()> {
 
 fn select_args_gn(root: &Path) -> PathBuf {
     let candidate = match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "config/args.mac-arm64.gn",
-        _ => "config/args.gn",
+        ("macos", "aarch64") => ".config/args.mac-arm64.gn",
+        _ => ".config/args.gn",
     };
     root.join(candidate)
 }

@@ -19,7 +19,7 @@ TARBALL_DIR="/tmp/chromium-dl"
 TARBALL_PATH="${TARBALL_DIR}/chromium-${VERSION}.tar.xz"
 SRC_DIR="${COSMIUM_ROOT}/src"
 PATCHES_DIR="${COSMIUM_ROOT}/patches"
-ARGS_GN="${COSMIUM_ROOT}/config/args.gn"
+ARGS_GN="${COSMIUM_ROOT}/.config/args.gn"
 BUILD_OUT="${SRC_DIR}/out/Default"
 JOBS="${JOBS:-$(( $(nproc) - 2 ))}"
 
@@ -80,7 +80,7 @@ if should_run "fetch"; then
   export PATH="$COSMIUM_ROOT/depot_tools:$PATH"
 
   # Set up .gclient for linux target
-  cp "$COSMIUM_ROOT/config/gclient-linux.py" "$COSMIUM_ROOT/.gclient"
+  cp "$COSMIUM_ROOT/.config/gclient-linux.py" "$COSMIUM_ROOT/.gclient"
   ok "Set .gclient for linux"
 
   # Initialize DEPS sub-dirs as git repos so gclient doesn't re-clone

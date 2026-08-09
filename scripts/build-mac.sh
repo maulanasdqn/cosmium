@@ -19,7 +19,7 @@ TARBALL_DIR="/tmp/chromium-dl"
 TARBALL_PATH="${TARBALL_DIR}/chromium-${VERSION}.tar.xz"
 SRC_DIR="${COSMIUM_ROOT}/src"
 PATCHES_DIR="${COSMIUM_ROOT}/patches"
-ARGS_GN="${COSMIUM_ROOT}/config/args.mac-arm64.gn"
+ARGS_GN="${COSMIUM_ROOT}/.config/args.mac-arm64.gn"
 BUILD_OUT="${SRC_DIR}/out/Default"
 JOBS="${JOBS:-$(( $(sysctl -n hw.ncpu) - 2 ))}"
 
