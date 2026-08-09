@@ -24,3 +24,5 @@ tempfile.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+chromiumoxide.workspace = true
+futures-util.workspace = true

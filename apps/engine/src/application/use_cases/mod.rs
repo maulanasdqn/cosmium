@@ -4,5 +4,6 @@ pub mod list_profiles;
 pub mod mutate_profile;
 pub mod repair_profile;
 pub mod run_browser;
+pub mod scrape_page;
 pub mod test_fingerprint;
 pub mod validate_profile;

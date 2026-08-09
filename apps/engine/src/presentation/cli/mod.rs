@@ -14,6 +14,7 @@ use crate::infrastructure::runtime::TokioProcessRuntime;
 use commands::build::BuildCmd;
 use commands::profile::ProfileCmd;
 use commands::run::RunCmd;
+use commands::scrape::ScrapeCmd;
 use commands::test::TestCmd;
 use state::CliState;
 
@@ -29,6 +30,8 @@ pub enum Command {
     #[command(subcommand)]
     Profile(ProfileCmd),
     Run(RunCmd),
+    #[command(subcommand)]
+    Scrape(ScrapeCmd),
     Build(BuildCmd),
     #[command(subcommand)]
     Test(TestCmd),
@@ -56,6 +59,7 @@ pub async fn run() -> Result<()> {
     match cli.command {
         Command::Profile(cmd) => commands::profile::execute(cmd, &state).await,
         Command::Run(cmd) => commands::run::execute(cmd, &state).await,
+        Command::Scrape(cmd) => commands::scrape::execute(cmd, &state).await,
         Command::Build(cmd) => commands::build::execute(cmd).await,
         Command::Test(cmd) => commands::test::execute(cmd, &state).await,
     }
