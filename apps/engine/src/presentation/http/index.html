@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cosmium</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--card:#141414;--border:#262626;--border-hover:#404040;
+  --text:#fafafa;--muted:#a1a1aa;--subtle:#71717a;
+  --primary:#3b82f6;--primary-hover:#2563eb;
+  --success:#22c55e;--error:#ef4444;--warn:#f59e0b;
+  --radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'SF Mono',SFMono-Regular,Menlo,monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+a{color:var(--primary);text-decoration:none}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+
+.container{max-width:960px;margin:0 auto;padding:24px 16px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+header h1{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+header h1 span{color:var(--primary)}
+header .subtitle{color:var(--muted);font-size:13px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.card-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.card-desc{color:var(--muted);font-size:13px;margin-bottom:20px}
+
+label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+input[type="text"],input[type="number"],input[type="url"],select,textarea{
+  width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);font-size:14px;outline:none;transition:border-color .15s
+}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+textarea{resize:vertical;min-height:72px;font-family:var(--mono);font-size:13px}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select option{background:var(--card);color:var(--text)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:640px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.field{margin-bottom:16px}
+
+.toggle-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;user-select:none}
+.toggle-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--primary);cursor:pointer}
+.toggle-label{font-size:14px;color:var(--text)}
+.toggle-hint{font-size:12px;color:var(--muted)}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--primary-hover)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm{padding:6px 14px;font-size:13px}
+
+.actions{display:flex;align-items:center;gap:12px;margin-top:8px}
+
+.badge{display:inline-flex;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid}
+.badge-ok{color:var(--success);border-color:var(--success);background:rgba(34,197,94,.08)}
+.badge-err{color:var(--error);border-color:var(--error);background:rgba(239,68,68,.08)}
+.badge-warn{color:var(--warn);border-color:var(--warn);background:rgba(245,158,11,.08)}
+.badge-info{color:var(--primary);border-color:var(--primary);background:rgba(59,130,246,.08)}
+.badge-muted{color:var(--muted);border-color:var(--border);background:transparent}
+
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.status-bar{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px}
+
+.result-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:640px){.result-grid{grid-template-columns:1fr}}
+.result-item{padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+.result-item .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.result-item .value{font-size:14px;word-break:break-all}
+.result-item .value.mono{font-family:var(--mono);font-size:13px}
+
+pre.json{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--muted);max-height:400px;overflow-y:auto}
+
+.screenshot-wrap{text-align:center}
+.screenshot-wrap img{max-width:100%;border:1px solid var(--border);border-radius:var(--radius)}
+
+.section-toggle{background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:500;padding:4px 0}
+
+.error-box{background:rgba(239,68,68,.08);border:1px solid var(--error);border-radius:var(--radius);padding:12px 16px;color:var(--error);font-size:14px;margin-top:12px}
+
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1><span>Cosmium</span></h1>
+      <div class="subtitle">Stealth browser scraping dashboard</div>
+    </div>
+    <div id="health-status" class="badge badge-muted">checking…</div>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Scrape a page</div>
+    <div class="card-desc">Enter a URL, pick a profile, and test your stealth scraping setup.</div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="profile">Profile</label>
+        <select id="profile"><option value="">Loading…</option></select>
+      </div>
+      <div class="field">
+        <label for="url">URL</label>
+        <input type="url" id="url" placeholder="https://example.com">
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label>Mode</label>
+        <div class="toggle-row" onclick="this.querySelector('input').click()">
+          <input type="checkbox" id="headful">
+          <div><div class="toggle-label">Headful</div><div class="toggle-hint">Show browser window</div></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Capture</label>
+        <div class="toggle-row" onclick="this.querySelector('input').click()">
+          <input type="checkbox" id="screenshot">
+          <div><div class="toggle-label">Screenshot</div><div class="toggle-hint">JPEG screenshot</div></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="wait_ms">Wait (ms)</label>
+        <input type="number" id="wait_ms" value="0" min="0" step="500" placeholder="0">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="extract">Extract selectors <span style="font-weight:400;text-transform:none">(comma-separated)</span></label>
+      <input type="text" id="extract" placeholder="h1, .price, .title">
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="script">JavaScript</label>
+        <textarea id="script" placeholder="document.title" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label for="proxy">Proxy</label>
+        <input type="text" id="proxy" placeholder="http://user:pass@host:port">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="scrape-btn" onclick="runScrape()">Scrape</button>
+      <div id="status-msg" class="status-bar hidden"></div>
+    </div>
+    <div id="error-box" class="error-box hidden"></div>
+  </div>
+
+  <div id="result-card" class="card hidden">
+    <div class="card-title">Result</div>
+    <div id="result-url" class="card-desc" style="font-family:var(--mono);font-size:12px"></div>
+
+    <div id="result-header" class="result-header"></div>
+    <div id="result-grid" class="result-grid"></div>
+
+    <div id="extracted-section" class="hidden">
+      <label>Extracted data</label>
+      <pre class="json" id="extracted-json"></pre>
+    </div>
+
+    <div id="screenshot-section" class="hidden" style="margin-top:16px">
+      <label>Screenshot</label>
+      <div class="screenshot-wrap"><img id="screenshot-img" alt="screenshot"></div>
+    </div>
+
+    <div style="margin-top:16px">
+      <button class="section-toggle" id="html-toggle" onclick="toggleHtml()">▸ Show HTML preview</button>
+      <div id="html-section" class="hidden" style="margin-top:8px">
+        <pre class="json" id="html-preview" style="max-height:300px"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function checkHealth() {
+  try {
+    const r = await fetch('/api/health');
+    $('health-status').textContent = r.ok ? 'connected' : 'error';
+    $('health-status').className = 'badge ' + (r.ok ? 'badge-ok' : 'badge-err');
+  } catch {
+    $('health-status').textContent = 'offline';
+    $('health-status').className = 'badge badge-err';
+  }
+}
+
+async function loadProfiles() {
+  try {
+    const r = await fetch('/api/v1/profiles');
+    const data = await r.json();
+    const sel = $('profile');
+    sel.innerHTML = '';
+    if (!data.profiles?.length) {
+      sel.innerHTML = '<option value="">No profiles found</option>';
+      return;
+    }
+    data.profiles.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    $('profile').innerHTML = '<option value="">Failed to load</option>';
+  }
+}
+
+let scraping = false;
+let lastHtml = '';
+
+async function runScrape() {
+  if (scraping) return;
+  const url = $('url').value.trim();
+  const profile = $('profile').value;
+  if (!url) { $('url').focus(); return; }
+  if (!profile) return;
+
+  scraping = true;
+  $('scrape-btn').disabled = true;
+  $('scrape-btn').innerHTML = '<span class="spinner"></span>Scraping…';
+  $('status-msg').textContent = 'Launching browser and navigating…';
+  $('status-msg').classList.remove('hidden');
+  $('error-box').classList.add('hidden');
+  $('result-card').classList.add('hidden');
+
+  const extract = $('extract').value.split(',').map(s => s.trim()).filter(Boolean);
+  const script = $('script').value.trim() || undefined;
+  const proxy = $('proxy').value.trim() || undefined;
+
+  const body = {
+    url, profile,
+    screenshot: $('screenshot').checked,
+    headful: $('headful').checked,
+    wait_ms: parseInt($('wait_ms').value) || 0,
+    extract, script, proxy,
+    include_html: true,
+  };
+
+  try {
+    const r = await fetch('/api/v1/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    showResult(data);
+  } catch (e) {
+    $('error-box').textContent = e.message;
+    $('error-box').classList.remove('hidden');
+  } finally {
+    scraping = false;
+    $('scrape-btn').disabled = false;
+    $('scrape-btn').innerHTML = 'Scrape';
+    $('status-msg').classList.add('hidden');
+  }
+}
+
+function showResult(d) {
+  $('result-card').classList.remove('hidden');
+  $('result-url').textContent = d.final_url;
+
+  const hdr = $('result-header');
+  hdr.innerHTML = '';
+  const statusClass = d.http_status >= 200 && d.http_status < 400 ? 'badge-ok' : 'badge-err';
+  hdr.innerHTML += `<span class="badge ${statusClass}">HTTP ${d.http_status}</span>`;
+  hdr.innerHTML += d.blocked
+    ? '<span class="badge badge-err">BLOCKED</span>'
+    : '<span class="badge badge-ok">NOT BLOCKED</span>';
+  hdr.innerHTML += `<span class="badge badge-info">${d.elapsed_ms}ms</span>`;
+
+  const grid = $('result-grid');
+  grid.innerHTML = `
+    <div class="result-item"><div class="label">Final URL</div><div class="value mono">${esc(d.final_url)}</div></div>
+    <div class="result-item"><div class="label">User Agent</div><div class="value mono">${esc(d.user_agent)}</div></div>
+    <div class="result-item"><div class="label">HTML Length</div><div class="value">${d.html_length.toLocaleString()} bytes</div></div>
+    <div class="result-item"><div class="label">Cookies</div><div class="value">${d.cookies_count} cookies collected</div></div>
+  `;
+
+  const extracted = d.extracted && Object.keys(d.extracted).length > 0;
+  $('extracted-section').classList.toggle('hidden', !extracted);
+  if (extracted) $('extracted-json').textContent = JSON.stringify(d.extracted, null, 2);
+
+  const hasScreenshot = !!d.screenshot_base64;
+  $('screenshot-section').classList.toggle('hidden', !hasScreenshot);
+  if (hasScreenshot) $('screenshot-img').src = 'data:image/jpeg;base64,' + d.screenshot_base64;
+
+  lastHtml = d.html || '';
+  $('html-section').classList.add('hidden');
+  $('html-toggle').textContent = '▸ Show HTML preview';
+  $('html-preview').textContent = lastHtml.slice(0, 50000);
+}
+
+function toggleHtml() {
+  const s = $('html-section');
+  const hidden = s.classList.toggle('hidden');
+  $('html-toggle').textContent = hidden ? '▸ Show HTML preview' : '▾ Hide HTML preview';
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+checkHealth();
+loadProfiles();
+</script>
+</body>
+</html>

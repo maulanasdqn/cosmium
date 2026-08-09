@@ -15,6 +15,7 @@ use commands::build::BuildCmd;
 use commands::profile::ProfileCmd;
 use commands::run::RunCmd;
 use commands::scrape::ScrapeCmd;
+use commands::serve::ServeArgs;
 use commands::test::TestCmd;
 use state::CliState;
 
@@ -32,6 +33,7 @@ pub enum Command {
     Run(RunCmd),
     #[command(subcommand)]
     Scrape(ScrapeCmd),
+    Serve(ServeArgs),
     Build(BuildCmd),
     #[command(subcommand)]
     Test(TestCmd),
@@ -60,6 +62,7 @@ pub async fn run() -> Result<()> {
         Command::Profile(cmd) => commands::profile::execute(cmd, &state).await,
         Command::Run(cmd) => commands::run::execute(cmd, &state).await,
         Command::Scrape(cmd) => commands::scrape::execute(cmd, &state).await,
+        Command::Serve(args) => commands::serve::execute(args, &state).await,
         Command::Build(cmd) => commands::build::execute(cmd).await,
         Command::Test(cmd) => commands::test::execute(cmd, &state).await,
     }
