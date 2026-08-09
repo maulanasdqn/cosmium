@@ -62,7 +62,10 @@ fn hygiene_flags_present() {
 #[test]
 fn disable_features_includes_telemetry_surfaces() {
     let flags = profile_to_flags(&fixture());
-    let df = flags.iter().find(|f| f.starts_with("--disable-features=")).unwrap();
+    let df = flags
+        .iter()
+        .find(|f| f.starts_with("--disable-features="))
+        .unwrap();
     for feat in ["Translate", "PrivacySandboxAdsAPIs", "AcceptCHFrame"] {
         assert!(df.contains(feat), "--disable-features missing {feat}: {df}");
     }
@@ -78,28 +81,46 @@ fn audio_latency_switches_present() {
 #[test]
 fn canvas_seed_switch_present() {
     let flags = profile_to_flags(&fixture());
-    assert!(has(&flags, "--cosmium-canvas-seed="), "canvas seed required");
+    assert!(
+        has(&flags, "--cosmium-canvas-seed="),
+        "canvas seed required"
+    );
 }
 
 #[test]
 fn strip_automation_tells_is_opt_in() {
     let mut p = fixture();
     p.strip_automation_tells = false;
-    assert!(!profile_to_flags(&p).iter().any(|f| f == "--cosmium-strip-automation-tells"));
+    assert!(
+        !profile_to_flags(&p)
+            .iter()
+            .any(|f| f == "--cosmium-strip-automation-tells")
+    );
     p.strip_automation_tells = true;
-    assert!(profile_to_flags(&p).iter().any(|f| f == "--cosmium-strip-automation-tells"));
+    assert!(
+        profile_to_flags(&p)
+            .iter()
+            .any(|f| f == "--cosmium-strip-automation-tells")
+    );
 }
 
 #[test]
 fn webrtc_policy_passed_through() {
     let flags = profile_to_flags(&mac_fixture());
-    assert!(flags.iter().any(|f| f == "--force-webrtc-ip-handling-policy=default_public_interface_only"));
+    assert!(
+        flags
+            .iter()
+            .any(|f| f == "--force-webrtc-ip-handling-policy=default_public_interface_only")
+    );
 }
 
 #[test]
 fn chrome_version_switch_present_when_set() {
     let p = mac_fixture();
-    assert!(p.chrome_version.is_some(), "fixture should have chrome_version");
+    assert!(
+        p.chrome_version.is_some(),
+        "fixture should have chrome_version"
+    );
     let flags = profile_to_flags(&p);
     assert!(
         has(&flags, "--cosmium-chrome-version="),
@@ -112,7 +133,10 @@ fn chrome_version_rewrites_user_agent() {
     let mut p = mac_fixture();
     p.chrome_version = Some("151.0.7922.108".into());
     let flags = profile_to_flags(&p);
-    let ua = flags.iter().find(|f| f.starts_with("--user-agent=")).unwrap();
+    let ua = flags
+        .iter()
+        .find(|f| f.starts_with("--user-agent="))
+        .unwrap();
     assert!(
         ua.contains("Chrome/151.0.0.0"),
         "UA should contain spoofed Chrome/151.0.0.0, got: {ua}"
@@ -133,15 +157,24 @@ fn chrome_version_absent_when_none() {
         "no switch when chrome_version is None"
     );
     // UA should be unchanged
-    let ua = flags.iter().find(|f| f.starts_with("--user-agent=")).unwrap();
+    let ua = flags
+        .iter()
+        .find(|f| f.starts_with("--user-agent="))
+        .unwrap();
     assert!(ua.contains("Chrome/135"), "UA unchanged when no override");
 }
 
 #[test]
 fn audio_sample_rate_and_channels_present() {
     let flags = profile_to_flags(&fixture());
-    assert!(has(&flags, "--cosmium-audio-sample-rate="), "audio sample rate");
-    assert!(has(&flags, "--cosmium-audio-max-channels="), "audio max channels");
+    assert!(
+        has(&flags, "--cosmium-audio-sample-rate="),
+        "audio sample rate"
+    );
+    assert!(
+        has(&flags, "--cosmium-audio-max-channels="),
+        "audio max channels"
+    );
 }
 
 #[test]

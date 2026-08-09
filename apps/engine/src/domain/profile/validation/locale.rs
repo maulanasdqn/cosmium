@@ -91,9 +91,7 @@ pub(super) fn voice_defaults(p: &Profile) -> Vec<Diagnostic> {
     if default_count > 1 {
         return vec![Diagnostic::err(
             "voices",
-            format!(
-                "{default_count} voices have default=true — exactly one must be the default"
-            ),
+            format!("{default_count} voices have default=true — exactly one must be the default"),
         )];
     }
     vec![]

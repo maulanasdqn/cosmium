@@ -155,9 +155,7 @@ async fn verify_xcode() -> Result<()> {
         .output()
         .await?;
     if !out.status.success() {
-        anyhow::bail!(
-            "Xcode not found — install via: xcode-select --install"
-        );
+        anyhow::bail!("Xcode not found — install via: xcode-select --install");
     }
     tracing::info!("Xcode detected");
     Ok(())

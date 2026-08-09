@@ -24,6 +24,13 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Chromium CIPD/GCS tooling artifacts
+/.cipd/
+/.gcs_entries
+
+# Release tarballs
+*.tar.gz
+
 # Patch authoring scratch
 /patches/.scratch/
 /patches/*.rej

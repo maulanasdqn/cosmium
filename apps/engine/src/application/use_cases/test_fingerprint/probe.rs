@@ -125,11 +125,7 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             "String(window.devicePixelRatio)",
             &p.screen.device_pixel_ratio.to_string(),
         ),
-        simple(
-            "user_agent",
-            "navigator.userAgent",
-            &p.identity.user_agent,
-        ),
+        simple("user_agent", "navigator.userAgent", &p.identity.user_agent),
     ];
     probes.shrink_to_fit();
     probes

@@ -8,8 +8,7 @@ use super::features::{disable_features_list, webrtc_flags};
 fn rewrite_ua_version(ua: &str, full_version: &str) -> String {
     let major = full_version.split('.').next().unwrap_or(full_version);
     // Chrome reduced UA uses "Chrome/MAJOR.0.0.0"
-    let chrome_re =
-        regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+").unwrap();
+    let chrome_re = regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+").unwrap();
     let out = chrome_re.replace(ua, format!("Chrome/{major}.0.0.0"));
     out.into_owned()
 }
@@ -73,8 +72,7 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     let voices_json = serde_json::to_string(&p.voices).unwrap_or_default();
     f.push(format!("--cosmium-voices={voices_json}"));
     f.push(format!("--cosmium-fonts={}", p.fonts.installed.join(",")));
-    let devices_json =
-        serde_json::to_string(&p.media_devices).unwrap_or_default();
+    let devices_json = serde_json::to_string(&p.media_devices).unwrap_or_default();
     f.push(format!("--cosmium-media-devices={devices_json}"));
     f.push(format!("--cosmium-avail-left={}", p.screen.avail_left));
     f.push(format!("--cosmium-avail-top={}", p.screen.avail_top));
