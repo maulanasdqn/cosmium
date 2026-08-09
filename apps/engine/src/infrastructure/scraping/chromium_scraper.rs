@@ -56,16 +56,16 @@ impl ChromiumScraper {
 
         let watcher = StatusWatcher::attach(&page).await;
 
-        let nav_timeout = if request.wait_ms > 0 {
-            Duration::from_millis(u64::from(request.wait_ms))
-        } else {
-            Duration::from_secs(DEFAULT_NAV_TIMEOUT_SECS)
-        };
+        let nav_timeout = Duration::from_secs(DEFAULT_NAV_TIMEOUT_SECS);
 
         tokio::time::timeout(nav_timeout, page.goto(&request.url))
             .await
             .map_err(|_| ScrapeError::NavigationTimeout(nav_timeout.as_millis() as u64))?
             .map_err(|e| ScrapeError::Connection(e.to_string()))?;
+
+        if request.wait_ms > 0 {
+            tokio::time::sleep(Duration::from_millis(u64::from(request.wait_ms))).await;
+        }
 
         let past_challenge = wait_past_challenge(&page, nav_timeout).await;
 

@@ -56,6 +56,13 @@ impl ScrapePage {
             flags.push("--headless=new".into());
         }
 
+        if !flags
+            .iter()
+            .any(|f| f.contains("cosmium-strip-automation-tells"))
+        {
+            flags.push("--cosmium-strip-automation-tells".into());
+        }
+
         let endpoint = self
             .session
             .launch_with_cdp(
