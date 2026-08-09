@@ -1,0 +1,79 @@
+# cosmium patch: 0022-spoof-battery-status-api
+# Authored: 2026-08-09
+# Chromium base: see ../VERSION
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/modules/battery/battery_manager.cc
+# - what changed: Override the BatteryManager JS getters (charging,
+#                 chargingTime, dischargingTime, level) to return values
+#                 from command-line switches when present.  A real desktop
+#                 user has a fluctuating battery; returning the default
+#                 "charging=true, level=1.0" is a tell for headless/VM.
+# - profile fields read: hardware.battery.{charging, level,
+#                         charging_time_seconds, discharging_time_seconds}
+#   mapped to: --cosmium-battery-charging, --cosmium-battery-level,
+#              --cosmium-battery-charging-time, --cosmium-battery-discharging-time
+# - test: navigator.getBattery().then(b => console.log(b.level, b.charging))
+diff --git a/third_party/blink/renderer/modules/battery/battery_manager.cc b/third_party/blink/renderer/modules/battery/battery_manager.cc
+index abcdef1234..5678abcdef 100644
+--- a/third_party/blink/renderer/modules/battery/battery_manager.cc
++++ b/third_party/blink/renderer/modules/battery/battery_manager.cc
+@@ -5,6 +5,9 @@
+ #include "third_party/blink/renderer/modules/battery/battery_manager.h"
+
++#include <cmath>
++
++#include "base/command_line.h"
++#include "base/strings/string_number_conversions.h"
+ #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink.h"
+ #include "third_party/blink/renderer/core/dom/dom_exception.h"
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+@@ -82,19 +85,51 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
+
+ bool BatteryManager::charging() {
++  // Cosmium: spoof battery charging state from profile.
++  const auto* cmd = base::CommandLine::ForCurrentProcess();
++  if (cmd->HasSwitch("cosmium-battery-charging"))
++    return cmd->GetSwitchValueASCII("cosmium-battery-charging") == "true";
+   return battery_status_.Charging();
+ }
+
+ double BatteryManager::chargingTime() {
++  // Cosmium: spoof battery charging time from profile.
++  const auto* cmd = base::CommandLine::ForCurrentProcess();
++  if (cmd->HasSwitch("cosmium-battery-charging-time")) {
++    std::string s = cmd->GetSwitchValueASCII("cosmium-battery-charging-time");
++    if (s == "Infinity")
++      return std::numeric_limits<double>::infinity();
++    double val;
++    if (base::StringToDouble(s, &val))
++      return val;
++  }
+   return battery_status_.charging_time().InSecondsF();
+ }
+
+ double BatteryManager::dischargingTime() {
++  // Cosmium: spoof battery discharging time from profile.
++  const auto* cmd = base::CommandLine::ForCurrentProcess();
++  if (cmd->HasSwitch("cosmium-battery-discharging-time")) {
++    std::string s = cmd->GetSwitchValueASCII("cosmium-battery-discharging-time");
++    if (s == "Infinity")
++      return std::numeric_limits<double>::infinity();
++    double val;
++    if (base::StringToDouble(s, &val))
++      return val;
++  }
+   return battery_status_.discharging_time().InSecondsF();
+ }
+
+ double BatteryManager::level() {
++  // Cosmium: spoof battery level from profile.
++  const auto* cmd = base::CommandLine::ForCurrentProcess();
++  if (cmd->HasSwitch("cosmium-battery-level")) {
++    double val;
++    if (base::StringToDouble(
++            cmd->GetSwitchValueASCII("cosmium-battery-level"), &val))
++      return val;
++  }
+   return battery_status_.Level();
+ }

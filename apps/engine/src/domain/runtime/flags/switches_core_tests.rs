@@ -183,3 +183,31 @@ fn screen_avail_switches_present() {
     assert!(has(&flags, "--cosmium-avail-left="), "avail_left");
     assert!(has(&flags, "--cosmium-avail-top="), "avail_top");
 }
+
+#[test]
+fn battery_switches_present_when_set() {
+    let p = mac_fixture();
+    assert!(p.hardware.battery.is_some(), "fixture should have battery");
+    let flags = profile_to_flags(&p);
+    assert!(has(&flags, "--cosmium-battery-charging="), "charging");
+    assert!(has(&flags, "--cosmium-battery-level="), "level");
+    assert!(
+        has(&flags, "--cosmium-battery-charging-time="),
+        "charging_time"
+    );
+    assert!(
+        has(&flags, "--cosmium-battery-discharging-time="),
+        "discharging_time"
+    );
+}
+
+#[test]
+fn battery_switches_absent_when_none() {
+    let mut p = mac_fixture();
+    p.hardware.battery = None;
+    let flags = profile_to_flags(&p);
+    assert!(
+        !has(&flags, "--cosmium-battery-"),
+        "no battery switches when battery is None"
+    );
+}

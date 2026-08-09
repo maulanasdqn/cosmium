@@ -94,6 +94,18 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     if let Some(ver) = &p.chrome_version {
         f.push(format!("--cosmium-chrome-version={ver}"));
     }
+    if let Some(bat) = &p.hardware.battery {
+        f.push(format!("--cosmium-battery-charging={}", bat.charging));
+        f.push(format!("--cosmium-battery-level={}", bat.level));
+        match bat.charging_time_seconds {
+            Some(t) => f.push(format!("--cosmium-battery-charging-time={t}")),
+            None => f.push("--cosmium-battery-charging-time=Infinity".into()),
+        }
+        match bat.discharging_time_seconds {
+            Some(t) => f.push(format!("--cosmium-battery-discharging-time={t}")),
+            None => f.push("--cosmium-battery-discharging-time=Infinity".into()),
+        }
+    }
     f.push(format!("--disable-features={}", disable_features_list()));
     f.push("--no-default-browser-check".into());
     f.push("--no-first-run".into());
