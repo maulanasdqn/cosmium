@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use chromiumoxide::browser::Browser;
-use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
+use chromiumoxide::cdp::browser_protocol::page::{
+    AddScriptToEvaluateOnNewDocumentParams, CaptureScreenshotFormat,
+};
 use chromiumoxide::page::ScreenshotParams;
 use futures_util::StreamExt;
 
@@ -14,6 +16,7 @@ use crate::domain::scraping::request::ScrapeRequest;
 use super::challenge::wait_past_challenge;
 use super::cookies;
 use super::settle::{SettleWindow, wait_for_stable_content};
+use super::stealth;
 use super::status::StatusWatcher;
 use super::workflow;
 
@@ -53,6 +56,12 @@ impl ChromiumScraper {
             .new_page("about:blank")
             .await
             .map_err(|e| ScrapeError::Connection(e.to_string()))?;
+
+        let stealth_cmd =
+            AddScriptToEvaluateOnNewDocumentParams::new(stealth::STEALTH_SCRIPT);
+        if let Err(e) = page.execute(stealth_cmd).await {
+            tracing::warn!(error = %e, "stealth script injection failed");
+        }
 
         let watcher = StatusWatcher::attach(&page).await;
 

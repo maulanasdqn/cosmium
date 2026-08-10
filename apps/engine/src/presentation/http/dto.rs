@@ -44,3 +44,33 @@ pub struct ProfileListResponse {
 pub struct ErrorResponse {
     pub error: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct GenerateProfileRequest {
+    pub persona: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenerateProfileResponse {
+    pub profile: serde_json::Value,
+    pub diagnostics: Vec<DiagnosticDto>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DiagnosticDto {
+    pub severity: String,
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SaveProfileRequest {
+    pub name: String,
+    pub profile: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SaveProfileResponse {
+    pub saved: String,
+}
