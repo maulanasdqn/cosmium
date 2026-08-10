@@ -2,12 +2,8 @@ use crate::domain::profile::Profile;
 
 use super::features::{disable_features_list, webrtc_flags};
 
-/// Rewrite `Chrome/X.Y.Z.W` inside a User-Agent string to use the given
-/// full version.  Also patches `Safari/X.Y.Z.W` → `Safari/537.36` (Chrome
-/// always sends this fixed value, so a stale numeric slip is a tell).
 fn rewrite_ua_version(ua: &str, full_version: &str) -> String {
     let major = full_version.split('.').next().unwrap_or(full_version);
-    // Chrome reduced UA uses "Chrome/MAJOR.0.0.0"
     let chrome_re = regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+").unwrap();
     let out = chrome_re.replace(ua, format!("Chrome/{major}.0.0.0"));
     out.into_owned()
@@ -16,8 +12,6 @@ fn rewrite_ua_version(ua: &str, full_version: &str) -> String {
 pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     let mut f = Vec::new();
 
-    // If chrome_version is set, rewrite the UA string on the fly so the
-    // HTTP User-Agent header and Sec-CH-UA headers all agree.
     let ua = match &p.chrome_version {
         Some(ver) => rewrite_ua_version(&p.identity.user_agent, ver),
         None => p.identity.user_agent.clone(),
@@ -84,9 +78,6 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         "--force-device-scale-factor={}",
         p.screen.device_pixel_ratio
     ));
-    // AutomationControlled is now disabled at source level (patch 0013),
-    // so the --disable-blink-features flag is no longer needed and would
-    // trigger a "bad flags" infobar that leaks in the DOM.
     if p.strip_automation_tells {
         f.push("--cosmium-strip-automation-tells".into());
     }
@@ -126,6 +117,10 @@ pub(super) fn primary_lang(langs: &[String]) -> &str {
 #[cfg(test)]
 #[path = "switches_core_tests.rs"]
 mod core_tests;
+
+#[cfg(test)]
+#[path = "switches_battery_tests.rs"]
+mod battery_tests;
 
 #[cfg(test)]
 #[path = "switches_serial_tests.rs"]

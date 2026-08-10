@@ -42,9 +42,6 @@ fn webgl_renderer_passed_through() {
 #[test]
 fn hygiene_flags_present() {
     let flags = profile_to_flags(&fixture());
-    // Note: --disable-blink-features=AutomationControlled was removed after
-    // patch 0013 disabled AutomationControlled at source level, and patch 0014
-    // suppresses the bad-flags infobar that the flag used to trigger.
     for w in [
         "--no-default-browser-check",
         "--no-first-run",
@@ -156,7 +153,6 @@ fn chrome_version_absent_when_none() {
         !has(&flags, "--cosmium-chrome-version="),
         "no switch when chrome_version is None"
     );
-    // UA should be unchanged
     let ua = flags
         .iter()
         .find(|f| f.starts_with("--user-agent="))
@@ -182,32 +178,4 @@ fn screen_avail_switches_present() {
     let flags = profile_to_flags(&mac_fixture());
     assert!(has(&flags, "--cosmium-avail-left="), "avail_left");
     assert!(has(&flags, "--cosmium-avail-top="), "avail_top");
-}
-
-#[test]
-fn battery_switches_present_when_set() {
-    let p = mac_fixture();
-    assert!(p.hardware.battery.is_some(), "fixture should have battery");
-    let flags = profile_to_flags(&p);
-    assert!(has(&flags, "--cosmium-battery-charging="), "charging");
-    assert!(has(&flags, "--cosmium-battery-level="), "level");
-    assert!(
-        has(&flags, "--cosmium-battery-charging-time="),
-        "charging_time"
-    );
-    assert!(
-        has(&flags, "--cosmium-battery-discharging-time="),
-        "discharging_time"
-    );
-}
-
-#[test]
-fn battery_switches_absent_when_none() {
-    let mut p = mac_fixture();
-    p.hardware.battery = None;
-    let flags = profile_to_flags(&p);
-    assert!(
-        !has(&flags, "--cosmium-battery-"),
-        "no battery switches when battery is None"
-    );
 }

@@ -16,8 +16,8 @@ use crate::domain::scraping::request::ScrapeRequest;
 use super::challenge::wait_past_challenge;
 use super::cookies;
 use super::settle::{SettleWindow, wait_for_stable_content};
-use super::stealth;
 use super::status::StatusWatcher;
+use super::stealth;
 use super::workflow;
 
 const DEFAULT_NAV_TIMEOUT_SECS: u64 = 30;
@@ -57,8 +57,7 @@ impl ChromiumScraper {
             .await
             .map_err(|e| ScrapeError::Connection(e.to_string()))?;
 
-        let stealth_cmd =
-            AddScriptToEvaluateOnNewDocumentParams::new(stealth::STEALTH_SCRIPT);
+        let stealth_cmd = AddScriptToEvaluateOnNewDocumentParams::new(stealth::STEALTH_SCRIPT);
         if let Err(e) = page.execute(stealth_cmd).await {
             tracing::warn!(error = %e, "stealth script injection failed");
         }

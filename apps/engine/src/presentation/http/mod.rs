@@ -1,5 +1,6 @@
 pub mod dto;
 pub mod handlers;
+pub mod handlers_scrape;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -50,7 +51,7 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/profiles/{name}", get(handlers::get_profile))
         .route("/v1/profiles/generate", post(handlers::generate_profile))
         .route("/v1/profiles/save", post(handlers::save_profile))
-        .route("/v1/scrape", post(handlers::scrape))
+        .route("/v1/scrape", post(handlers_scrape::scrape))
         .layer(auth_middleware);
 
     let api = Router::new()
