@@ -1,8 +1,8 @@
 diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
-index 2bc557c1d9..d21ba6535c 100644
+index 2bc557c1d9..07cfb88fa2 100644
 --- a/content/browser/renderer_host/render_process_host_impl.cc
 +++ b/content/browser/renderer_host/render_process_host_impl.cc
-@@ -3345,6 +3345,28 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+@@ -3345,6 +3345,34 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
    // Propagate the following switches to the renderer command line (along
    // with any associated values) if present in the browser command line.
    static const char* const kSwitchNames[] = {
@@ -28,6 +28,12 @@ index 2bc557c1d9..d21ba6535c 100644
 +      "cosmium-battery-level",
 +      "cosmium-battery-charging-time",
 +      "cosmium-battery-discharging-time",
++      "cosmium-screen-width",
++      "cosmium-screen-height",
++      "cosmium-screen-avail-width",
++      "cosmium-screen-avail-height",
++      "cosmium-screen-avail-left",
++      "cosmium-screen-avail-top",
        switches::kDisableInProcessStackTraces,
        sandbox::policy::switches::kDisableSeccompFilterSandbox,
        sandbox::policy::switches::kNoSandbox,

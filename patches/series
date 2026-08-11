@@ -25,3 +25,4 @@
 0025-spoof-ua-platform-at-source-not-accessor.patch
 0026-allow-unsafe-buffers-in-noise-patches.patch
 0027-keep-timezone-override-across-monitor-push.patch
+0028-spoof-screen-dimensions.patch

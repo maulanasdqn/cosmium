@@ -53,6 +53,9 @@ probes=(
   "screen_dpr|devicePixelRatio matches profile|String(window.devicePixelRatio)|^\${screen.device_pixel_ratio}$"
   "screen_w|screen.width matches profile|String(screen.width)|^\${screen.width}$"
   "screen_h|screen.height matches profile|String(screen.height)|^\${screen.height}$"
+  "screen_avail_w|screen.availWidth matches profile|String(screen.availWidth)|^\${screen.avail_width}$"
+  "screen_avail_h|screen.availHeight matches profile|String(screen.availHeight)|^\${screen.avail_height}$"
+  "screen_avail_lte|availHeight must not exceed height|String(screen.availHeight <= screen.height)|^true$"
   "color_depth|screen.colorDepth matches profile|String(screen.colorDepth)|^\${screen.color_depth}$"
   "audio_sr|AudioContext sampleRate matches profile|String(new AudioContext().sampleRate)|^\${audio.sample_rate}$"
 )
@@ -164,6 +167,12 @@ mapfile -t cosmium_flags < <(jq -r '
     "--cosmium-device-memory=\(.hardware.device_memory_gb)",
     "--cosmium-max-touch-points=\(.hardware.max_touch_points)",
     "--cosmium-color-depth=\(.screen.color_depth)",
+    "--cosmium-screen-width=\(.screen.width)",
+    "--cosmium-screen-height=\(.screen.height)",
+    "--cosmium-screen-avail-width=\(.screen.avail_width)",
+    "--cosmium-screen-avail-height=\(.screen.avail_height)",
+    "--cosmium-screen-avail-left=\(.screen.avail_left)",
+    "--cosmium-screen-avail-top=\(.screen.avail_top)",
     "--cosmium-webgl-vendor=\(.gpu.vendor)",
     "--cosmium-webgl-renderer=\(.gpu.renderer)"
   ] | .[]' "${PROFILE}")
