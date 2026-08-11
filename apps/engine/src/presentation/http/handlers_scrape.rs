@@ -35,6 +35,7 @@ pub async fn scrape(
         workflow,
         proxy,
         headful: req.headful,
+        wait_for_api: req.wait_for_api,
     };
 
     let result = uc.execute(input).await.map_err(|e| {

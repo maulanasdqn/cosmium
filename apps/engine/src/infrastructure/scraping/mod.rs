@@ -4,6 +4,7 @@ pub mod chromium_scraper;
 pub mod cookies;
 pub mod datadome;
 pub mod fetch;
+pub mod network;
 pub mod proxy;
 pub mod settle;
 pub mod status;

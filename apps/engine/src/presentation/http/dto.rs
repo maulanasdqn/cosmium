@@ -16,6 +16,7 @@ pub struct ScrapeRequest {
     pub proxy: Option<String>,
     #[serde(default)]
     pub include_html: bool,
+    pub wait_for_api: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

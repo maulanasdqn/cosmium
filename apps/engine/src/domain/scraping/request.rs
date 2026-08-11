@@ -9,6 +9,7 @@ pub struct ScrapeRequest {
     pub screenshot: bool,
     pub workflow: Vec<WorkflowStep>,
     pub proxy: Option<ProxyConfig>,
+    pub wait_for_api: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

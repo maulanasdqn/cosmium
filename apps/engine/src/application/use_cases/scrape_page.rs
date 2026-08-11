@@ -29,6 +29,7 @@ pub struct ScrapePageInput {
     pub workflow: Vec<WorkflowStep>,
     pub proxy: Option<ProxyConfig>,
     pub headful: bool,
+    pub wait_for_api: Option<String>,
 }
 
 pub struct ScrapePageOutput {
@@ -104,6 +105,7 @@ impl ScrapePage {
             screenshot: input.screenshot,
             workflow: input.workflow,
             proxy: input.proxy,
+            wait_for_api: input.wait_for_api,
         };
 
         let page = scraper

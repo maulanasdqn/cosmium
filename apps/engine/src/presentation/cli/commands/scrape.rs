@@ -51,6 +51,9 @@ pub struct ScrapePageArgs {
 
     #[arg(long, default_value_t = 0)]
     pub retries: u32,
+
+    #[arg(long)]
+    pub wait_for_api: Option<String>,
 }
 
 pub async fn execute(cmd: ScrapeCmd, state: &CliState) -> Result<()> {
@@ -97,6 +100,7 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
             workflow: workflow.clone(),
             proxy: proxy.clone(),
             headful: args.headful,
+            wait_for_api: args.wait_for_api.clone(),
         };
         let r = uc.execute(input).await?;
         if !r.blocked || attempt == max_attempts {
@@ -121,26 +125,26 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
     }
 
     if result.blocked {
-        eprintln!("warning: page appears to be blocked");
+        tracing::warn!("page appears to be blocked");
     }
 
     if let Some(dir) = &args.output_dir {
         std::fs::create_dir_all(dir)?;
         let html_path = dir.join("page.html");
         std::fs::write(&html_path, &result.page.html)?;
-        eprintln!("saved html to {}", html_path.display());
+        tracing::info!(path = %html_path.display(), "saved html");
 
         if !result.page.screenshot.is_empty() {
             let ss_path = dir.join("screenshot.jpg");
             std::fs::write(&ss_path, &result.page.screenshot)?;
-            eprintln!("saved screenshot to {}", ss_path.display());
+            tracing::info!(path = %ss_path.display(), "saved screenshot");
         }
 
         if !result.page.cookies.is_empty() {
             let cookies_path = dir.join("cookies.json");
             let cookies_json = serde_json::to_string_pretty(&result.page.cookies)?;
             std::fs::write(&cookies_path, cookies_json)?;
-            eprintln!("saved cookies to {}", cookies_path.display());
+            tracing::info!(path = %cookies_path.display(), "saved cookies");
         }
     }
 
