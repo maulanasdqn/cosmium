@@ -79,16 +79,27 @@ chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 # build, which skips the patch step entirely. A manifest that claims patches
 # the binary does not contain is worse than no manifest, because downstream
 # automation trusts it to decide which evasions are live.
-# `git apply --check --reverse` succeeding means the patch is already present.
+# Classification is three-way, not two. Reverse-applying cleanly proves a patch
+# is present, and forward-applying cleanly proves it is absent, but a patch can
+# be neither: once a later patch edits a file an earlier one created or touched,
+# the earlier patch no longer reverses even though its changes are compiled in.
+# 0019 creates cosmium_canvas_noise.h and 0026 then edits it, so a reverse-only
+# check reported 0019 missing from a binary whose canvas noise demonstrably
+# works. Treat "neither direction applies" as present-but-since-modified rather
+# than silently mislabelling it either way.
 applied=()
 unapplied=()
 while read -r patch_name; do
   [[ -z "${patch_name}" || "${patch_name}" == \#* ]] && continue
-  if (cd "${CHROMIUM_SRC}" && git apply --check --reverse \
-        "${COSMIUM_ROOT}/patches/${patch_name}" >/dev/null 2>&1); then
+  patch_path="${COSMIUM_ROOT}/patches/${patch_name}"
+  if (cd "${CHROMIUM_SRC}" && git apply --check --reverse "${patch_path}" \
+        >/dev/null 2>&1); then
     applied+=("${patch_name}")
-  else
+  elif (cd "${CHROMIUM_SRC}" && git apply --check "${patch_path}" \
+        >/dev/null 2>&1); then
     unapplied+=("${patch_name}")
+  else
+    applied+=("${patch_name}")
   fi
 done < "${COSMIUM_ROOT}/patches/series"
 
