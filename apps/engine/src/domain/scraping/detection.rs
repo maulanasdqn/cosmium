@@ -19,16 +19,18 @@ const WALL_URL_MARKERS: [&str; 7] = [
     "/blocked",
 ];
 
-const CHALLENGE_MARKERS: [&str; 11] = [
+const CHALLENGE_MARKERS: [&str; 13] = [
     "just a moment",
     "checking your browser",
     "ddos protection",
     "verify you are human",
+    "confirm you are human",
     "attention required",
     "acceso ha sido denegado",
     "access denied",
     "press & hold",
     "captcha-delivery.com",
+    "awswaf.com",
     "please enable js and disable any ad blocker",
     "access is temporarily restricted",
 ];

@@ -28,18 +28,17 @@ impl ChromiumScraper {
             datadome::preseed_cookies(&page, &host, &session_dir).await;
         }
 
-        warmup::warmup_homepage(&page, &request.url).await;
-        self.handle_homepage_datadome(&page).await;
-
-        if let Some(host) = datadome::url_host(&request.url) {
-            datadome::save_cookies(&page, &host, &session_dir).await;
-        }
-
         let api_capture = match &request.wait_for_api {
-            Some(pattern) => ApiCapture::start(&page, pattern).await,
+            Some(pattern) => {
+                tracing::info!("enabling API capture before warmup");
+                ApiCapture::start(&page, pattern).await
+            }
             None => None,
         };
-        let need_navigation = api_capture.is_some();
+
+        warmup::warmup_homepage(&page, &request.url).await;
+
+        let need_navigation = request.wait_for_api.is_some();
 
         if !need_navigation {
             if let Some(fetched_html) = fetch::in_page_fetch(&page, &request.url).await {
@@ -122,36 +121,5 @@ impl ChromiumScraper {
             user_agent,
             script_results,
         })
-    }
-
-    async fn handle_homepage_datadome(&self, page: &chromiumoxide::Page) {
-        let home_html = warmup::cdp_content_timeout(page, Duration::from_secs(10)).await;
-        match &home_html {
-            Some(html) => {
-                let v = datadome::classify(html);
-                match &v {
-                    datadome::DdVerdict::Clean => {
-                        tracing::info!("homepage clean");
-                    }
-                    datadome::DdVerdict::SoftChallenge => {
-                        tracing::info!("homepage has DataDome challenge, waiting for c.js");
-                        let ic = datadome::get_dd_cookie_value(page).await;
-                        let resolved =
-                            datadome::wait_for_challenge_js(page, ic.as_deref()).await;
-                        if matches!(resolved, datadome::DdVerdict::Clean) {
-                            tracing::info!("DataDome challenge resolved");
-                        }
-                    }
-                    datadome::DdVerdict::HardBlock => {
-                        tracing::warn!("homepage hard-blocked by DataDome");
-                    }
-                }
-            }
-            None => {
-                tracing::info!("page.content() timed out, using cookie-based DataDome detection");
-                let ic = datadome::get_dd_cookie_value(page).await;
-                datadome::wait_for_challenge_js(page, ic.as_deref()).await;
-            }
-        };
     }
 }

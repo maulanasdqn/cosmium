@@ -7,8 +7,8 @@ use super::behavior::mouse;
 use super::behavior::scroll;
 
 const NAV_TIMEOUT: Duration = Duration::from_secs(20);
-const SETTLE: Duration = Duration::from_secs(3);
-const CHALLENGE_BUDGET: Duration = Duration::from_secs(20);
+const COOKIE_POLL: Duration = Duration::from_secs(2);
+const COOKIE_BUDGET: Duration = Duration::from_secs(30);
 const POST_WARMUP_PAUSE_MS: u64 = 3000;
 
 pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
@@ -16,16 +16,21 @@ pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
         return false;
     };
     tracing::info!(url = %home, "warming up homepage");
+
+    let initial_cookie = get_datadome_cookie(page).await;
     navigate(page, &home).await;
     tracing::debug!("homepage loaded, settling 3s");
     tokio::time::sleep(Duration::from_secs(3)).await;
+
     tracing::debug!("simulating mouse/scroll presence");
     match tokio::time::timeout(Duration::from_secs(15), simulate_presence(page)).await {
         Ok(()) => tracing::debug!("mouse/scroll simulation done"),
         Err(_) => tracing::debug!("mouse/scroll simulation timed out (15s), continuing"),
     }
-    tracing::debug!("waiting for warmup challenge to clear");
-    wait_until_clean(page).await;
+
+    tracing::debug!("waiting for DataDome cookie to rotate (c.js)");
+    wait_for_cookie_rotation(page, initial_cookie.as_deref()).await;
+
     let extra = { rand::rng().random_range(0..1500) as u64 };
     tracing::debug!(pause_ms = POST_WARMUP_PAUSE_MS + extra, "post-warmup pause");
     tokio::time::sleep(Duration::from_millis(POST_WARMUP_PAUSE_MS + extra)).await;
@@ -91,32 +96,56 @@ async fn simulate_presence(page: &Page) {
     tokio::time::sleep(Duration::from_millis(final_pause)).await;
 }
 
-async fn wait_until_clean(page: &Page) {
+async fn wait_for_cookie_rotation(page: &Page, initial: Option<&str>) {
     let start = Instant::now();
-    loop {
-        tokio::time::sleep(SETTLE).await;
-        let html = match tokio::time::timeout(Duration::from_secs(10), page.content()).await {
-            Ok(Ok(h)) => h,
-            Ok(Err(_)) => {
-                tracing::debug!("warmup page.content() error");
+    let initial_val = initial.unwrap_or_default().to_owned();
+
+    let page_url = page.url().await.ok().flatten();
+    let explicit_urls = page_url
+        .as_ref()
+        .map(|u| vec![u.clone()]);
+
+    while start.elapsed() < COOKIE_BUDGET {
+        tokio::time::sleep(COOKIE_POLL).await;
+        let cookie = get_datadome_cookie_for_urls(page, explicit_urls.clone()).await;
+        if let Some(ref current) = cookie {
+            if *current != initial_val {
+                tracing::info!("DataDome cookie rotated — c.js resolved");
+                tokio::time::sleep(Duration::from_secs(2)).await;
                 return;
             }
-            Err(_) => {
-                tracing::debug!("warmup page.content() timed out");
-                return;
-            }
-        };
-        if !crate::domain::scraping::detection::is_challenge_page(&html) {
-            tracing::debug!("warmup page clean — no challenge detected");
-            return;
         }
         let elapsed = start.elapsed().as_secs();
-        tracing::debug!(elapsed, "warmup challenge still present");
-        if start.elapsed() >= CHALLENGE_BUDGET {
-            tracing::debug!("warmup challenge budget exhausted, proceeding");
-            return;
+        if elapsed % 10 == 0 && elapsed > 0 {
+            tracing::debug!(elapsed, "waiting for DataDome cookie rotation");
         }
     }
+    tracing::warn!("DataDome cookie did not rotate within budget (30s)");
+}
+
+async fn get_datadome_cookie(page: &Page) -> Option<String> {
+    get_datadome_cookie_for_urls(page, None).await
+}
+
+async fn get_datadome_cookie_for_urls(
+    page: &Page,
+    urls: Option<Vec<String>>,
+) -> Option<String> {
+    use chromiumoxide::cdp::browser_protocol::network::GetCookiesParams;
+
+    let mut params = GetCookiesParams::default();
+    params.urls = urls;
+    let timeout = Duration::from_secs(5);
+    let result = match tokio::time::timeout(timeout, page.execute(params)).await {
+        Ok(Ok(resp)) => resp,
+        _ => return None,
+    };
+    result
+        .result
+        .cookies
+        .iter()
+        .find(|c| c.name == "datadome")
+        .map(|c| c.value.clone())
 }
 
 pub async fn cdp_content_timeout(page: &Page, timeout: Duration) -> Option<String> {

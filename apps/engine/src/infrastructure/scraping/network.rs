@@ -22,8 +22,17 @@ struct CapturedRequest {
 
 impl ApiCapture {
     pub async fn start(page: &Page, url_pattern: &str) -> Option<Self> {
-        page.execute(EnableParams::default()).await.ok()?;
-        let mut listener = page.event_listener::<EventResponseReceived>().await.ok()?;
+        if let Err(e) = page.execute(EnableParams::default()).await {
+            tracing::warn!(error = %e, "failed to enable CDP Network domain");
+            return None;
+        }
+        let mut listener = match page.event_listener::<EventResponseReceived>().await {
+            Ok(l) => l,
+            Err(e) => {
+                tracing::warn!(error = %e, "failed to attach response listener");
+                return None;
+            }
+        };
 
         let pattern = url_pattern.to_owned();
         let captured = Arc::new(Mutex::new(Vec::new()));
