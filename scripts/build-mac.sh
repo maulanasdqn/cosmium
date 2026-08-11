@@ -20,7 +20,13 @@ TARBALL_PATH="${TARBALL_DIR}/chromium-${VERSION}.tar.xz"
 SRC_DIR="${COSMIUM_ROOT}/src"
 PATCHES_DIR="${COSMIUM_ROOT}/patches"
 ARGS_GN="${COSMIUM_ROOT}/.config/args.mac-arm64.gn"
-BUILD_OUT="${SRC_DIR}/out/Default"
+
+# BUILD_OUT comes from the shared config so this script, 04-build.sh,
+# 05-package.sh, test-fingerprint.sh and the Rust CLI's COSMIUM_BUILD_OUT all
+# agree on one directory. It used to be hardcoded to src/out/Default, which no
+# other tool looked in. Override it per-machine in .env, not here.
+# shellcheck source=../.config/chromium.env
+source "${COSMIUM_ROOT}/.config/chromium.env"
 JOBS="${JOBS:-$(( $(sysctl -n hw.ncpu) - 2 ))}"
 
 # ── Parse args ──────────────────────────────────────────
