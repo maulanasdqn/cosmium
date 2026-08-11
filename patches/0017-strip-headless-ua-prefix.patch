@@ -2,20 +2,6 @@ diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedd
 index 64f9e50f60..04e0e31fe4 100644
 --- a/components/embedder_support/user_agent_utils.cc
 +++ b/components/embedder_support/user_agent_utils.cc
-@@ -184,10 +184,9 @@ const blink::UserAgentBrandList GetUserAgentBrandList(
-   int major_version_number;
-   bool parse_result = base::StringToInt(major_version, &major_version_number);
-   DCHECK(parse_result);
--  std::optional<std::string> brand;
--#if !BUILDFLAG(CHROMIUM_BRANDING)
--  brand = version_info::GetProductName();
--#endif
-+  // Cosmium: always report "Google Chrome" as a brand so Sec-CH-UA matches
-+  // real Chrome and doesn't trigger bot-detection on missing brand.
-+  std::optional<std::string> brand = "Google Chrome";
- 
-   std::string brand_version =
-       output_version_type == blink::UserAgentBrandVersionType::kFullVersion
 @@ -228,9 +227,11 @@ const blink::UserAgentBrandList GetUserAgentBrandFullVersionListInternal(
  std::string GetUserAgentInternal(
      UserAgentReductionEnterprisePolicyState user_agent_reduction) {

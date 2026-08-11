@@ -18,7 +18,7 @@ diff --git a/third_party/blink/renderer/modules/battery/battery_manager.cc b/thi
 index abcdef1234..5678abcdef 100644
 --- a/third_party/blink/renderer/modules/battery/battery_manager.cc
 +++ b/third_party/blink/renderer/modules/battery/battery_manager.cc
-@@ -5,6 +5,9 @@
+@@ -5,5 +5,9 @@
  #include "third_party/blink/renderer/modules/battery/battery_manager.h"
 
 +#include <cmath>
@@ -28,7 +28,7 @@ index abcdef1234..5678abcdef 100644
  #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink.h"
  #include "third_party/blink/renderer/core/dom/dom_exception.h"
  #include "third_party/blink/renderer/core/dom/events/event.h"
-@@ -82,19 +85,51 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
+@@ -82,16 +85,48 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
 
  bool BatteryManager::charging() {
 +  // Cosmium: spoof battery charging state from profile.

@@ -1,0 +1,34 @@
+--- a/third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h
++++ b/third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h
+@@ -3,6 +3,16 @@
+ // to defeat canvas fingerprinting (DataDome, etc.) while maintaining
+ // visual consistency for the same seed (profile).
+ 
++#ifdef UNSAFE_BUFFERS_BUILD
++// Cosmium: ApplyCanvasNoise walks a Skia pixel buffer by raw pointer, which
++// -Wunsafe-buffer-usage rejects as an error under Chromium's default build
++// config. The bounds come from the caller's own width/height/row_bytes, so the
++// arithmetic is checked by construction rather than by the type system. This
++// is the same escape hatch Chromium applies to its own not-yet-converted
++// graphics code; converting to base::span is the real fix.
++#pragma allow_unsafe_buffers
++#endif
++
+ #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COSMIUM_CANVAS_NOISE_H_
+ #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COSMIUM_CANVAS_NOISE_H_
+ 
+--- a/third_party/blink/renderer/modules/webaudio/audio_buffer.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_buffer.cc
+@@ -27,6 +27,12 @@
+  */
+ 
+ #ifdef UNSAFE_BUFFERS_BUILD
++// Cosmium: the fingerprint-noise loop indexes the channel's float* directly,
++// which -Wunsafe-buffer-usage rejects. The index is bounded by the same
++// channel_data->length() the pointer came from. This pragma must come before
++// allow_unsafe_libc_calls -- the plugin stops scanning the file's pragma block
++// at the first one it does not own, so ordering decides whether it is seen.
++#pragma allow_unsafe_buffers
+ // TODO(crbug.com/390223051): Remove C-library calls to fix the errors.
+ #pragma allow_unsafe_libc_calls
+ #endif

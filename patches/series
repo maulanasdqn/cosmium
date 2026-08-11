@@ -23,3 +23,5 @@
 0023-forward-cosmium-switches-to-renderer.patch
 0024-apply-platform-override-above-ua-reduction.patch
 0025-spoof-ua-platform-at-source-not-accessor.patch
+0026-allow-unsafe-buffers-in-noise-patches.patch
+0027-keep-timezone-override-across-monitor-push.patch

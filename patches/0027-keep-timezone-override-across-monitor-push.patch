@@ -1,0 +1,21 @@
+--- a/third_party/blink/renderer/core/timezone/timezone_controller.cc
++++ b/third_party/blink/renderer/core/timezone/timezone_controller.cc
+@@ -231,6 +231,18 @@
+   // override is removed.
+   instance().host_timezone_id_ = timezone_id;
+ 
++  // cosmium: the constructor applies --cosmium-timezone and then immediately
++  // binds this TimeZoneMonitor client, and the browser answers by pushing the
++  // real host zone -- which lands here and overwrites the override before any
++  // JS runs. Setting the zone once at startup is therefore not enough; the
++  // switch has to win here too. host_timezone_id_ is still recorded above so
++  // the DevTools override path keeps its bookkeeping.
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (cosmium_cmd->HasSwitch("cosmium-timezone") &&
++      !cosmium_cmd->GetSwitchValueASCII("cosmium-timezone").empty()) {
++    return;
++  }
++
+   if (!HasTimeZoneOverride())
+     SetIcuTimeZoneAndNotifyV8(timezone_id);
+ }
