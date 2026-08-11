@@ -169,10 +169,10 @@ mapfile -t cosmium_flags < <(jq -r '
     "--cosmium-color-depth=\(.screen.color_depth)",
     "--cosmium-screen-width=\(.screen.width)",
     "--cosmium-screen-height=\(.screen.height)",
-    "--cosmium-screen-avail-width=\(.screen.avail_width)",
-    "--cosmium-screen-avail-height=\(.screen.avail_height)",
-    "--cosmium-screen-avail-left=\(.screen.avail_left)",
-    "--cosmium-screen-avail-top=\(.screen.avail_top)",
+    "--cosmium-avail-width=\(.screen.avail_width)",
+    "--cosmium-avail-height=\(.screen.avail_height)",
+    "--cosmium-avail-left=\(.screen.avail_left)",
+    "--cosmium-avail-top=\(.screen.avail_top)",
     "--cosmium-webgl-vendor=\(.gpu.vendor)",
     "--cosmium-webgl-renderer=\(.gpu.renderer)"
   ] | .[]' "${PROFILE}")

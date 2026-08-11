@@ -179,3 +179,46 @@ fn screen_avail_switches_present() {
     assert!(has(&flags, "--cosmium-avail-left="), "avail_left");
     assert!(has(&flags, "--cosmium-avail-top="), "avail_top");
 }
+
+#[test]
+fn accept_lang_switch_carries_no_quality_values() {
+    // Chromium's --accept-lang parser CHECK-fails on ';' or ' ' and aborts the
+    // browser at startup, so the header-form value in the profile must be
+    // reduced to a bare list before it reaches the switch.
+    let flags = profile_to_flags(&fixture());
+    let accept = flags
+        .iter()
+        .find(|f| f.starts_with("--accept-lang="))
+        .expect("--accept-lang emitted");
+
+    assert!(
+        !accept.contains(';') && !accept.contains(' '),
+        "would abort the browser: {accept}"
+    );
+    assert_eq!(accept, "--accept-lang=en-US,en");
+}
+
+#[test]
+fn accept_lang_value_strips_q_values_and_whitespace() {
+    assert_eq!(accept_lang_switch_value("en-US,en;q=0.9"), "en-US,en");
+    assert_eq!(
+        accept_lang_switch_value("fr-FR, fr;q=0.9, en;q=0.8"),
+        "fr-FR,fr,en"
+    );
+    assert_eq!(accept_lang_switch_value("de-DE"), "de-DE");
+}
+
+#[test]
+fn screen_dimension_switches_match_profile() {
+    // These must agree with the names screen.cc reads; a rename on either side
+    // silently stops spoofing rather than failing loudly.
+    let flags = profile_to_flags(&fixture());
+    for want in [
+        "--cosmium-screen-width=1920",
+        "--cosmium-screen-height=1080",
+        "--cosmium-avail-width=1920",
+        "--cosmium-avail-height=1032",
+    ] {
+        assert!(flags.iter().any(|f| f == want), "missing flag: {want}");
+    }
+}

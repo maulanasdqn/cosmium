@@ -47,7 +47,7 @@
 +// height 1080 is the Windows 11 taskbar -- so the difference stays plausible.
  int Screen::availLeft() const {
 +  int cosmium_value = 0;
-+  if (CosmiumScreenInt("cosmium-screen-avail-left", &cosmium_value))
++  if (CosmiumScreenInt("cosmium-avail-left", &cosmium_value))
 +    return cosmium_value;
    if (!DomWindow())
      return 0;
@@ -56,7 +56,7 @@
  
  int Screen::availTop() const {
 +  int cosmium_value = 0;
-+  if (CosmiumScreenInt("cosmium-screen-avail-top", &cosmium_value))
++  if (CosmiumScreenInt("cosmium-avail-top", &cosmium_value))
 +    return cosmium_value;
    if (!DomWindow())
      return 0;
@@ -65,7 +65,7 @@
  
  int Screen::availHeight() const {
 +  int cosmium_value = 0;
-+  if (CosmiumScreenInt("cosmium-screen-avail-height", &cosmium_value))
++  if (CosmiumScreenInt("cosmium-avail-height", &cosmium_value))
 +    return cosmium_value;
    if (!DomWindow())
      return 0;
@@ -74,7 +74,7 @@
  
  int Screen::availWidth() const {
 +  int cosmium_value = 0;
-+  if (CosmiumScreenInt("cosmium-screen-avail-width", &cosmium_value))
++  if (CosmiumScreenInt("cosmium-avail-width", &cosmium_value))
 +    return cosmium_value;
    if (!DomWindow())
      return 0;

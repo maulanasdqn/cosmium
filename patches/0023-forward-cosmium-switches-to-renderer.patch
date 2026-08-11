@@ -1,5 +1,5 @@
 diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
-index 2bc557c1d9..07cfb88fa2 100644
+index 2bc557c1d9..9c8abe7aff 100644
 --- a/content/browser/renderer_host/render_process_host_impl.cc
 +++ b/content/browser/renderer_host/render_process_host_impl.cc
 @@ -3345,6 +3345,34 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
@@ -30,10 +30,10 @@ index 2bc557c1d9..07cfb88fa2 100644
 +      "cosmium-battery-discharging-time",
 +      "cosmium-screen-width",
 +      "cosmium-screen-height",
-+      "cosmium-screen-avail-width",
-+      "cosmium-screen-avail-height",
-+      "cosmium-screen-avail-left",
-+      "cosmium-screen-avail-top",
++      "cosmium-avail-width",
++      "cosmium-avail-height",
++      "cosmium-avail-left",
++      "cosmium-avail-top",
        switches::kDisableInProcessStackTraces,
        sandbox::policy::switches::kDisableSeccompFilterSandbox,
        sandbox::policy::switches::kNoSandbox,
