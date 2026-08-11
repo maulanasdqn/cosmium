@@ -8,6 +8,13 @@ pub fn user_data_dir(profile_name: &str) -> PathBuf {
     base.join(sanitize(profile_name))
 }
 
+pub fn session_cache_dir() -> PathBuf {
+    dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join("cosmium")
+        .join("sessions")
+}
+
 fn sanitize(name: &str) -> String {
     name.chars()
         .map(|c| {

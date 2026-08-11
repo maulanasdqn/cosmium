@@ -1,42 +1,35 @@
+pub mod targets;
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 
 use crate::domain::profile::ProfileRepository;
 use crate::domain::runtime::browser::LaunchSpec;
 use crate::domain::runtime::{profile_to_env, profile_to_flags, user_data_dir};
-use crate::domain::scraping::ScrapedPage;
-use crate::domain::scraping::port::{BrowserSession, PageScraper};
-use crate::domain::scraping::request::{ProxyConfig, ScrapeRequest};
-use crate::domain::scraping::workflow::WorkflowStep;
+use crate::domain::scraping::port::BrowserSession;
+use crate::domain::scraping::validation::{ValidationResult, ValidationTarget};
 use crate::infrastructure::scraping::ChromiumScraper;
-use crate::infrastructure::scraping::ProxyForwarder;
 
-use super::stealth_config::build_stealth_config;
-
-pub struct ScrapePage {
+pub struct ValidateStealth {
     profile_repo: Arc<dyn ProfileRepository>,
     session: Arc<dyn BrowserSession>,
 }
 
-pub struct ScrapePageInput {
+pub struct ValidateStealthInput {
     pub profile: PathBuf,
     pub binary: PathBuf,
-    pub url: String,
-    pub wait_ms: u32,
-    pub screenshot: bool,
-    pub workflow: Vec<WorkflowStep>,
-    pub proxy: Option<ProxyConfig>,
+    pub targets: Vec<ValidationTarget>,
     pub headful: bool,
 }
 
-pub struct ScrapePageOutput {
-    pub page: ScrapedPage,
-    pub blocked: bool,
+pub struct ValidateStealthOutput {
+    pub results: Vec<ValidationResult>,
 }
 
-impl ScrapePage {
+impl ValidateStealth {
     pub fn new(profile_repo: Arc<dyn ProfileRepository>, session: Arc<dyn BrowserSession>) -> Self {
         Self {
             profile_repo,
@@ -44,7 +37,7 @@ impl ScrapePage {
         }
     }
 
-    pub async fn execute(&self, input: ScrapePageInput) -> Result<ScrapePageOutput> {
+    pub async fn execute(&self, input: ValidateStealthInput) -> Result<ValidateStealthOutput> {
         let profile = self
             .profile_repo
             .load(&input.profile)
@@ -58,28 +51,12 @@ impl ScrapePage {
         if !input.headful {
             flags.push("--headless=new".into());
         }
-
         if !flags
             .iter()
             .any(|f| f.contains("cosmium-strip-automation-tells"))
         {
             flags.push("--cosmium-strip-automation-tells".into());
         }
-
-        let _forwarder = if let Some(ref proxy) = input.proxy {
-            match ProxyForwarder::start(proxy).await {
-                Some(fwd) => {
-                    flags.push(fwd.chrome_flag());
-                    Some(fwd)
-                }
-                None => {
-                    flags.push(format!("--proxy-server={}", proxy.url));
-                    None
-                }
-            }
-        } else {
-            None
-        };
 
         let endpoint = self
             .session
@@ -95,30 +72,37 @@ impl ScrapePage {
             .await
             .with_context(|| format!("launching {}", input.binary.display()))?;
 
-        let stealth_config = build_stealth_config(&profile);
+        let stealth_config =
+            crate::application::use_cases::stealth_config::build_stealth_config(&profile);
         let scraper = ChromiumScraper::from_browser(endpoint.browser, Some(stealth_config));
 
-        let request = ScrapeRequest {
-            url: input.url,
-            wait_ms: input.wait_ms,
-            screenshot: input.screenshot,
-            workflow: input.workflow,
-            proxy: input.proxy,
-        };
-
-        let page = scraper
-            .scrape(request)
-            .await
-            .map_err(|e| anyhow::anyhow!("scrape failed: {e}"))?;
-
-        let blocked = crate::domain::scraping::detection::is_blocked(
-            page.http_status as i16,
-            &page.html,
-            &page.final_url,
-        );
+        let mut results = Vec::with_capacity(input.targets.len());
+        for target in &input.targets {
+            let r = run_target(&scraper, target).await;
+            results.push(r);
+        }
 
         let _ = self.session.shutdown().await;
+        Ok(ValidateStealthOutput { results })
+    }
+}
 
-        Ok(ScrapePageOutput { page, blocked })
+async fn run_target(scraper: &ChromiumScraper, target: &ValidationTarget) -> ValidationResult {
+    let start = Instant::now();
+    let raw = match scraper
+        .evaluate_on_url(&target.url, target.wait_ms, &target.extractor)
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => format!("ERROR: {e}"),
+    };
+    let duration_ms = start.elapsed().as_millis() as u64;
+    let (verdict, detail) = targets::evaluate(&target.name, &raw);
+    ValidationResult {
+        target: target.name.clone(),
+        verdict,
+        detail,
+        raw,
+        duration_ms,
     }
 }

@@ -5,5 +5,7 @@ pub mod mutate_profile;
 pub mod repair_profile;
 pub mod run_browser;
 pub mod scrape_page;
+pub mod stealth_config;
 pub mod test_fingerprint;
 pub mod validate_profile;
+pub mod validate_stealth;

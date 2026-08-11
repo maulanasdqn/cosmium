@@ -1,5 +1,6 @@
 mod parse;
-mod probe;
+pub(crate) mod probe;
+mod probe_render;
 
 use std::path::PathBuf;
 
@@ -35,7 +36,7 @@ impl TestFingerprint {
         let probes = probe::for_profile(&input.profile);
         let temp = tempfile::tempdir()?;
         let html_path = temp.path().join("probes.html");
-        fs::write(&html_path, probe::render_html(&probes))
+        fs::write(&html_path, probe_render::render_html(&probes))
             .await
             .context("writing probes.html")?;
 

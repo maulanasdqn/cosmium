@@ -210,6 +210,39 @@
         }
       }
     },
+    "browser_state": {
+      "type": "object",
+      "description": "Fake browser usage artifacts. Bot detectors check history.length, download count, and installed extensions to distinguish fresh automated browsers from real user browsers.",
+      "properties": {
+        "history_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 5,
+          "description": "window.history.length — a fresh browser returns 1; real users have 3-15+."
+        },
+        "download_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "default": 3,
+          "description": "Number of fake download entries returned by chrome.downloads.search()."
+        },
+        "extensions": {
+          "type": "array",
+          "description": "Fake installed extensions returned by chrome.management.getAll(). Real browsers have 2-8 extensions (ad blocker, password manager, etc).",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "version"],
+            "properties": {
+              "id": { "type": "string", "description": "Chrome Web Store extension ID (32-char lowercase)" },
+              "name": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "strip_automation_tells": {
       "type": "boolean",
       "default": false,

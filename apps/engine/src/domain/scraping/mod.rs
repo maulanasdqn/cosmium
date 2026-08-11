@@ -3,6 +3,7 @@ pub mod error;
 pub mod page;
 pub mod port;
 pub mod request;
+pub mod validation;
 pub mod workflow;
 
 pub use error::{ScrapeError, ScrapeResult};

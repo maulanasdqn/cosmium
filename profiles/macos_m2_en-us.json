@@ -105,6 +105,15 @@
   "canvas_noise": {
     "seed": "f0e1d2c3b4a596877685544332211009"
   },
-  "strip_automation_tells": false,
-  "chrome_version": "151.0.7922.108"
+  "browser_state": {
+    "history_length": 7,
+    "download_count": 4,
+    "extensions": [
+      { "id": "cjpalhdlnbpafiamejdnhcphjbkeiagm", "name": "uBlock Origin", "version": "1.62.0" },
+      { "id": "hdokiejnpimakedhajhdlcegeplioahd", "name": "LastPass: Free Password Manager", "version": "4.133.0" },
+      { "id": "bgnkhhnnamicmpeenaelnjfhikgbkllg", "name": "AdGuard AdBlocker", "version": "4.4.39" },
+      { "id": "eimadpbcbfnmbkopoojfekhnkhdbieeh", "name": "Dark Reader", "version": "4.9.96" }
+    ]
+  },
+  "strip_automation_tells": true
 }

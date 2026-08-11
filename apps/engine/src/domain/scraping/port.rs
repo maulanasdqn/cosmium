@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use async_trait::async_trait;
+use chromiumoxide::browser::Browser;
 
 use crate::domain::runtime::RuntimeResult;
 use crate::domain::runtime::browser::LaunchSpec;
@@ -10,7 +11,7 @@ use super::page::ScrapedPage;
 use super::request::ScrapeRequest;
 
 pub struct CdpEndpoint {
-    pub ws_url: String,
+    pub browser: Browser,
 }
 
 #[async_trait]

@@ -1,6 +1,5 @@
-use regex::Regex;
-
 use crate::domain::profile::Profile;
+use regex::Regex;
 
 pub struct ProbeDef {
     pub id: &'static str,
@@ -33,9 +32,6 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
 
     let mut probes = vec![
         simple("webdriver", "String(navigator.webdriver)", "false"),
-        // WorkerNavigator has its own automation-information surface; a common
-        // bot probe reads navigator.webdriver from inside a Worker. Must also be
-        // false (acceptance test for the strip-automation-controlled patch).
         simple(
             "webdriver_worker",
             r#"await new Promise((res)=>{const b=new Blob(["onmessage=()=>postMessage(String(navigator.webdriver))"],{type:"application/javascript"});const w=new Worker(URL.createObjectURL(b));w.onmessage=(e)=>res(e.data);w.postMessage(0);})"#,
@@ -126,6 +122,50 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             &p.screen.device_pixel_ratio.to_string(),
         ),
         simple("user_agent", "navigator.userAgent", &p.identity.user_agent),
+        simple(
+            "ua_data_arch",
+            "(await navigator.userAgentData.getHighEntropyValues(['architecture'])).architecture",
+            &p.identity.client_hints.architecture,
+        ),
+        simple(
+            "ua_data_bitness",
+            "(await navigator.userAgentData.getHighEntropyValues(['bitness'])).bitness",
+            &p.identity.client_hints.bitness,
+        ),
+        simple(
+            "ua_data_pv",
+            "(await navigator.userAgentData.getHighEntropyValues(['platformVersion'])).platformVersion",
+            &p.identity.client_hints.platform_version,
+        ),
+        simple("has_focus", "String(document.hasFocus())", "true"),
+        simple("visibility", "document.visibilityState", "visible"),
+        simple("pdf_viewer", "String(navigator.pdfViewerEnabled)", "true"),
+        simple("chrome_app", "String(typeof window.chrome.app)", "object"),
+        simple("chrome_csi", "String(typeof window.chrome.csi)", "function"),
+        simple(
+            "screen_width",
+            "String(screen.width)",
+            &p.screen.width.to_string(),
+        ),
+        simple(
+            "screen_height",
+            "String(screen.height)",
+            &p.screen.height.to_string(),
+        ),
+        simple(
+            "intl_locale",
+            "new Intl.NumberFormat().resolvedOptions().locale",
+            p.locale
+                .languages
+                .first()
+                .map(String::as_str)
+                .unwrap_or("en-US"),
+        ),
+        simple(
+            "intl_tz",
+            "new Intl.DateTimeFormat().resolvedOptions().timeZone",
+            &p.locale.timezone,
+        ),
     ];
     probes.shrink_to_fit();
     probes
@@ -139,28 +179,4 @@ fn simple(id: &'static str, expr: &str, expected: &str) -> ProbeDef {
         expected_display: expected.to_owned(),
         negate: false,
     }
-}
-
-pub fn render_html(probes: &[ProbeDef]) -> String {
-    let entries: String = probes
-        .iter()
-        .map(|p| {
-            format!(
-                "[{},{}]",
-                serde_json::to_string(p.id).unwrap(),
-                serde_json::to_string(&p.expression).unwrap()
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",");
-    format!(
-        "<!doctype html><pre id=\"out\">running…</pre><script>\
-        async function run(){{const probes=[{entries}];const out=[];\
-        for(const [id,expr] of probes){{\
-        try{{const fn=new Function('return (async()=>('+expr+'))()');\
-        const v=await fn();out.push(JSON.stringify({{id,value:String(v),error:null}}));}}\
-        catch(e){{out.push(JSON.stringify({{id,value:null,error:String(e)}}));}}}}\
-        document.getElementById('out').textContent=out.join('\\n');}}run();\
-        </script>"
-    )
 }

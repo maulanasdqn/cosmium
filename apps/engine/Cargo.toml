@@ -34,3 +34,4 @@ tower-http.workspace = true
 tracing.workspace = true
 chromiumoxide.workspace = true
 futures-util.workspace = true
+rand.workspace = true

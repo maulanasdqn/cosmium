@@ -8,6 +8,8 @@ use crate::domain::scraping::request::ProxyConfig;
 use crate::domain::scraping::workflow::WorkflowStep;
 use crate::presentation::cli::state::CliState;
 
+use super::scrape_output::build_json_output;
+
 #[derive(Debug, Subcommand)]
 pub enum ScrapeCmd {
     Page(ScrapePageArgs),
@@ -46,6 +48,9 @@ pub struct ScrapePageArgs {
 
     #[arg(long, default_value = "json")]
     pub format: String,
+
+    #[arg(long, default_value_t = 0)]
+    pub retries: u32,
 }
 
 pub async fn execute(cmd: ScrapeCmd, state: &CliState) -> Result<()> {
@@ -56,7 +61,6 @@ pub async fn execute(cmd: ScrapeCmd, state: &CliState) -> Result<()> {
 
 async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
     let session = std::sync::Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
-
     let uc = ScrapePage::new(state.profile_repo.clone(), session);
 
     let mut workflow = Vec::new();
@@ -78,18 +82,32 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
 
     let proxy = args.proxy.map(|url| ProxyConfig { url });
 
-    let result = uc
-        .execute(ScrapePageInput {
-            profile: args.profile,
-            binary: args.binary.unwrap_or_else(|| state.binary.clone()),
-            url: args.url,
+    let max_attempts = 1 + args.retries;
+    let mut result = None;
+    for attempt in 1..=max_attempts {
+        if attempt > 1 {
+            tracing::info!(attempt, max_attempts, "retrying scrape");
+        }
+        let input = ScrapePageInput {
+            profile: args.profile.clone(),
+            binary: args.binary.clone().unwrap_or_else(|| state.binary.clone()),
+            url: args.url.clone(),
             wait_ms: args.wait_ms,
             screenshot: args.screenshot,
-            workflow,
-            proxy,
+            workflow: workflow.clone(),
+            proxy: proxy.clone(),
             headful: args.headful,
-        })
-        .await?;
+        };
+        let r = uc.execute(input).await?;
+        if !r.blocked || attempt == max_attempts {
+            result = Some(r);
+            break;
+        }
+        tracing::warn!("page blocked, retrying with new proxy IP");
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        result = Some(r);
+    }
+    let result = result.unwrap();
 
     match args.format.as_str() {
         "html" => {
@@ -127,60 +145,4 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn build_json_output(
-    result: &crate::application::use_cases::scrape_page::ScrapePageOutput,
-    output_dir: &Option<PathBuf>,
-) -> Result<String> {
-    let mut obj = serde_json::Map::new();
-    obj.insert(
-        "url".into(),
-        serde_json::Value::String(result.page.final_url.clone()),
-    );
-    obj.insert(
-        "status".into(),
-        serde_json::Value::Number(result.page.http_status.into()),
-    );
-    obj.insert(
-        "html_length".into(),
-        serde_json::Value::Number(result.page.html.len().into()),
-    );
-    obj.insert("blocked".into(), serde_json::Value::Bool(result.blocked));
-    obj.insert(
-        "user_agent".into(),
-        serde_json::Value::String(result.page.user_agent.clone()),
-    );
-    obj.insert(
-        "cookies_count".into(),
-        serde_json::Value::Number(result.page.cookies.len().into()),
-    );
-
-    if !result.page.script_results.is_empty() {
-        let mut extracted = serde_json::Map::new();
-        for (k, v) in &result.page.script_results {
-            let parsed: serde_json::Value =
-                serde_json::from_str(v).unwrap_or(serde_json::Value::String(v.clone()));
-            extracted.insert(k.clone(), parsed);
-        }
-        obj.insert("extracted".into(), serde_json::Value::Object(extracted));
-    }
-
-    if !result.page.screenshot.is_empty() {
-        if let Some(dir) = output_dir {
-            obj.insert(
-                "screenshot_path".into(),
-                serde_json::Value::String(dir.join("screenshot.jpg").display().to_string()),
-            );
-        } else {
-            obj.insert(
-                "screenshot_bytes".into(),
-                serde_json::Value::Number(result.page.screenshot.len().into()),
-            );
-        }
-    }
-
-    Ok(serde_json::to_string_pretty(&serde_json::Value::Object(
-        obj,
-    ))?)
 }

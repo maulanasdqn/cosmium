@@ -2,25 +2,27 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::{Child, Command};
+use chromiumoxide::browser::{Browser, BrowserConfig};
+use futures_util::StreamExt;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 
 use crate::domain::runtime::browser::LaunchSpec;
 use crate::domain::runtime::error::{RuntimeError, RuntimeResult};
 use crate::domain::scraping::port::{BrowserSession, CdpEndpoint};
 
-const WS_URL_PREFIX: &str = "DevTools listening on ";
-const WS_PARSE_TIMEOUT_SECS: u64 = 30;
-
 pub struct CdpSessionRuntime {
-    child: Arc<Mutex<Option<Child>>>,
+    state: Arc<Mutex<Option<SessionState>>>,
+}
+
+struct SessionState {
+    _handler: JoinHandle<()>,
 }
 
 impl CdpSessionRuntime {
     pub fn new() -> Self {
         Self {
-            child: Arc::new(Mutex::new(None)),
+            state: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -38,96 +40,59 @@ impl BrowserSession for CdpSessionRuntime {
             return Err(RuntimeError::BinaryNotFound(binary.to_path_buf()));
         }
 
+        let mut builder = BrowserConfig::builder()
+            .disable_default_args()
+            .chrome_executable(binary);
+
         if let Some(dir) = spec.user_data_dir.as_ref() {
             std::fs::create_dir_all(dir).map_err(|source| RuntimeError::Spawn {
                 binary: binary.to_path_buf(),
                 source,
             })?;
+            builder = builder.user_data_dir(dir);
         }
 
-        let mut cmd = Command::new(binary);
         for (k, v) in &spec.env {
-            cmd.env(k, v);
+            builder = builder.env(k, v);
         }
-        cmd.args(&spec.flags);
-        cmd.arg("--remote-debugging-port=0");
-        if let Some(dir) = spec.user_data_dir.as_ref() {
-            cmd.arg(format!("--user-data-dir={}", dir.display()));
-        }
-        cmd.args(&spec.urls);
-        cmd.stderr(std::process::Stdio::piped());
-        cmd.stdout(std::process::Stdio::null());
 
-        let mut child = cmd.spawn().map_err(|source| RuntimeError::Spawn {
+        for flag in &spec.flags {
+            let stripped = flag.strip_prefix("--").unwrap_or(flag);
+            builder = builder.arg(stripped);
+        }
+
+        let config = builder.build().map_err(|e| RuntimeError::Spawn {
             binary: binary.to_path_buf(),
-            source,
+            source: std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
         })?;
 
-        let stderr = child.stderr.take().ok_or_else(|| RuntimeError::Spawn {
-            binary: binary.to_path_buf(),
-            source: std::io::Error::new(std::io::ErrorKind::Other, "failed to capture stderr"),
-        })?;
+        let (browser, mut handler) =
+            Browser::launch(config)
+                .await
+                .map_err(|e| RuntimeError::Spawn {
+                    binary: binary.to_path_buf(),
+                    source: std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
+                })?;
 
-        let ws_url = parse_ws_url(stderr)
-            .await
-            .map_err(|source| RuntimeError::Spawn {
-                binary: binary.to_path_buf(),
-                source,
-            })?;
+        let handler_task = tokio::spawn(async move {
+            while let Some(event) = handler.next().await {
+                if event.is_err() {
+                    break;
+                }
+            }
+        });
 
-        *self.child.lock().await = Some(child);
+        *self.state.lock().await = Some(SessionState {
+            _handler: handler_task,
+        });
 
-        Ok(CdpEndpoint { ws_url })
+        Ok(CdpEndpoint { browser })
     }
 
     async fn shutdown(&self) -> RuntimeResult<()> {
-        if let Some(mut child) = self.child.lock().await.take() {
-            let _ = child.kill().await;
+        if let Some(_state) = self.state.lock().await.take() {
+            drop(_state);
         }
         Ok(())
-    }
-}
-
-impl Drop for CdpSessionRuntime {
-    fn drop(&mut self) {
-        if let Ok(mut guard) = self.child.try_lock() {
-            if let Some(mut child) = guard.take() {
-                let _ = child.start_kill();
-            }
-        }
-    }
-}
-
-async fn parse_ws_url(stderr: tokio::process::ChildStderr) -> Result<String, std::io::Error> {
-    let reader = BufReader::new(stderr);
-    let mut lines = reader.lines();
-
-    let result = tokio::time::timeout(
-        std::time::Duration::from_secs(WS_PARSE_TIMEOUT_SECS),
-        async {
-            while let Some(line) = lines.next_line().await? {
-                if let Some(url) = line.strip_prefix(WS_URL_PREFIX) {
-                    return Ok(url.trim().to_owned());
-                }
-                if line.contains("DevTools listening on ws://") {
-                    if let Some(pos) = line.find("ws://") {
-                        return Ok(line[pos..].trim().to_owned());
-                    }
-                }
-            }
-            Err(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "browser exited without emitting DevTools URL",
-            ))
-        },
-    )
-    .await;
-
-    match result {
-        Ok(inner) => inner,
-        Err(_) => Err(std::io::Error::new(
-            std::io::ErrorKind::TimedOut,
-            "timed out waiting for DevTools URL on stderr",
-        )),
     }
 }

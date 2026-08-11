@@ -8,12 +8,14 @@ use chromiumoxide::Page;
 use serde_json::Value;
 
 use crate::domain::scraping::workflow::WorkflowStep;
+use crate::infrastructure::scraping::behavior::Point;
 
 const DEFAULT_SCRIPT_TIMEOUT: u64 = 30;
 const FOLLOW_SETTLE_MS: u64 = 400;
 
 pub async fn run(page: &Page, steps: &[WorkflowStep]) -> HashMap<String, String> {
     let mut results = HashMap::new();
+    let mut cursor = Point { x: 400.0, y: 300.0 };
     for step in steps {
         match step {
             WorkflowStep::Delay { duration_ms } => {
@@ -34,17 +36,17 @@ pub async fn run(page: &Page, steps: &[WorkflowStep]) -> HashMap<String, String>
                 }
             }
             WorkflowStep::Click { selector } => {
-                actions::click(page, selector).await;
+                actions::click(page, selector, &mut cursor).await;
             }
             WorkflowStep::Input { selector, text } => {
-                actions::input(page, selector, text).await;
+                actions::input(page, selector, text, &mut cursor).await;
             }
             WorkflowStep::Scroll {
                 infinite,
                 selector,
                 times,
             } => {
-                actions::scroll(page, *infinite, selector.as_deref(), *times).await;
+                actions::scroll(page, *infinite, selector.as_deref(), *times, &mut cursor).await;
             }
             WorkflowStep::Extract {
                 name,
@@ -116,19 +118,11 @@ async fn evaluate(page: &Page, code: &str, seconds: u64, name: &str) -> Option<S
     match evaluation {
         Ok(Ok(result)) => Some(serialise(result.into_value::<Value>().ok())),
         Ok(Err(err)) => {
-            tracing::warn!(
-                script = %name,
-                error = %err,
-                "workflow script failed"
-            );
+            tracing::warn!(script = %name, error = %err, "workflow script failed");
             None
         }
         Err(_) => {
-            tracing::warn!(
-                script = %name,
-                seconds,
-                "workflow script timed out"
-            );
+            tracing::warn!(script = %name, seconds, "workflow script timed out");
             None
         }
     }

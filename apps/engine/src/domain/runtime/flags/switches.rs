@@ -106,6 +106,8 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push("--disable-search-engine-choice-screen".into());
     f.push("--password-store=basic".into());
     f.push("--use-mock-keychain".into());
+    f.push("--disable-blink-features=AutomationControlled".into());
+    f.push("--disable-infobars".into());
     f.extend(webrtc_flags(&p.webrtc.ip_handling_policy));
     f
 }

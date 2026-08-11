@@ -1,5 +1,6 @@
 pub mod aggregate;
 pub mod audio;
+pub mod browser_state;
 pub mod canvas_noise;
 pub mod error;
 pub mod fonts;
@@ -16,6 +17,7 @@ pub mod webrtc;
 
 pub use aggregate::Profile;
 pub use audio::Audio;
+pub use browser_state::{BrowserState, FakeExtension};
 pub use canvas_noise::CanvasNoise;
 pub use error::{ProfileError, ProfileResult};
 pub use fonts::Fonts;

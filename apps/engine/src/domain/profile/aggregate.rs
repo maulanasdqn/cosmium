@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::audio::Audio;
+use super::browser_state::BrowserState;
 use super::canvas_noise::CanvasNoise;
 use super::fonts::Fonts;
 use super::gpu::Gpu;
@@ -31,17 +32,12 @@ pub struct Profile {
     pub webrtc: WebRtc,
     pub canvas_noise: CanvasNoise,
 
-    /// Opt-in: emit `--cosmium-strip-automation-tells`, which the CDP-leak
-    /// strip patch (0013) consults to hide Runtime.evaluate / chrome.runtime
-    /// tells. Off by default so non-automation use keeps full CDP behavior.
+    #[serde(default)]
+    pub browser_state: BrowserState,
+
     #[serde(default)]
     pub strip_automation_tells: bool,
 
-    /// Override the Chrome version reported in User-Agent, Sec-CH-UA, and
-    /// high-entropy client hints.  Set this to a current Chrome stable full
-    /// version string (e.g. "151.0.7922.108") so bot detectors don't flag
-    /// the stale compiled version.  When present, `profile_to_flags` also
-    /// rewrites `identity.user_agent` on the fly to match.
     #[serde(default)]
     pub chrome_version: Option<String>,
 }

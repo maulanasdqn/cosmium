@@ -19,7 +19,7 @@ const WALL_URL_MARKERS: [&str; 7] = [
     "/blocked",
 ];
 
-const CHALLENGE_MARKERS: [&str; 8] = [
+const CHALLENGE_MARKERS: [&str; 11] = [
     "just a moment",
     "checking your browser",
     "ddos protection",
@@ -28,19 +28,29 @@ const CHALLENGE_MARKERS: [&str; 8] = [
     "acceso ha sido denegado",
     "access denied",
     "press & hold",
+    "captcha-delivery.com",
+    "please enable js and disable any ad blocker",
+    "access is temporarily restricted",
 ];
 
 const SNIFF_BYTES: usize = 4096;
 
 pub fn is_blocked(http_status: i16, body: &[u8], final_url: &str) -> bool {
+    let head = String::from_utf8_lossy(&body[..body.len().min(SNIFF_BYTES)]).to_lowercase();
     if BLOCKED_STATUSES.contains(&http_status) {
-        return true;
+        if is_challenge_page(&head) {
+            return true;
+        }
+        return !looks_like_real_content(&head);
     }
     if landed_on_wall(final_url) {
         return true;
     }
-    let head = String::from_utf8_lossy(&body[..body.len().min(SNIFF_BYTES)]).to_lowercase();
     BLOCKED_MARKERS.iter().any(|marker| head.contains(marker))
+}
+
+fn looks_like_real_content(html: &str) -> bool {
+    html.len() > SNIFF_BYTES && !BLOCKED_MARKERS.iter().any(|m| html.contains(m))
 }
 
 pub fn is_challenge_page(html: &str) -> bool {
