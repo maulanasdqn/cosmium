@@ -46,7 +46,7 @@ probes=(
   "ua_arch|userAgentData.architecture matches profile|(await navigator.userAgentData.getHighEntropyValues(['architecture'])).architecture|^\${identity.client_hints.architecture}$"
   "webgl_vendor|UNMASKED_VENDOR_WEBGL matches profile|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_VENDOR_WEBGL);})()|^\${gpu.vendor}$"
   "webgl_renderer|UNMASKED_RENDERER_WEBGL matches profile|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()|^\${gpu.renderer}$"
-  "webgl_no_swiftshader|WebGL renderer must NOT contain SwiftShader|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()|^(?!.*SwiftShader).*$"
+  "webgl_no_swiftshader|WebGL renderer must NOT contain SwiftShader|(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()|!SwiftShader"
   "media_devices|enumerateDevices returns >0 entries|(await navigator.mediaDevices.enumerateDevices()).length > 0 ? 'true' : 'false'|^true$"
   "voices|speechSynthesis returns >0 voices|String(speechSynthesis.getVoices().length > 0)|^true$"
   "timezone|Intl timezone matches profile|Intl.DateTimeFormat().resolvedOptions().timeZone|^\${locale.timezone}$"
@@ -84,12 +84,24 @@ cat > "${tmp}/probes.html" <<'EOF'
 <html><head><meta charset="utf-8"><title>cosmium probes</title></head>
 <body><pre id="out">running…</pre>
 <script>
+// Probes run sequentially, so one that never settles strands every probe
+// after it and the page reports nothing at all. navigator.mediaDevices
+// .enumerateDevices() does exactly that under --headless. Race each probe
+// against a deadline so a hang is reported as one failed probe instead of
+// taking the whole run down.
+function withDeadline(p, ms) {
+  return Promise.race([
+    p,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('probe timed out after ' + ms + 'ms')), ms)),
+  ]);
+}
 async function run(probes) {
   const out = [];
   for (const [id, desc, expr] of probes) {
     try {
       const fn = new Function('return (async () => (' + expr + '))()');
-      const v = await fn();
+      const v = await withDeadline(fn(), 3000);
       out.push(JSON.stringify({id, desc, value: String(v), error: null}));
     } catch (e) {
       out.push(JSON.stringify({id, desc, value: null, error: String(e)}));
@@ -117,11 +129,16 @@ sed -i.bak "s|__PROBES__|${js_probes}|" "${tmp}/probes.html"
 
 # Run cosmium headlessly and capture the rendered <pre> contents.
 out_dump="${tmp}/dump.html"
+# --dump-dom serialises the DOM as soon as load finishes, but every probe runs
+# inside an async function, so without --virtual-time-budget the dump captures
+# the placeholder "running…" and no probe ever reports. The budget lets virtual
+# time run ahead until the pending work drains, then dumps.
 "${BIN}" \
   --cosmium-profile="${PROFILE}" \
   --headless=new \
   --disable-gpu-sandbox \
   --no-sandbox \
+  --virtual-time-budget="${VIRTUAL_TIME_BUDGET_MS:-10000}" \
   --dump-dom \
   "file://${tmp}/probes.html" > "${out_dump}" 2>/dev/null
 
@@ -151,9 +168,28 @@ for p in "${probes[@]}"; do
   fi
   value=$(echo "${line}" | jq -r '.value // ""')
   err=$(echo "${line}" | jq -r '.error // ""')
+  # An expected pattern starting with '!' means "must NOT match the rest".
+  # bash's [[ =~ ]] is POSIX ERE and has no negative lookahead, so a pattern
+  # like ^(?!.*SwiftShader).*$ is not merely unsupported — it makes bash abort
+  # the comparison with "invalid regular expression", so the probe could never
+  # report anything but FAIL.
+  negate=""
+  if [[ "${expected_resolved}" == '!'* ]]; then
+    negate="yes"
+    expected_resolved="${expected_resolved#!}"
+  fi
+
   if [[ -n "${err}" ]]; then
     printf '%-22s %s%-8s%s %s\n' "${id}" "${C_ERR}" "ERROR" "${C_RESET}" "${err}"
     fail=$((fail + 1))
+  elif [[ -n "${negate}" ]]; then
+    if [[ "${value}" =~ ${expected_resolved} ]]; then
+      printf '%-22s %s%-8s%s got=%s must-not-match=%s\n' "${id}" "${C_ERR}" "FAIL" "${C_RESET}" "${value}" "${expected_resolved}"
+      fail=$((fail + 1))
+    else
+      printf '%-22s %s%-8s%s %s\n' "${id}" "${C_OK}" "PASS" "${C_RESET}" "${value}"
+      pass=$((pass + 1))
+    fi
   elif [[ "${value}" =~ ${expected_resolved} ]]; then
     printf '%-22s %s%-8s%s %s\n' "${id}" "${C_OK}" "PASS" "${C_RESET}" "${value}"
     pass=$((pass + 1))
