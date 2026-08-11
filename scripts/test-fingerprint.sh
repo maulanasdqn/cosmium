@@ -57,12 +57,24 @@ probes=(
   "audio_sr|AudioContext sampleRate matches profile|String(new AudioContext().sampleRate)|^\${audio.sample_rate}$"
 )
 
-# Resolve profile field interpolations.
-resolve() {
-  local expr="$1"
+# Escape ERE metacharacters so an interpolated profile value compares as a
+# literal. Profile values are full of them -- ["en-US","en"] reads as a
+# character class, "Google Inc. (NVIDIA)" as a group -- so an exact match
+# reported FAIL with got= and expected= printing identical text.
+regex_escape() {
+  printf '%s' "$1" | sed 's/[][\\.^$*+?(){}|]/\\&/g'
+}
+
+# Resolve profile field interpolations. `mode` is "pattern" when the result is
+# used as a regex, in which case substituted values are escaped; the probe's JS
+# expression side must stay verbatim.
+resolve_mode() {
+  local mode="$1"
+  local expr="$2"
   # Special-case array → JSON.
   local langs_json
   langs_json=$(jq -c '.locale.languages' "${PROFILE}")
+  [[ "${mode}" == pattern ]] && langs_json=$(regex_escape "${langs_json}")
   expr="${expr//\$\{identity_languages_json\}/${langs_json}}"
 
   # Generic ${a.b.c} → jq path.
@@ -70,10 +82,14 @@ resolve() {
     local path="${BASH_REMATCH[1]}"
     local val
     val=$(jq -r ".${path}" "${PROFILE}")
+    [[ "${mode}" == pattern ]] && val=$(regex_escape "${val}")
     expr="${expr//\$\{${path}\}/${val}}"
   done
   echo "${expr}"
 }
+
+resolve() { resolve_mode literal "$1"; }
+resolve_pattern() { resolve_mode pattern "$1"; }
 
 # Build a single HTML page that evaluates every probe and prints results.
 tmp=$(mktemp -d)
@@ -133,8 +149,27 @@ out_dump="${tmp}/dump.html"
 # inside an async function, so without --virtual-time-budget the dump captures
 # the placeholder "running…" and no probe ever reports. The budget lets virtual
 # time run ahead until the pending work drains, then dumps.
+# The patches expose one switch per spoofed value; there is no
+# --cosmium-profile switch, and passing one made Chromium ignore it silently
+# while every profile-derived probe reported the machine's real values. This
+# mirrors what the Rust CLI's `cosmium run` does: expand the profile into the
+# switches the binary actually reads.
+mapfile -t cosmium_flags < <(jq -r '
+  [
+    "--cosmium-platform=\(.identity.navigator_platform)",
+    "--cosmium-ua-platform=\(.identity.client_hints.platform)",
+    "--cosmium-languages=\(.locale.languages | join(","))",
+    "--cosmium-timezone=\(.locale.timezone)",
+    "--cosmium-hardware-concurrency=\(.hardware.hardware_concurrency)",
+    "--cosmium-device-memory=\(.hardware.device_memory_gb)",
+    "--cosmium-max-touch-points=\(.hardware.max_touch_points)",
+    "--cosmium-color-depth=\(.screen.color_depth)",
+    "--cosmium-webgl-vendor=\(.gpu.vendor)",
+    "--cosmium-webgl-renderer=\(.gpu.renderer)"
+  ] | .[]' "${PROFILE}")
+
 "${BIN}" \
-  --cosmium-profile="${PROFILE}" \
+  "${cosmium_flags[@]}" \
   --headless=new \
   --disable-gpu-sandbox \
   --no-sandbox \
@@ -159,7 +194,7 @@ printf '%-22s %-8s %s\n' "----------------------" "--------" "-----"
 
 for p in "${probes[@]}"; do
   IFS='|' read -r id desc expr expected <<< "${p}"
-  expected_resolved=$(resolve "${expected}")
+  expected_resolved=$(resolve_pattern "${expected}")
   line=$(echo "${results}" | grep "\"id\":\"${id}\"" || true)
   if [[ -z "${line}" ]]; then
     printf '%-22s %s%-8s%s %s\n' "${id}" "${C_ERR}" "MISSING" "${C_RESET}" ""

@@ -20,3 +20,6 @@
 0020-inject-audio-fingerprint-noise.patch
 0021-spoof-chrome-version-in-ua-headers.patch
 0022-spoof-battery-status-api.patch
+0023-forward-cosmium-switches-to-renderer.patch
+0024-apply-platform-override-above-ua-reduction.patch
+0025-spoof-ua-platform-at-source-not-accessor.patch

@@ -1,0 +1,31 @@
+diff --git a/third_party/blink/renderer/core/execution_context/navigator_base.cc b/third_party/blink/renderer/core/execution_context/navigator_base.cc
+index 64bdfb1a10..1465af380d 100644
+--- a/third_party/blink/renderer/core/execution_context/navigator_base.cc
++++ b/third_party/blink/renderer/core/execution_context/navigator_base.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/core/execution_context/navigator_base.h"
+ 
++#include "base/command_line.h"
+ #include "base/feature_list.h"
+ #include "build/build_config.h"
+ #include "third_party/blink/public/common/features.h"
+@@ -51,6 +52,18 @@ String NavigatorBase::userAgent() const {
+ }
+ 
+ String NavigatorBase::platform() const {
++  // cosmium: this override has to sit above the user-agent reduction branches
++  // below. From reduction phase 5 onward ReduceUserAgentPlatformOsCpu is on by
++  // default on desktop, so this function returns the frozen
++  // GetReducedNavigatorPlatform() string and NavigatorID::platform() -- where
++  // the --cosmium-platform hook lives -- is never reached. Checking here keeps
++  // that hook working as the fallback for contexts where reduction is off.
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (cosmium_cmd->HasSwitch("cosmium-platform")) {
++    return String::FromUTF8(
++        cosmium_cmd->GetSwitchValueASCII("cosmium-platform"));
++  }
++
+   ExecutionContext* execution_context = GetExecutionContext();
+ 
+ #if BUILDFLAG(IS_ANDROID)
