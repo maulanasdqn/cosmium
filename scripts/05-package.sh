@@ -6,10 +6,31 @@ source "$(dirname "$0")/_lib.sh"
 
 require_src
 
-if [[ ! -x "${BUILD_OUT}/chrome" ]]; then
-  log_error "${BUILD_OUT}/chrome not found — run scripts/04-build.sh first"
-  exit 1
-fi
+# Two entry points build into two different directories. 04-build.sh honours
+# BUILD_OUT from .config/chromium.env (out/cosmium, which is also what the Rust
+# CLI's COSMIUM_BUILD_OUT and test-fingerprint.sh expect), while the standalone
+# build-linux.sh / build-mac.sh hardcode src/out/Default. Packaging only the
+# configured path made this script fail outright after a build-linux.sh run.
+# Take the configured path when it holds a binary, otherwise fall back.
+resolve_build_out() {
+  local candidates=("${BUILD_OUT}" "${CHROMIUM_SRC}/out/Default")
+  local c
+  for c in "${candidates[@]}"; do
+    if [[ -x "${c}/chrome" ]]; then
+      printf '%s' "${c}"
+      return 0
+    fi
+  done
+  log_error "No built chrome binary found. Looked in:"
+  for c in "${candidates[@]}"; do
+    log_error "  ${c}/chrome"
+  done
+  log_error "Run scripts/04-build.sh (or scripts/build-linux.sh) first."
+  return 1
+}
+
+BUILD_OUT="$(resolve_build_out)" || exit 1
+log_info "Packaging from ${BUILD_OUT}"
 
 mkdir -p "${DIST_DIR}"
 stage="${DIST_DIR}/cosmium-${CHROMIUM_TAG}"
