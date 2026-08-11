@@ -1,10 +1,15 @@
 [package]
 name = "cosmium-cli"
-description = "cosmium command-line interface"
+description = "Cosmium CLI — stealth Chromium browser toolkit for scraping and automation"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "cosmium"

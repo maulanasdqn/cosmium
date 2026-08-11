@@ -11,10 +11,15 @@ version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+authors = ["maulanasdqn"]
+repository = "https://github.com/maulanasdqn/cosmium"
+homepage = "https://github.com/maulanasdqn/cosmium"
+keywords = ["chromium", "stealth", "fingerprint", "browser", "scraping"]
+categories = ["command-line-utilities", "web-programming"]
 
 [workspace.dependencies]
-config = { path = ".config" }
-engine = { path = "apps/engine" }
+config = { path = ".config", package = "cosmium-config", version = "0.2.0" }
+engine = { path = "apps/engine", package = "cosmium-engine", version = "0.2.0" }
 
 anyhow = "1.0"
 async-trait = "0.1"

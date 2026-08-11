@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cosmium/profile.schema.json",
+  "title": "Cosmium Fingerprint Profile",
+  "description": "Coherent fingerprint specification consumed by cosmium at startup. Every field maps to one or more C++ patches that override Chromium's default reporting.",
+  "type": "object",
+  "required": ["name", "identity", "locale", "hardware", "gpu", "screen", "audio", "media_devices", "voices", "fonts", "webrtc", "canvas_noise"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable profile id, e.g. 'win11_rtx3060_en-us'"
+    },
+    "version": {
+      "type": "integer",
+      "description": "Schema version this profile targets",
+      "const": 1
+    },
+    "identity": {
+      "type": "object",
+      "required": ["user_agent", "client_hints", "navigator_platform", "navigator_app_version"],
+      "additionalProperties": false,
+      "properties": {
+        "user_agent": { "type": "string" },
+        "client_hints": {
+          "type": "object",
+          "required": ["brands", "platform", "platform_version", "architecture", "bitness", "model", "mobile", "wow64"],
+          "properties": {
+            "brands": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["brand", "version"],
+                "properties": {
+                  "brand": { "type": "string" },
+                  "version": { "type": "string" }
+                }
+              }
+            },
+            "platform": { "type": "string", "examples": ["Windows", "macOS", "Linux"] },
+            "platform_version": { "type": "string", "examples": ["15.0.0", "13.6.0"] },
+            "architecture": { "type": "string", "enum": ["x86", "arm"] },
+            "bitness": { "type": "string", "enum": ["32", "64"] },
+            "model": { "type": "string" },
+            "mobile": { "type": "boolean" },
+            "wow64": { "type": "boolean" }
+          }
+        },
+        "navigator_platform": { "type": "string", "examples": ["Win32", "MacIntel", "Linux x86_64"] },
+        "navigator_app_version": { "type": "string" },
+        "navigator_vendor": { "type": "string", "default": "Google Inc." },
+        "navigator_product": { "type": "string", "default": "Gecko" },
+        "navigator_product_sub": { "type": "string", "default": "20030107" }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "required": ["languages", "accept_language", "timezone"],
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "navigator.languages — first entry is navigator.language"
+        },
+        "accept_language": {
+          "type": "string",
+          "description": "Accept-Language header value; must align with languages"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone, e.g. 'America/Chicago'. Must match proxy geo."
+        },
+        "currency": { "type": "string" }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "required": ["hardware_concurrency", "device_memory_gb", "max_touch_points"],
+      "properties": {
+        "hardware_concurrency": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64,
+          "description": "navigator.hardwareConcurrency"
+        },
+        "device_memory_gb": {
+          "type": "number",
+          "enum": [0.25, 0.5, 1, 2, 4, 8],
+          "description": "navigator.deviceMemory (Chrome rounds to these buckets)"
+        },
+        "max_touch_points": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "battery": {
+          "type": "object",
+          "description": "Battery API removed from public Chrome but some sites still probe via getBattery() with permission",
+          "properties": {
+            "charging": { "type": "boolean" },
+            "level": { "type": "number", "minimum": 0, "maximum": 1 },
+            "charging_time_seconds": { "type": ["integer", "null"] },
+            "discharging_time_seconds": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    },
+    "gpu": {
+      "type": "object",
+      "required": ["vendor", "renderer", "vendor_id", "device_id"],
+      "properties": {
+        "vendor": { "type": "string", "examples": ["Google Inc. (NVIDIA)", "Apple Inc."] },
+        "renderer": { "type": "string", "examples": ["ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)"] },
+        "vendor_id": { "type": "string", "description": "PCI vendor id, e.g. '0x10de' for NVIDIA" },
+        "device_id": { "type": "string" },
+        "webgl_version": { "type": "string", "default": "WebGL 2.0 (OpenGL ES 3.0 Chromium)" },
+        "webgpu_adapter": {
+          "type": "object",
+          "properties": {
+            "vendor": { "type": "string" },
+            "architecture": { "type": "string" },
+            "device": { "type": "string" }
+          }
+        }
+      }
+    },
+    "screen": {
+      "type": "object",
+      "required": ["width", "height", "avail_width", "avail_height", "color_depth", "pixel_depth", "device_pixel_ratio"],
+      "properties": {
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "avail_width": { "type": "integer" },
+        "avail_height": { "type": "integer" },
+        "color_depth": { "type": "integer", "enum": [24, 30] },
+        "pixel_depth": { "type": "integer", "enum": [24, 30] },
+        "device_pixel_ratio": { "type": "number", "enum": [1, 1.25, 1.5, 1.75, 2, 2.5, 3] },
+        "avail_left": { "type": "integer", "default": 0, "description": "screen.availLeft — 0 for Windows, varies for macOS (menu bar offset)" },
+        "avail_top": { "type": "integer", "default": 0, "description": "screen.availTop — 0 for Windows, 25 for macOS (menu bar height)" }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "required": ["sample_rate", "base_latency", "output_latency"],
+      "properties": {
+        "sample_rate": { "type": "integer", "enum": [44100, 48000] },
+        "base_latency": { "type": "number", "description": "AudioContext.baseLatency in seconds" },
+        "output_latency": { "type": "number" },
+        "max_channel_count": { "type": "integer", "default": 2 }
+      }
+    },
+    "media_devices": {
+      "type": "array",
+      "description": "Synthetic enumerateDevices() output. Real desktops typically have audioinput, audiooutput, videoinput.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "label", "deviceId", "groupId"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["audioinput", "audiooutput", "videoinput"] },
+          "label": { "type": "string" },
+          "deviceId": { "type": "string" },
+          "groupId": { "type": "string" }
+        }
+      }
+    },
+    "voices": {
+      "type": "array",
+      "description": "Synthetic speechSynthesis.getVoices() output. Real desktops have ~10-50 voices.",
+      "items": {
+        "type": "object",
+        "required": ["name", "lang", "default", "localService", "voiceURI"],
+        "properties": {
+          "name": { "type": "string" },
+          "lang": { "type": "string" },
+          "default": { "type": "boolean" },
+          "localService": { "type": "boolean" },
+          "voiceURI": { "type": "string" }
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "required": ["installed"],
+      "properties": {
+        "installed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Whitelist of fonts that document.fonts.check() returns true for"
+        }
+      }
+    },
+    "webrtc": {
+      "type": "object",
+      "required": ["ip_handling_policy"],
+      "properties": {
+        "ip_handling_policy": {
+          "type": "string",
+          "enum": ["default", "default_public_interface_only", "default_public_and_private_interfaces", "disable_non_proxied_udp"],
+          "description": "Mirrors chrome://flags WebRTC IP handling. 'default_public_interface_only' is the safest for hiding container internal IPs."
+        },
+        "stun_servers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "canvas_noise": {
+      "type": "object",
+      "required": ["seed"],
+      "properties": {
+        "seed": {
+          "type": "string",
+          "description": "Hex string, deterministic per-profile. Drives reproducible-but-unique canvas/audio fingerprints. Same profile → same fingerprint across sessions (which sites expect for stability)."
+        }
+      }
+    },
+    "strip_automation_tells": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt-in. Emits --cosmium-strip-automation-tells, which the CDP-leak strip patch consults to hide Runtime.evaluate / chrome.runtime / Error.stack automation markers. Off by default so non-automation use keeps full CDP."
+    },
+    "chrome_version": {
+      "type": "string",
+      "description": "Override the Chrome version reported in User-Agent, Sec-CH-UA, and high-entropy client hints. Set to a current Chrome stable full version (e.g. '151.0.7922.108'). When present, the engine also rewrites the User-Agent string to match. Omit to keep the compiled version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+\\.\\d+$",
+      "examples": ["151.0.7922.108"]
+    }
+  }
+}

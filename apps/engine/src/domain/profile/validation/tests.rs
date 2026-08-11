@@ -2,12 +2,12 @@ use super::*;
 use crate::domain::profile::*;
 
 fn fixture() -> Profile {
-    let raw = include_str!("../../../../../../profiles/win11_rtx3060_en-us.json");
+    let raw = include_str!("../../../../profiles/win11_rtx3060_en-us.json");
     serde_json::from_str(raw).expect("fixture parses")
 }
 
 fn mac_fixture() -> Profile {
-    let raw = include_str!("../../../../../../profiles/macos_m2_en-us.json");
+    let raw = include_str!("../../../../profiles/macos_m2_en-us.json");
     serde_json::from_str(raw).expect("fixture parses")
 }
 

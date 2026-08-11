@@ -348,7 +348,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
-name = "config"
+name = "cosmium-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "cosmium-config",
+ "cosmium-engine",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "cosmium-config"
 version = "0.2.0"
 dependencies = [
  "anyhow",
@@ -358,13 +369,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmium-cli"
+name = "cosmium-engine"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "config",
- "engine",
+ "async-trait",
+ "axum",
+ "base64",
+ "chromiumoxide",
+ "chrono-tz",
+ "clap",
+ "cosmium-config",
+ "dirs",
+ "futures-util",
+ "indexmap",
+ "once_cell",
+ "regex",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
  "tokio",
+ "tower-http",
  "tracing",
 ]
 
@@ -452,33 +479,6 @@ name = "either"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e5e8f6c15a24b9a3ee5efec809ccd006d3b30e8b3bb63c39af737c7f87daa1d"
-
-[[package]]
-name = "engine"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "base64",
- "chromiumoxide",
- "chrono-tz",
- "clap",
- "config",
- "dirs",
- "futures-util",
- "indexmap",
- "once_cell",
- "regex",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tower-http",
- "tracing",
-]
 
 [[package]]
 name = "equivalent"

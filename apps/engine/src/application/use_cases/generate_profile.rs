@@ -5,8 +5,8 @@ use anyhow::{Context, Result, bail};
 use crate::domain::llm::{ChatMessage, ChatRequest, LlmClient};
 use crate::domain::profile::{Diagnostic, Profile, validation};
 
-const SCHEMA: &str = include_str!("../../../../../profiles/schema.json");
-const REFERENCE: &str = include_str!("../../../../../profiles/win11_rtx3060_en-us.json");
+const SCHEMA: &str = include_str!("../../../profiles/schema.json");
+const REFERENCE: &str = include_str!("../../../profiles/win11_rtx3060_en-us.json");
 
 const SYSTEM_PROMPT: &str = "You are a browser fingerprint engineer producing cosmium profiles.\n\
 Output strict JSON only — no prose, no markdown fences, no commentary.\n\
