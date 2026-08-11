@@ -73,13 +73,43 @@ done
 # enable it via setuid; here we just preserve the executable bit.
 chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 
+# Record what is actually compiled into this binary, not what patches/series
+# lists. The two drift apart whenever series gains entries after the tree was
+# patched -- a pull that adds upstream patches, or a build run with --only
+# build, which skips the patch step entirely. A manifest that claims patches
+# the binary does not contain is worse than no manifest, because downstream
+# automation trusts it to decide which evasions are live.
+# `git apply --check --reverse` succeeding means the patch is already present.
+applied=()
+unapplied=()
+while read -r patch_name; do
+  [[ -z "${patch_name}" || "${patch_name}" == \#* ]] && continue
+  if (cd "${CHROMIUM_SRC}" && git apply --check --reverse \
+        "${COSMIUM_ROOT}/patches/${patch_name}" >/dev/null 2>&1); then
+    applied+=("${patch_name}")
+  else
+    unapplied+=("${patch_name}")
+  fi
+done < "${COSMIUM_ROOT}/patches/series"
+
+applied_json=$(printf '%s\n' "${applied[@]+"${applied[@]}"}" \
+  | jq -R . | jq -sc 'map(select(. != ""))')
+unapplied_json=$(printf '%s\n' "${unapplied[@]+"${unapplied[@]}"}" \
+  | jq -R . | jq -sc 'map(select(. != ""))')
+
+if [[ ${#unapplied[@]} -gt 0 ]]; then
+  log_warn "${#unapplied[@]} patch(es) in series are NOT in this binary:"
+  for u in "${unapplied[@]}"; do log_warn "  ${u}"; done
+fi
+
 # Stamp the build with version info readable by automation clients.
 cat > "${stage}/cosmium.json" <<EOF
 {
   "chromium_tag": "${CHROMIUM_TAG}",
   "build_host": "$(uname -srm)",
   "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "patches": $(jq -R . < "${COSMIUM_ROOT}/patches/series" | jq -s . 2>/dev/null || echo "[]")
+  "patches": ${applied_json},
+  "patches_not_applied": ${unapplied_json}
 }
 EOF
 
