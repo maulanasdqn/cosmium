@@ -15,8 +15,14 @@ pub struct ScrapeRequest {
     pub script: Option<String>,
     pub proxy: Option<String>,
     #[serde(default)]
+    pub proxies: Vec<String>,
+    #[serde(default)]
+    pub proxy_rotation: Option<String>,
+    #[serde(default)]
     pub include_html: bool,
     pub wait_for_api: Option<String>,
+    #[serde(default)]
+    pub retries: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -33,7 +39,10 @@ pub struct ScrapeResponse {
     pub extracted: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub screenshot_base64: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proxy_used: Option<String>,
     pub elapsed_ms: u64,
+    pub attempts: u32,
 }
 
 #[derive(Debug, Serialize)]

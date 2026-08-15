@@ -1,18 +1,24 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 
 use crate::application::use_cases::scrape_page::{ScrapePage, ScrapePageInput};
 use crate::domain::scraping::request::ProxyConfig;
-use crate::domain::scraping::workflow::WorkflowStep;
 use crate::presentation::cli::state::CliState;
 
-use super::scrape_output::build_json_output;
+use super::scrape_output::{build_proxy_pool, build_workflow, print_result, save_artifacts};
 
 #[derive(Debug, Subcommand)]
 pub enum ScrapeCmd {
     Page(ScrapePageArgs),
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum RotationArg {
+    RoundRobin,
+    Random,
 }
 
 #[derive(Debug, Args)]
@@ -33,6 +39,18 @@ pub struct ScrapePageArgs {
 
     #[arg(long)]
     pub proxy: Option<String>,
+
+    #[arg(long)]
+    pub proxy_file: Option<PathBuf>,
+
+    #[arg(long, value_delimiter = ',')]
+    pub proxy_list: Vec<String>,
+
+    #[arg(long, default_value = "round-robin")]
+    pub proxy_rotation: RotationArg,
+
+    #[arg(long, default_value_t = 60)]
+    pub proxy_cooldown: u64,
 
     #[arg(long)]
     pub output_dir: Option<PathBuf>,
@@ -63,34 +81,30 @@ pub async fn execute(cmd: ScrapeCmd, state: &CliState) -> Result<()> {
 }
 
 async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
-    let session = std::sync::Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
-    let uc = ScrapePage::new(state.profile_repo.clone(), session);
+    let pool = build_proxy_pool(&args)?;
+    let single_proxy = if pool.is_none() {
+        args.proxy.clone().map(|url| ProxyConfig { url })
+    } else {
+        None
+    };
 
-    let mut workflow = Vec::new();
-    for sel in &args.extract {
-        workflow.push(WorkflowStep::Extract {
-            name: sel.clone(),
-            selector: sel.clone(),
-            attribute: None,
-            limit: 0,
-        });
-    }
-    if let Some(code) = &args.script {
-        workflow.push(WorkflowStep::Script {
-            name: "script".into(),
-            code: code.clone(),
-            timeout_seconds: 30,
-        });
+    if let Some(ref p) = pool {
+        tracing::info!(count = p.len(), "proxy pool initialized");
     }
 
-    let proxy = args.proxy.map(|url| ProxyConfig { url });
-
+    let workflow = build_workflow(&args.extract, &args.script);
     let max_attempts = 1 + args.retries;
     let mut result = None;
+
     for attempt in 1..=max_attempts {
         if attempt > 1 {
             tracing::info!(attempt, max_attempts, "retrying scrape");
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
+
+        let session = Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
+        let uc = ScrapePage::new(state.profile_repo.clone(), session);
+
         let input = ScrapePageInput {
             profile: args.profile.clone(),
             binary: args.binary.clone().unwrap_or_else(|| state.binary.clone()),
@@ -98,54 +112,43 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
             wait_ms: args.wait_ms,
             screenshot: args.screenshot,
             workflow: workflow.clone(),
-            proxy: proxy.clone(),
+            proxy: single_proxy.clone(),
+            proxy_pool: pool.clone(),
             headful: args.headful,
             wait_for_api: args.wait_for_api.clone(),
         };
+
         let r = uc.execute(input).await?;
+
+        if let Some(ref url) = r.proxy_used {
+            tracing::info!(proxy = %url, blocked = r.blocked, "attempt finished");
+        }
+
         if !r.blocked || attempt == max_attempts {
             result = Some(r);
             break;
         }
-        tracing::warn!("page blocked, retrying with new proxy IP");
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+        tracing::warn!("page blocked, rotating proxy");
         result = Some(r);
     }
-    let result = result.unwrap();
 
-    match args.format.as_str() {
-        "html" => {
-            let html = String::from_utf8_lossy(&result.page.html);
-            println!("{html}");
-        }
-        _ => {
-            let output = build_json_output(&result, &args.output_dir)?;
-            println!("{output}");
+    let result = result.unwrap();
+    print_result(&args.format, &result, &args.output_dir)?;
+    save_artifacts(&args.output_dir, &result)?;
+
+    if let Some(ref p) = pool {
+        for s in &p.stats() {
+            tracing::debug!(
+                proxy = %s.url, uses = s.total_uses,
+                failures = s.total_failures, available = s.available,
+                "proxy stats"
+            );
         }
     }
 
     if result.blocked {
         tracing::warn!("page appears to be blocked");
-    }
-
-    if let Some(dir) = &args.output_dir {
-        std::fs::create_dir_all(dir)?;
-        let html_path = dir.join("page.html");
-        std::fs::write(&html_path, &result.page.html)?;
-        tracing::info!(path = %html_path.display(), "saved html");
-
-        if !result.page.screenshot.is_empty() {
-            let ss_path = dir.join("screenshot.jpg");
-            std::fs::write(&ss_path, &result.page.screenshot)?;
-            tracing::info!(path = %ss_path.display(), "saved screenshot");
-        }
-
-        if !result.page.cookies.is_empty() {
-            let cookies_path = dir.join("cookies.json");
-            let cookies_json = serde_json::to_string_pretty(&result.page.cookies)?;
-            std::fs::write(&cookies_path, cookies_json)?;
-            tracing::info!(path = %cookies_path.display(), "saved cookies");
-        }
     }
 
     Ok(())

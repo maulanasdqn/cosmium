@@ -12,6 +12,7 @@ use crate::domain::scraping::request::{ProxyConfig, ScrapeRequest};
 use crate::domain::scraping::workflow::WorkflowStep;
 use crate::infrastructure::scraping::ChromiumScraper;
 use crate::infrastructure::scraping::ProxyForwarder;
+use crate::infrastructure::scraping::ProxyPool;
 
 use super::stealth_config::build_stealth_config;
 
@@ -28,6 +29,7 @@ pub struct ScrapePageInput {
     pub screenshot: bool,
     pub workflow: Vec<WorkflowStep>,
     pub proxy: Option<ProxyConfig>,
+    pub proxy_pool: Option<Arc<ProxyPool>>,
     pub headful: bool,
     pub wait_for_api: Option<String>,
 }
@@ -35,6 +37,7 @@ pub struct ScrapePageInput {
 pub struct ScrapePageOutput {
     pub page: ScrapedPage,
     pub blocked: bool,
+    pub proxy_used: Option<String>,
 }
 
 impl ScrapePage {
@@ -46,6 +49,15 @@ impl ScrapePage {
     }
 
     pub async fn execute(&self, input: ScrapePageInput) -> Result<ScrapePageOutput> {
+        let proxy = resolve_proxy(&input);
+        self.execute_with_proxy(input, proxy).await
+    }
+
+    async fn execute_with_proxy(
+        &self,
+        input: ScrapePageInput,
+        proxy: Option<ProxyConfig>,
+    ) -> Result<ScrapePageOutput> {
         let profile = self
             .profile_repo
             .load(&input.profile)
@@ -67,14 +79,16 @@ impl ScrapePage {
             flags.push("--cosmium-strip-automation-tells".into());
         }
 
-        let _forwarder = if let Some(ref proxy) = input.proxy {
-            match ProxyForwarder::start(proxy).await {
+        let proxy_url = proxy.as_ref().map(|p| p.url.clone());
+
+        let _forwarder = if let Some(ref p) = proxy {
+            match ProxyForwarder::start(p).await {
                 Some(fwd) => {
                     flags.push(fwd.chrome_flag());
                     Some(fwd)
                 }
                 None => {
-                    flags.push(format!("--proxy-server={}", proxy.url));
+                    flags.push(format!("--proxy-server={}", p.url));
                     None
                 }
             }
@@ -104,7 +118,7 @@ impl ScrapePage {
             wait_ms: input.wait_ms,
             screenshot: input.screenshot,
             workflow: input.workflow,
-            proxy: input.proxy,
+            proxy: proxy.clone(),
             wait_for_api: input.wait_for_api,
         };
 
@@ -119,8 +133,28 @@ impl ScrapePage {
             &page.final_url,
         );
 
+        if let (Some(pool), Some(url)) = (&input.proxy_pool, &proxy_url) {
+            if blocked {
+                pool.mark_failed(url);
+            } else {
+                pool.mark_success(url);
+            }
+        }
+
         let _ = self.session.shutdown().await;
 
-        Ok(ScrapePageOutput { page, blocked })
+        Ok(ScrapePageOutput {
+            page,
+            blocked,
+            proxy_used: proxy_url,
+        })
+    }
+}
+
+fn resolve_proxy(input: &ScrapePageInput) -> Option<ProxyConfig> {
+    if let Some(ref pool) = input.proxy_pool {
+        pool.next_proxy()
+    } else {
+        input.proxy.clone()
     }
 }
