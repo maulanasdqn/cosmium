@@ -9,10 +9,13 @@ use crate::domain::scraping::request::ProxyConfig;
 use crate::domain::scraping::workflow::WorkflowStep;
 use crate::infrastructure::scraping::ProxyPool;
 
-use super::scrape::ScrapePageArgs;
 use super::scrape::RotationArg;
+use super::scrape::ScrapePageArgs;
 
-pub fn build_json_output(result: &ScrapePageOutput, output_dir: &Option<PathBuf>) -> Result<String> {
+pub fn build_json_output(
+    result: &ScrapePageOutput,
+    output_dir: &Option<PathBuf>,
+) -> Result<String> {
     let mut obj = serde_json::Map::new();
     obj.insert(
         "url".into(),
@@ -72,7 +75,11 @@ pub fn build_json_output(result: &ScrapePageOutput, output_dir: &Option<PathBuf>
     ))?)
 }
 
-pub fn print_result(format: &str, result: &ScrapePageOutput, output_dir: &Option<PathBuf>) -> Result<()> {
+pub fn print_result(
+    format: &str,
+    result: &ScrapePageOutput,
+    output_dir: &Option<PathBuf>,
+) -> Result<()> {
     match format {
         "html" => {
             let html = String::from_utf8_lossy(&result.page.html);

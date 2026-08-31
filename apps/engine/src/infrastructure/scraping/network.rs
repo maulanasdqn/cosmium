@@ -59,11 +59,7 @@ impl ApiCapture {
         })
     }
 
-    pub async fn wait_and_collect(
-        self,
-        page: &Page,
-        timeout: Duration,
-    ) -> Vec<(String, String)> {
+    pub async fn wait_and_collect(self, page: &Page, timeout: Duration) -> Vec<(String, String)> {
         let start = Instant::now();
         let poll = Duration::from_millis(500);
 

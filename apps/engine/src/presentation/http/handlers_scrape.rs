@@ -70,7 +70,13 @@ pub async fn scrape(
     }
 
     let (r, attempts) = result.unwrap();
-    Ok(Json(build_response(url, include_html, &r, &started, attempts)))
+    Ok(Json(build_response(
+        url,
+        include_html,
+        &r,
+        &started,
+        attempts,
+    )))
 }
 
 fn build_pool(req: &ScrapeRequest) -> Option<Arc<ProxyPool>> {

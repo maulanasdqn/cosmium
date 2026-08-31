@@ -1,10 +1,8 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::domain::scraping::proxy_pool::{
-    ProxyEntry, ProxyPoolConfig, RotationStrategy,
-};
+use crate::domain::scraping::proxy_pool::{ProxyEntry, ProxyPoolConfig, RotationStrategy};
 use crate::domain::scraping::request::ProxyConfig;
 
 pub struct ProxyPool {
@@ -40,12 +38,8 @@ impl ProxyPool {
         }
 
         match self.config.strategy {
-            RotationStrategy::RoundRobin => {
-                self.pick_round_robin(&mut entries, count, now)
-            }
-            RotationStrategy::Random => {
-                self.pick_random(&mut entries, count, now)
-            }
+            RotationStrategy::RoundRobin => self.pick_round_robin(&mut entries, count, now),
+            RotationStrategy::Random => self.pick_random(&mut entries, count, now),
         }
     }
 

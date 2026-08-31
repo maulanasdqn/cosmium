@@ -82,7 +82,7 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
         extensions_json: serde_json::to_string(&ext_entries).unwrap_or_default(),
         languages_json: serde_json::to_string(&p.locale.languages).unwrap_or_default(),
         hardware_concurrency: p.hardware.hardware_concurrency,
-        device_memory: p.hardware.device_memory_gb as f32,
+        device_memory: p.hardware.device_memory_gb,
     }
 }
 

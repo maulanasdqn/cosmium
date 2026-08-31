@@ -118,9 +118,7 @@ pub fn parse_proxy_list(input: &str) -> Vec<ProxyConfig> {
         .lines()
         .map(|l| l.trim())
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .map(|l| ProxyConfig {
-            url: l.to_owned(),
-        })
+        .map(|l| ProxyConfig { url: l.to_owned() })
         .collect()
 }
 

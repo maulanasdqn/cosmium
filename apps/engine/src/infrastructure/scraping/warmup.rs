@@ -101,9 +101,7 @@ async fn wait_for_cookie_rotation(page: &Page, initial: Option<&str>) {
     let initial_val = initial.unwrap_or_default().to_owned();
 
     let page_url = page.url().await.ok().flatten();
-    let explicit_urls = page_url
-        .as_ref()
-        .map(|u| vec![u.clone()]);
+    let explicit_urls = page_url.as_ref().map(|u| vec![u.clone()]);
 
     while start.elapsed() < COOKIE_BUDGET {
         tokio::time::sleep(COOKIE_POLL).await;
@@ -127,14 +125,10 @@ async fn get_datadome_cookie(page: &Page) -> Option<String> {
     get_datadome_cookie_for_urls(page, None).await
 }
 
-async fn get_datadome_cookie_for_urls(
-    page: &Page,
-    urls: Option<Vec<String>>,
-) -> Option<String> {
+async fn get_datadome_cookie_for_urls(page: &Page, urls: Option<Vec<String>>) -> Option<String> {
     use chromiumoxide::cdp::browser_protocol::network::GetCookiesParams;
 
-    let mut params = GetCookiesParams::default();
-    params.urls = urls;
+    let params = GetCookiesParams { urls };
     let timeout = Duration::from_secs(5);
     let result = match tokio::time::timeout(timeout, page.execute(params)).await {
         Ok(Ok(resp)) => resp,

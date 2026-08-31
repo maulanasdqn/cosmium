@@ -154,6 +154,14 @@ pub(super) fn primary_lang(langs: &[String]) -> &str {
 mod core_tests;
 
 #[cfg(test)]
+#[path = "switches_version_tests.rs"]
+mod version_tests;
+
+#[cfg(test)]
+#[path = "switches_screen_tests.rs"]
+mod screen_tests;
+
+#[cfg(test)]
 #[path = "switches_battery_tests.rs"]
 mod battery_tests;
 
