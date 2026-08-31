@@ -1,0 +1,98 @@
+---
+title: Cosmium
+description: A patched Chromium variant plus a Rust orchestration layer for stealth scraping inside containers.
+template: splash
+head:
+  - tag: title
+    content: Cosmium — stealth Chromium for containers
+hero:
+  tagline: A patched Chromium that does not fingerprint as a container — plus the Rust layer that drives it.
+  actions:
+    - text: Get started
+      link: /start/what-is-cosmium/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/maulanasdqn/cosmium
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+## The problem Cosmium solves
+
+Generic stealth tooling patches the automation API — `navigator.webdriver`, CDP
+tells, the headless UA prefix. That closes one class of detection and leaves
+another wide open: the **hardware-absence tells** that give away a container.
+
+A headless Chromium in Docker reports SwiftShader as its WebGL renderer, an
+empty `enumerateDevices()`, Linux Client Hints under a Windows user agent,
+Docker bridge IPs in WebRTC candidates, UTC as its timezone, and an 800×600
+screen. No amount of JavaScript injection fixes those convincingly, because the
+page can ask the same question through a Worker, an iframe, or a property
+descriptor check and catch the lie.
+
+Cosmium fixes them **in the C++**, before any JavaScript runs.
+
+<CardGrid>
+  <Card title="28 Chromium patches" icon="seti:cpp">
+    Surgical edits against a pinned Chromium tag, each exposing a
+    `--cosmium-*` switch. WebGL strings, Client Hints, timezone, canvas and
+    audio noise, battery, screen dimensions.
+  </Card>
+  <Card title="Coherent profiles" icon="document">
+    A fingerprint is one JSON document, validated by cross-field rules that
+    JSON Schema cannot express — the UA major must match the Client Hints
+    brand version, `Win32` must pair with `Windows`, and so on.
+  </Card>
+  <Card title="Scraping engine" icon="rocket">
+    Drive it from the CLI or an HTTP API: workflows, extraction selectors,
+    proxy rotation with health tracking, block detection, retries.
+  </Card>
+  <Card title="Clean Rust core" icon="approve-check">
+    Domain, application, infrastructure, presentation — dependencies point
+    only inward. Every layer is a crate you can embed.
+  </Card>
+</CardGrid>
+
+## Thirty seconds in
+
+```bash
+cargo install cosmium-cli
+
+# Check that a fingerprint profile is internally coherent
+cosmium profile validate win11_rtx3060_en-us
+
+# Scrape a page through the patched browser
+cosmium scrape page \
+  --profile profiles/win11_rtx3060_en-us.json \
+  --extract "title=h1" \
+  --screenshot \
+  https://example.com
+```
+
+The `scrape` and `run` subcommands need a built Chromium binary. `profile`
+validation, listing, and LLM authoring work without one.
+
+<CardGrid stagger>
+  <LinkCard
+    title="What is Cosmium"
+    href="/start/what-is-cosmium/"
+    description="The detection vectors it closes, and the ones it deliberately does not."
+  />
+  <LinkCard
+    title="Quickstart"
+    href="/start/quickstart/"
+    description="From install to a scraped page and a stealth report."
+  />
+  <LinkCard
+    title="CLI reference"
+    href="/reference/cli/"
+    description="Every subcommand, flag, and default."
+  />
+  <LinkCard
+    title="Patch series"
+    href="/reference/patches/"
+    description="All 28 patches and the vector each one closes."
+  />
+</CardGrid>

@@ -2,6 +2,8 @@
 
 A patched Chromium variant + Rust orchestration layer for stealth scraping inside containers.
 
+**Documentation: [cosmium.zod.rs](https://cosmium.zod.rs)**
+
 Cosmium exists to solve one specific problem: a Chromium binary that does **not** fingerprint as a containerized environment. Generic stealth tooling (patchright, undetected-chromedriver) handles automation-API tells like `navigator.webdriver` but cannot fix the *hardware-absence* tells that betray Docker — SwiftShader WebGL strings, empty `mediaDevices`, leaked Linux Client Hints under a Windows UA, Docker bridge IPs in WebRTC candidates, UTC timezone, missing fonts.
 
 This repo ships:

@@ -1,0 +1,66 @@
+:root {
+  --sl-font:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --sl-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+:root {
+  --sl-color-accent-low: #1c2144;
+  --sl-color-accent: #5566e8;
+  --sl-color-accent-high: #b9c2fb;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #eceef4;
+  --sl-color-gray-2: #c1c5d1;
+  --sl-color-gray-3: #888fa3;
+  --sl-color-gray-4: #545b6d;
+  --sl-color-gray-5: #353b4a;
+  --sl-color-gray-6: #242934;
+  --sl-color-black: #14161c;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #d5dafb;
+  --sl-color-accent: #3f4fd0;
+  --sl-color-accent-high: #1e2461;
+  --sl-color-white: #14161c;
+  --sl-color-gray-1: #242934;
+  --sl-color-gray-2: #353b4a;
+  --sl-color-gray-3: #545b6d;
+  --sl-color-gray-4: #888fa3;
+  --sl-color-gray-5: #c1c5d1;
+  --sl-color-gray-6: #eceef4;
+  --sl-color-gray-7: #f5f6f9;
+  --sl-color-black: #ffffff;
+}
+
+.hero > img,
+.hero > picture > img {
+  filter: drop-shadow(0 0 60px rgb(85 102 232 / 0.35));
+}
+
+/* The splash hero reads as a product page rather than a doc page. */
+.hero h1 {
+  letter-spacing: -0.03em;
+}
+
+.hero .tagline {
+  max-width: 44ch;
+}
+
+/* Keep long flag names and JSON samples from stretching the page. */
+.sl-markdown-content table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.sl-markdown-content code {
+  font-size: 0.875em;
+}
+
+/* Card grids on the splash page get a subtle accent edge. */
+.card {
+  border-color: var(--sl-color-gray-5);
+}

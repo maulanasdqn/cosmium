@@ -1,0 +1,21 @@
+{
+  "name": "landing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "deploy": "astro build && wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.41.10",
+    "astro": "^7.2.9",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.127.1"
+  }
+}
