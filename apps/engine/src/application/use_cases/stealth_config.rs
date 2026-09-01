@@ -83,6 +83,9 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
         languages_json: serde_json::to_string(&p.locale.languages).unwrap_or_default(),
         hardware_concurrency: p.hardware.hardware_concurrency,
         device_memory: p.hardware.device_memory_gb,
+        webgl_vendor: p.gpu.vendor.clone(),
+        webgl_renderer: p.gpu.renderer.clone(),
+        audio_base_latency: p.audio.base_latency,
     }
 }
 

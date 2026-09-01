@@ -11,6 +11,7 @@ pub mod settle;
 pub mod status;
 pub mod stealth;
 pub mod stealth_scripts;
+pub mod stealth_scripts_fp;
 pub mod warmup;
 pub mod workflow;
 

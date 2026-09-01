@@ -36,6 +36,9 @@ pub struct StealthConfig {
     pub languages_json: String,
     pub hardware_concurrency: u32,
     pub device_memory: f32,
+    pub webgl_vendor: String,
+    pub webgl_renderer: String,
+    pub audio_base_latency: f64,
 }
 
 impl StealthConfig {

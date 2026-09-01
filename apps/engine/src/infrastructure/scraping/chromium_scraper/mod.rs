@@ -53,6 +53,9 @@ impl ChromiumScraper {
                 cfg.client_rects_script(),
                 cfg.intl_script(),
                 cfg.browser_state_script(),
+                cfg.webgl_script(),
+                cfg.canvas_script(),
+                cfg.audio_script(),
             ];
             for s in scripts {
                 let _ = page
