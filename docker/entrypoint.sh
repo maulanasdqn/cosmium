@@ -58,7 +58,9 @@ default_flags=(
   --disable-renderer-backgrounding
   --no-default-browser-check
   --no-first-run
-  --remote-debugging-pipe
+  --no-sandbox
+  --disable-crash-reporter
+  --disable-dev-shm-usage
 )
 
 if [[ -n "${profile_path}" ]]; then
