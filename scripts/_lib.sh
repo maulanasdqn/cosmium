@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# Shared helpers sourced by every script in this dir.
 
 set -euo pipefail
 
-# Resolve the cosmium repo root from the script's own location (not from PWD,
-# so scripts work no matter where they are invoked from).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
 COSMIUM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 export COSMIUM_ROOT
@@ -12,7 +9,6 @@ export COSMIUM_ROOT
 # shellcheck source=../.config/chromium.env
 source "${COSMIUM_ROOT}/.config/chromium.env"
 
-# Logging helpers — colored if stdout is a tty, plain otherwise.
 if [[ -t 1 ]]; then
   C_INFO=$'\033[1;34m'
   C_OK=$'\033[1;32m'

@@ -24,8 +24,6 @@ fn screen_avail_switches_present() {
 
 #[test]
 fn screen_dimension_switches_match_profile() {
-    // These must agree with the names screen.cc reads; a rename on either side
-    // silently stops spoofing rather than failing loudly.
     let flags = profile_to_flags(&fixture());
     for want in [
         "--cosmium-screen-width=1920",

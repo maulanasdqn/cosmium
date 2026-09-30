@@ -1,46 +1,35 @@
-# Chromium source tree (huge — fetched, not committed)
 /src/
 /depot_tools/
 /.gclient
 /.gclient_entries
 /.gclient_previous_sync_commits
 
-# Build outputs
 /out/
 /dist/
 
-# Local overrides
 /.env
 /config/local.gn
 
-# Rust
 /target/
 **/*.rs.bk
 
-# Editor / OS junk
 .DS_Store
 Thumbs.db
 *.swp
 .idea/
 .vscode/
 
-# Chromium CIPD/GCS tooling artifacts
 /.cipd/
 /.gcs_entries
 
-# Release tarballs
 *.tar.gz
 
-# Patch authoring scratch
 /patches/.scratch/
 /patches/*.rej
 /patches/*.orig
 
-# Graphify outputs
 /graphify-out/
 
-# Lefthook local overrides
 /lefthook-local.yml
 
-# Claude Code
 .claude/

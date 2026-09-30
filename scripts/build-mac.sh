@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# ──────────────────────────────────────────────────────────
-# Cosmium macOS ARM64 build script
-#
-# Prerequisites: Xcode + Metal Toolchain installed.
-# Usage:
-#   ./scripts/build-mac.sh              # full pipeline
-#   ./scripts/build-mac.sh --only fetch
-#   ./scripts/build-mac.sh --only patch
-#   ./scripts/build-mac.sh --only build
-#   ./scripts/build-mac.sh --jobs 8
-# ──────────────────────────────────────────────────────────
 set -euo pipefail
 
 COSMIUM_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,15 +10,10 @@ SRC_DIR="${COSMIUM_ROOT}/src"
 PATCHES_DIR="${COSMIUM_ROOT}/patches"
 ARGS_GN="${COSMIUM_ROOT}/.config/args.mac-arm64.gn"
 
-# BUILD_OUT comes from the shared config so this script, 04-build.sh,
-# 05-package.sh, test-fingerprint.sh and the Rust CLI's COSMIUM_BUILD_OUT all
-# agree on one directory. It used to be hardcoded to src/out/Default, which no
-# other tool looked in. Override it per-machine in .env, not here.
 # shellcheck source=../.config/chromium.env
 source "${COSMIUM_ROOT}/.config/chromium.env"
 JOBS="${JOBS:-$(( $(sysctl -n hw.ncpu) - 2 ))}"
 
-# ── Parse args ──────────────────────────────────────────
 ONLY=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,16 +31,13 @@ info()  { echo -e "\033[1;34m▸ $*\033[0m"; }
 ok()    { echo -e "\033[1;32m✓ $*\033[0m"; }
 err()   { echo -e "\033[1;31m✗ $*\033[0m"; exit 1; }
 
-# ── Preflight ───────────────────────────────────────────
 xcode-select -p >/dev/null 2>&1 || err "Xcode not found. Install: xcode-select --install"
 
-# Metal Toolchain (Xcode 26+ ships it separately)
 if ! xcrun -f metal >/dev/null 2>&1; then
   info "Downloading Metal Toolchain..."
   xcodebuild -downloadComponent MetalToolchain
 fi
 
-# ── 1. Fetch ────────────────────────────────────────────
 if should_run "fetch"; then
   info "Fetching Chromium ${VERSION} source tarball..."
   if [[ -d "$SRC_DIR/chrome" ]]; then
@@ -129,7 +110,6 @@ PYEOF
   ok "Hooks complete"
 fi
 
-# ── 2. Patch ────────────────────────────────────────────
 if should_run "patch"; then
   info "Applying cosmium patches..."
   cd "$SRC_DIR"
@@ -146,7 +126,6 @@ if should_run "patch"; then
   ok "Patches done"
 fi
 
-# ── 3. Build ────────────────────────────────────────────
 if should_run "build"; then
   export PATH="$COSMIUM_ROOT/depot_tools:$PATH"
   cd "$SRC_DIR"

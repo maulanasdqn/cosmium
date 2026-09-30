@@ -1,29 +1,6 @@
-# Cosmium Chromium build environment for NixOS / nix-shell.
-#
-# Usage:
-#   nix-shell              # enters the shell with all deps
-#   ./scripts/build-linux.sh   # fetch + patch + compile
-#
-# Tested on NixOS 24.11+. If a package name changes across channels,
-# override via `nixpkgs` pin or `--arg pkgs '...'`.
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  # Blink's build/scripts/gperf.py massages gperf output for modern compilers:
-  # it rewrites gperf's `/*FALLTHROUGH*/` comment into a `[[fallthrough]];`
-  # statement. gperf >= 3.2 already emits its own annotation block *and* still
-  # emits the comment, so the massaging yields two annotations in a row and
-  # neither directly precedes the case label:
-  #
-  #     #if (...)
-  #           [[fallthrough]];        <- gperf's own
-  #     #endif
-  #             [[fallthrough]];      <- gperf.py's substitution
-  #           case 19:
-  #
-  # clang rejects that with "fallthrough annotation does not directly precede
-  # switch label". nixpkgs only carries 3.3, so pin the 3.1 that Chromium's
-  # post-processing is written against.
   gperf31 = pkgs.gperf.overrideAttrs (old: rec {
     version = "3.1";
     src = pkgs.fetchurl {
@@ -32,10 +9,6 @@ let
     };
   });
 
-  # Libraries that host-side build tools (wayland_scanner, protoc-alikes,
-  # mojo/blink generators) link against. use_sysroot only governs the *target*
-  # toolchain; host tools link the Nix libs above and are emitted without an
-  # rpath, so they need an explicit LD_LIBRARY_PATH to run during the build.
   hostToolLibs = with pkgs; [
     expat glib nss nspr zlib bzip2 icu libpng freetype fontconfig
     dbus atk at-spi2-atk at-spi2-core cairo pango gtk3 alsa-lib
@@ -48,7 +21,6 @@ pkgs.mkShell {
   name = "cosmium-build";
 
   nativeBuildInputs = with pkgs; [
-    # Core build tools
     python3
     ninja
     gn
@@ -58,21 +30,14 @@ pkgs.mkShell {
     which
     perl
 
-    # Code generators invoked by build actions. Chromium's install-build-deps
-    # requires all three; without gperf the Blink build dies part-way through
-    # on gen/third_party/blink/renderer/platform/color_data.cc. gperf is
-    # version-pinned — see gperf31 above.
     gperf31
     bison
     flex
 
-    # Compilers — Chromium ships its own clang, but system clang is
-    # needed during bootstrap (cipd, gn, etc.)
     clang
     lld
     llvmPackages.bintools
 
-    # Required by install-build-deps / gn gen
     glib
     nss
     nspr
@@ -89,7 +54,7 @@ pkgs.mkShell {
     alsa-lib
     libxkbcommon
     libpulseaudio
-    systemd          # libudev
+    systemd
     expat
     flac
     libpng
@@ -100,7 +65,6 @@ pkgs.mkShell {
     freetype
     fontconfig
 
-    # X11
     xorg.libX11
     xorg.libXcomposite
     xorg.libXcursor
@@ -115,11 +79,9 @@ pkgs.mkShell {
     xorg.libxcb
     xorg.libxshmfence
 
-    # Wayland
     wayland
     wayland-protocols
 
-    # Misc
     pciutils
     libva
     libglvnd
@@ -129,23 +91,9 @@ pkgs.mkShell {
     export CHROMIUM_BUILDTOOLS_PATH="$PWD/src/buildtools"
     export PATH="$PWD/depot_tools:$PATH"
 
-    # Chromium compiles against its own pinned sysroot (use_sysroot = true in
-    # config/args.gn), so system library headers must NOT leak in. Nix points
-    # PKG_CONFIG_PATH at nix-store .pc files; Chromium's
-    # build/config/linux/pkg-config.py would then resolve glib/gtk/nss from
-    # the store and blindly prefix the sysroot onto those absolute paths,
-    # emitting include dirs like
-    #   build/linux/debian_bullseye_amd64-sysroot/nix/store/…/include/glib-2.0
-    # which cannot exist — the build dies on "'glib.h' file not found".
-    # Clearing these lets the sysroot's own .pc files resolve.
     unset PKG_CONFIG_PATH
     unset PKG_CONFIG_LIBDIR
 
-    # Host build tools are linked against the Nix libs without an rpath, so
-    # ninja actions that execute them fail at runtime, e.g.
-    #   ./wayland_scanner: error while loading shared libraries:
-    #     libexpat.so.1: cannot open shared object file
-    # (exit 127, surfacing as a failed wayland_scanner_wrapper.py action).
     export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath hostToolLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     echo "🛠  cosmium build shell ready ($(nproc) cores, $(free -g | awk '/Mem/{print $2}')G RAM)"
     echo "   run: ./scripts/build-linux.sh"

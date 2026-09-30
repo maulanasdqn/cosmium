@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# Helper for authoring a new patch.
-#
-# Workflow:
-#   1. Edit files directly in src/ (the working tree).
-#   2. When happy, run: ./scripts/make-patch.sh NNNN-short-name
-#      where NNNN is the next number in patches/series.
-#   3. The script diffs your edits against HEAD, writes patches/NNNN-short-name.patch,
-#      and appends it to patches/series.
-#   4. Verify: ./scripts/reset.sh && ./scripts/03-apply-patches.sh && ./scripts/04-build.sh
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
@@ -30,8 +21,6 @@ fi
 cd "${CHROMIUM_SRC}"
 log_info "Generating patch from working-tree changes"
 
-# Use git's default diff (3-way friendly). Includes new files via --no-prefix
-# is NOT used because git apply expects a/ and b/ prefixes.
 git diff HEAD --binary > "${out}"
 
 if [[ ! -s "${out}" ]]; then
@@ -40,7 +29,6 @@ if [[ ! -s "${out}" ]]; then
   exit 1
 fi
 
-# Add a header so future-us knows what this patch was for.
 tmp="$(mktemp)"
 {
   echo "# cosmium patch: ${name}"

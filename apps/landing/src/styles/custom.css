@@ -40,7 +40,6 @@
   filter: drop-shadow(0 0 60px rgb(85 102 232 / 0.35));
 }
 
-/* The splash hero reads as a product page rather than a doc page. */
 .hero h1 {
   letter-spacing: -0.03em;
 }
@@ -49,7 +48,6 @@
   max-width: 44ch;
 }
 
-/* Keep long flag names and JSON samples from stretching the page. */
 .sl-markdown-content table {
   display: block;
   overflow-x: auto;
@@ -60,7 +58,6 @@
   font-size: 0.875em;
 }
 
-/* Card grids on the splash page get a subtle accent edge. */
 .card {
   border-color: var(--sl-color-gray-5);
 }

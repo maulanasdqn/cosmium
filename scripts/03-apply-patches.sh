@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Apply every patch listed in patches/series, in order.
-# Stops on first failure and leaves a .rej for inspection.
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
@@ -24,7 +22,6 @@ cd "${CHROMIUM_SRC}"
 
 count=0
 while IFS= read -r line; do
-  # Skip blank lines and comments.
   [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
 
   patch_path="${COSMIUM_ROOT}/patches/${line}"

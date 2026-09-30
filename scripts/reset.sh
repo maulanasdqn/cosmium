@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Revert all applied patches, returning the source tree to the pinned tag.
-# Use this before rebasing onto a new Chromium tag, or to start fresh.
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"

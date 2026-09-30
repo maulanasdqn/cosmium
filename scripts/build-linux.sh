@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# ──────────────────────────────────────────────────────────
-# Cosmium Linux x86_64 build script
-#
-# Prerequisites: run inside `nix-shell` (or have all deps).
-# Usage:
-#   ./scripts/build-linux.sh              # full pipeline
-#   ./scripts/build-linux.sh --only fetch
-#   ./scripts/build-linux.sh --only patch
-#   ./scripts/build-linux.sh --only build
-#   ./scripts/build-linux.sh --jobs 14
-# ──────────────────────────────────────────────────────────
 set -euo pipefail
 
 COSMIUM_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,15 +10,10 @@ SRC_DIR="${COSMIUM_ROOT}/src"
 PATCHES_DIR="${COSMIUM_ROOT}/patches"
 ARGS_GN="${COSMIUM_ROOT}/.config/args.gn"
 
-# BUILD_OUT comes from the shared config so this script, 04-build.sh,
-# 05-package.sh, test-fingerprint.sh and the Rust CLI's COSMIUM_BUILD_OUT all
-# agree on one directory. It used to be hardcoded to src/out/Default, which no
-# other tool looked in. Override it per-machine in .env, not here.
 # shellcheck source=../.config/chromium.env
 source "${COSMIUM_ROOT}/.config/chromium.env"
 JOBS="${JOBS:-$(( $(nproc) - 2 ))}"
 
-# ── Parse args ──────────────────────────────────────────
 ONLY=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,7 +31,6 @@ info()  { echo -e "\033[1;34m▸ $*\033[0m"; }
 ok()    { echo -e "\033[1;32m✓ $*\033[0m"; }
 err()   { echo -e "\033[1;31m✗ $*\033[0m"; exit 1; }
 
-# ── 1. Fetch ────────────────────────────────────────────
 if should_run "fetch"; then
   info "Fetching Chromium ${VERSION} source tarball..."
   if [[ -d "$SRC_DIR/chrome" ]]; then
@@ -77,7 +60,6 @@ if should_run "fetch"; then
     ok "Git repo initialized"
   fi
 
-  # Clone depot_tools if missing
   if [[ ! -d "$COSMIUM_ROOT/depot_tools" ]]; then
     info "Cloning depot_tools..."
     git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git \
@@ -85,11 +67,9 @@ if should_run "fetch"; then
   fi
   export PATH="$COSMIUM_ROOT/depot_tools:$PATH"
 
-  # Set up .gclient for linux target
   cp "$COSMIUM_ROOT/.config/gclient-linux.py" "$COSMIUM_ROOT/.gclient"
   ok "Set .gclient for linux"
 
-  # Initialize DEPS sub-dirs as git repos so gclient doesn't re-clone
   info "Initializing DEPS sub-directories..."
   python3 - "$SRC_DIR" << 'PYEOF'
 import os, re, sys, subprocess
@@ -98,10 +78,6 @@ src = sys.argv[1]
 with open(os.path.join(src, 'DEPS')) as f:
     content = f.read()
 
-# Match every `'src/...':` dep key regardless of how its value is spelled —
-# a dict, a bare URL, or `Var('chromium_git') + '/foo.git'`. The narrower
-# value-shape match missed ~120 dirs (angle, boringssl, quiche, …) and
-# `gclient runhooks` then failed on the first one that was not a git repo.
 paths = set(re.findall(r"^\s*'(src/[^']+)'\s*:", content, re.M))
 paths |= set(re.findall(r'^\s*"(src/[^"]+)"\s*:', content, re.M))
 
@@ -125,35 +101,21 @@ print(f"  initialized {count} sub-directories")
 PYEOF
   ok "DEPS directories ready"
 
-  # Run gclient hooks (fetches remaining tools)
   info "Running gclient hooks..."
   cd "$COSMIUM_ROOT"
   gclient runhooks 2>&1 | tail -5
   ok "Hooks complete"
 
-  # Download Chromium's clang — MUST run after `gclient runhooks`.
-  # third_party/llvm-build/Release+Asserts is a `dep_type: 'gcs'` entry, and
-  # runhooks wipes that directory without re-fetching it (only `gclient sync`
-  # fetches GCS deps, and this tarball workflow never syncs). Fetching before
-  # hooks silently loses the toolchain and `gn gen` then fails with
-  # "the actual version is <blank>".
-  #
-  # Gate on the revision check, not on bin/clang existing: the release tarball
-  # ships that path with an EMPTY cr_build_revision stamp, so a file-existence
-  # guard would skip the real download.
   if ! python3 "$SRC_DIR/tools/clang/scripts/update.py" --print-revision \
        >/dev/null 2>&1; then
     info "Downloading Clang toolchain..."
     python3 "$SRC_DIR/tools/clang/scripts/update.py"
   fi
-  # Verify rather than assume — this is the exact check gn gen runs, so
-  # failing here gives a clear error instead of a confusing GN backtrace.
   CLANG_REV="$(python3 "$SRC_DIR/tools/clang/scripts/update.py" --print-revision 2>/dev/null)" \
     || err "Clang toolchain still missing/invalid after update.py"
   ok "Clang toolchain ready (${CLANG_REV})"
 fi
 
-# ── 2. Patch ────────────────────────────────────────────
 if should_run "patch"; then
   info "Applying cosmium patches..."
   cd "$SRC_DIR"
@@ -170,16 +132,9 @@ if should_run "patch"; then
   ok "Patches done"
 fi
 
-# ── 3. Build ────────────────────────────────────────────
 if should_run "build"; then
   export PATH="$COSMIUM_ROOT/depot_tools:$PATH"
 
-  # args.gn sets use_sysroot = true, so the pinned Debian sysroot must be the
-  # only source of library headers. A host PKG_CONFIG_PATH (Nix sets one) makes
-  # build/config/linux/pkg-config.py resolve packages from the host and then
-  # prefix the sysroot onto those absolute paths — producing include dirs that
-  # do not exist, e.g. "'glib.h' file not found". Safety net for runs that do
-  # not go through shell.nix (Docker, an already-entered shell).
   unset PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
 
   cd "$SRC_DIR"
@@ -194,7 +149,6 @@ if should_run "build"; then
   ninja -C "$BUILD_OUT" chrome -j"$JOBS"
   ok "Build complete!"
 
-  # Quick verify
   if [[ -f "$BUILD_OUT/chrome" ]]; then
     SIZE=$(du -sh "$BUILD_OUT/chrome" | cut -f1)
     ok "Binary: ${BUILD_OUT}/chrome (${SIZE})"

@@ -66,9 +66,6 @@ fn chrome_version_absent_when_none() {
 
 #[test]
 fn accept_lang_switch_carries_no_quality_values() {
-    // Chromium's --accept-lang parser CHECK-fails on ';' or ' ' and aborts the
-    // browser at startup, so the header-form value in the profile must be
-    // reduced to a bare list before it reaches the switch.
     let flags = profile_to_flags(&fixture());
     let accept = flags
         .iter()

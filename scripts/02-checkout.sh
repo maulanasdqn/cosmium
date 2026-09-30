@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Check out the pinned Chromium tag and run gclient hooks.
-# Use this after 01-fetch.sh, and any time VERSION changes.
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
@@ -12,7 +10,6 @@ require_src
 log_info "Checking out Chromium tag ${CHROMIUM_TAG}"
 cd "${CHROMIUM_SRC}"
 
-# Reset any in-progress patch state before switching tags.
 if [[ -f "${COSMIUM_ROOT}/.patches-applied" ]]; then
   log_warn "Patches currently applied — reverting before checkout"
   "${COSMIUM_ROOT}/scripts/reset.sh"

@@ -2,21 +2,6 @@ use crate::domain::profile::Profile;
 
 use super::features::{disable_features_list, webrtc_flags};
 
-/// Strip quality values from an Accept-Language list.
-///
-/// `locale.accept_language` is stored in HTTP header form (`en-US,en;q=0.9`)
-/// because that is what it means on the wire, but Chromium's `--accept-lang`
-/// switch parses a bare comma-separated list. Feeding it a q-value trips a
-/// CHECK in net/http/http_util.cc:
-///
-///   Check failed: std::string::npos == language.find_first_of("; ")
-///
-/// which aborts the browser during startup rather than failing softly, so
-/// every `cosmium run` with a header-form profile died before loading a page.
-#[expect(
-    clippy::doc_markdown,
-    reason = "the doc quotes a Chromium CHECK message verbatim"
-)]
 fn accept_lang_switch_value(accept_language: &str) -> String {
     accept_language
         .split(',')
@@ -128,10 +113,6 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push(format!("--cosmium-media-devices={devices_json}"));
     f.push(format!("--cosmium-avail-left={}", p.screen.avail_left));
     f.push(format!("--cosmium-avail-top={}", p.screen.avail_top));
-    // The screen dimensions need their own switches. --window-size below sizes
-    // the window, but screen.width/height report the display and stay at the
-    // headless 800x600 without these, contradicting both the profile and the
-    // avail_* pair emitted just above.
     f.push(format!("--cosmium-screen-width={}", p.screen.width));
     f.push(format!("--cosmium-screen-height={}", p.screen.height));
     f.push(format!("--cosmium-avail-width={}", p.screen.avail_width));

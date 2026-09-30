@@ -1,16 +1,3 @@
-# Compose for local cosmium development.
-#
-# - `build` service: long-running container with the full Chromium build env.
-#   Use it for fetch / patch / build cycles.
-#     docker compose run --rm build ./scripts/04-build.sh
-#
-# - `gpu` and `cpu` services: runtime containers consuming a packaged tarball
-#   from dist/. Use for fingerprint testing and integration with automation clients.
-#     docker compose run --rm gpu --cosmium-profile=/profiles/win11_rtx3060_en-us.json https://creepjs.example/
-#
-# Volumes preserve the Chromium source tree and build outputs across runs —
-# losing them costs ~30min refetch and several hours of rebuild.
-
 services:
   build:
     build:
@@ -24,7 +11,6 @@ services:
       - cosmium-depot:/cosmium/depot_tools
       - cosmium-cache:/cosmium/.git-cache
     working_dir: /cosmium
-    # Sysctl bump for Chromium's namespace-heavy build.
     ulimits:
       nofile:
         soft: 65536
@@ -45,7 +31,7 @@ services:
               count: all
               capabilities: [gpu]
     cap_add:
-      - SYS_ADMIN  # required for Chromium's seccomp/userns sandbox
+      - SYS_ADMIN
     volumes:
       - ../profiles:/profiles:ro
     environment:

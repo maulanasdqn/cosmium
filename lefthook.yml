@@ -1,12 +1,7 @@
-# Lefthook config — Git hooks for cosmium.
-# Install once per clone:  lefthook install
-# Skip ad-hoc:             LEFTHOOK=0 git commit ...
-# Skip a single hook:      LEFTHOOK_EXCLUDE=clippy git commit ...
-
 min_version: 1.5.0
 
 pre-commit:
-  parallel: false  # cargo cache lock — serial is faster + reliable
+  parallel: false
   commands:
     fmt:
       run: cargo fmt --all -- --check
@@ -20,10 +15,11 @@ pre-commit:
       run: cargo test --workspace --locked --quiet
       fail_text: "Tests fail locally. Fix before committing."
 
+    no-comments:
+      run: scripts/check-no-comments.sh
+      fail_text: "Comments are not allowed. Remove them and re-stage."
+
     loc-limit:
-      # Enforce per-FILE size cap. Any staged source file >200 lines blocks.
-      # Scoped to .rs source; design docs / patches / lockfiles / profiles
-      # are exempt because they're legitimately large.
       glob: "*.rs"
       run: |
         bad=""
@@ -42,7 +38,7 @@ pre-commit:
       fail_text: "One or more files exceed 200 LOC. Split them."
 
 pre-push:
-  parallel: false  # cargo cache lock — serial is faster + reliable
+  parallel: false
   commands:
     fmt:
       run: cargo fmt --all -- --check
@@ -56,8 +52,11 @@ pre-push:
       run: cargo test --workspace --locked
       fail_text: "Tests fail locally. Don't push red."
 
+    no-comments:
+      run: scripts/check-no-comments.sh
+      fail_text: "Comments are not allowed. Remove them and re-stage."
+
     loc-limit:
-      # Per-FILE cap on every .rs touched between upstream..HEAD.
       run: |
         if ! upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null); then
           echo "No upstream — skipping LOC gate."

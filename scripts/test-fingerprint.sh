@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Run cosmium against a battery of fingerprint probes and produce a pass/fail
-# report. Each probe is a self-contained JS expression that should evaluate
-# to a known-clean value when the corresponding patch is in place.
-#
-# Usage:
-#   ./scripts/test-fingerprint.sh [path/to/cosmium/binary] [path/to/profile.json]
-#
-# Defaults:
-#   binary  → out/cosmium/chrome
-#   profile → profiles/win11_rtx3060_en-us.json
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
@@ -27,13 +17,6 @@ fi
 
 log_info "Binary:  ${BIN}"
 log_info "Profile: ${PROFILE}"
-
-# Probe definitions. Each probe is:
-#   id|description|js-expression|expected-pattern (regex)
-#
-# A probe passes when the evaluated expression matches expected-pattern.
-# Expected values reference profile fields by `${profile.path}` — substituted
-# from the profile JSON before evaluation.
 
 probes=(
   "webdriver|navigator.webdriver === false|String(navigator.webdriver)|^false$"
@@ -60,27 +43,18 @@ probes=(
   "audio_sr|AudioContext sampleRate matches profile|String(new AudioContext().sampleRate)|^\${audio.sample_rate}$"
 )
 
-# Escape ERE metacharacters so an interpolated profile value compares as a
-# literal. Profile values are full of them -- ["en-US","en"] reads as a
-# character class, "Google Inc. (NVIDIA)" as a group -- so an exact match
-# reported FAIL with got= and expected= printing identical text.
 regex_escape() {
   printf '%s' "$1" | sed 's/[][\\.^$*+?(){}|]/\\&/g'
 }
 
-# Resolve profile field interpolations. `mode` is "pattern" when the result is
-# used as a regex, in which case substituted values are escaped; the probe's JS
-# expression side must stay verbatim.
 resolve_mode() {
   local mode="$1"
   local expr="$2"
-  # Special-case array → JSON.
   local langs_json
   langs_json=$(jq -c '.locale.languages' "${PROFILE}")
   [[ "${mode}" == pattern ]] && langs_json=$(regex_escape "${langs_json}")
   expr="${expr//\$\{identity_languages_json\}/${langs_json}}"
 
-  # Generic ${a.b.c} → jq path.
   while [[ "${expr}" =~ \$\{([a-z_]+(\.[a-z_]+)*)\} ]]; do
     local path="${BASH_REMATCH[1]}"
     local val
@@ -94,7 +68,6 @@ resolve_mode() {
 resolve() { resolve_mode literal "$1"; }
 resolve_pattern() { resolve_mode pattern "$1"; }
 
-# Build a single HTML page that evaluates every probe and prints results.
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
 
@@ -133,7 +106,6 @@ run(__PROBES__);
 </body></html>
 EOF
 
-# Build the JS array of probes.
 js_probes="["
 sep=""
 for p in "${probes[@]}"; do
@@ -146,17 +118,7 @@ js_probes+="]"
 
 sed -i.bak "s|__PROBES__|${js_probes}|" "${tmp}/probes.html"
 
-# Run cosmium headlessly and capture the rendered <pre> contents.
 out_dump="${tmp}/dump.html"
-# --dump-dom serialises the DOM as soon as load finishes, but every probe runs
-# inside an async function, so without --virtual-time-budget the dump captures
-# the placeholder "running…" and no probe ever reports. The budget lets virtual
-# time run ahead until the pending work drains, then dumps.
-# The patches expose one switch per spoofed value; there is no
-# --cosmium-profile switch, and passing one made Chromium ignore it silently
-# while every profile-derived probe reported the machine's real values. This
-# mirrors what the Rust CLI's `cosmium run` does: expand the profile into the
-# switches the binary actually reads.
 mapfile -t cosmium_flags < <(jq -r '
   [
     "--cosmium-platform=\(.identity.navigator_platform)",
@@ -186,7 +148,6 @@ mapfile -t cosmium_flags < <(jq -r '
   --dump-dom \
   "file://${tmp}/probes.html" > "${out_dump}" 2>/dev/null
 
-# Extract the JSON-per-line probe results.
 results=$(grep -oP '\{"id":[^}]+\}' "${out_dump}" || true)
 if [[ -z "${results}" ]]; then
   log_error "No probe results captured. Dump:"
@@ -194,7 +155,6 @@ if [[ -z "${results}" ]]; then
   exit 1
 fi
 
-# Compare each result against expected pattern.
 pass=0
 fail=0
 echo
@@ -212,11 +172,6 @@ for p in "${probes[@]}"; do
   fi
   value=$(echo "${line}" | jq -r '.value // ""')
   err=$(echo "${line}" | jq -r '.error // ""')
-  # An expected pattern starting with '!' means "must NOT match the rest".
-  # bash's [[ =~ ]] is POSIX ERE and has no negative lookahead, so a pattern
-  # like ^(?!.*SwiftShader).*$ is not merely unsupported — it makes bash abort
-  # the comparison with "invalid regular expression", so the probe could never
-  # report anything but FAIL.
   negate=""
   if [[ "${expected_resolved}" == '!'* ]]; then
     negate="yes"

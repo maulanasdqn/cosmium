@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
-# Bundle the built binary + runtime files into a distributable archive.
 
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
 
 require_src
 
-# Two entry points build into two different directories. 04-build.sh honours
-# BUILD_OUT from .config/chromium.env (out/cosmium, which is also what the Rust
-# CLI's COSMIUM_BUILD_OUT and test-fingerprint.sh expect), while the standalone
-# build-linux.sh / build-mac.sh hardcode src/out/Default. Packaging only the
-# configured path made this script fail outright after a build-linux.sh run.
-# Take the configured path when it holds a binary, otherwise fall back.
 resolve_build_out() {
   local candidates=("${BUILD_OUT}" "${CHROMIUM_SRC}/out/Default")
   local c
@@ -39,15 +32,12 @@ mkdir -p "${stage}"
 
 log_info "Staging runtime files in ${stage}"
 
-# Core binary + the pak/locale files Chromium loads at runtime.
-# This list mirrors what real Chrome ships — anything missing means runtime
-# crashes, anything extra is dead weight.
 files=(
   chrome
   chrome_100_percent.pak
   chrome_200_percent.pak
   chrome_crashpad_handler
-  chrome_sandbox        # SUID-able sandbox helper
+  chrome_sandbox
   icudtl.dat
   resources.pak
   v8_context_snapshot.bin
@@ -56,8 +46,8 @@ files=(
   libvk_swiftshader.so
   libvulkan.so.1
   vk_swiftshader_icd.json
-  ANGLE              # directory
-  locales            # directory
+  ANGLE
+  locales
 )
 
 for f in "${files[@]}"; do
@@ -69,24 +59,8 @@ for f in "${files[@]}"; do
   fi
 done
 
-# Permissions for the SUID sandbox helper. The container entrypoint will
-# enable it via setuid; here we just preserve the executable bit.
 chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 
-# Record what is actually compiled into this binary, not what patches/series
-# lists. The two drift apart whenever series gains entries after the tree was
-# patched -- a pull that adds upstream patches, or a build run with --only
-# build, which skips the patch step entirely. A manifest that claims patches
-# the binary does not contain is worse than no manifest, because downstream
-# automation trusts it to decide which evasions are live.
-# Classification is three-way, not two. Reverse-applying cleanly proves a patch
-# is present, and forward-applying cleanly proves it is absent, but a patch can
-# be neither: once a later patch edits a file an earlier one created or touched,
-# the earlier patch no longer reverses even though its changes are compiled in.
-# 0019 creates cosmium_canvas_noise.h and 0026 then edits it, so a reverse-only
-# check reported 0019 missing from a binary whose canvas noise demonstrably
-# works. Treat "neither direction applies" as present-but-since-modified rather
-# than silently mislabelling it either way.
 applied=()
 unapplied=()
 while read -r patch_name; do
@@ -113,7 +87,6 @@ if [[ ${#unapplied[@]} -gt 0 ]]; then
   for u in "${unapplied[@]}"; do log_warn "  ${u}"; done
 fi
 
-# Stamp the build with version info readable by automation clients.
 cat > "${stage}/cosmium.json" <<EOF
 {
   "chromium_tag": "${CHROMIUM_TAG}",
