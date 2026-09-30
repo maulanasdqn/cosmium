@@ -39,7 +39,7 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
     let env = config::env::Env::init()?;
 
     let app_state = AppState {
-        profile_repo: state.profile_repo.clone(),
+        profile_repo: Arc::clone(&state.profile_repo),
         binary,
         profiles_dir: env.profiles_dir.clone(),
         api_key: args.api_key,

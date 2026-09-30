@@ -113,7 +113,7 @@ pub async fn generate_profile(
         .iter()
         .map(|d| DiagnosticDto {
             severity: format!("{:?}", d.severity).to_lowercase(),
-            code: d.field.to_string(),
+            code: d.field.to_owned(),
             message: d.message.clone(),
         })
         .collect();

@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::{Diagnostic, Profile};
@@ -48,12 +47,13 @@ fn detect_ua_os(ua: &str) -> Option<&'static str> {
     }
 }
 
-static CHROME_VERSION_IN_UA: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"Chrome/(\d+)").expect("compile regex"));
+static CHROME_VERSION_IN_UA: std::sync::LazyLock<Option<Regex>> =
+    std::sync::LazyLock::new(|| Regex::new(r"Chrome/(\d+)").ok());
 
 pub(super) fn chrome_version(p: &Profile) -> Vec<Diagnostic> {
     let ua_major = CHROME_VERSION_IN_UA
-        .captures(&p.identity.user_agent)
+        .as_ref()
+        .and_then(|re| re.captures(&p.identity.user_agent))
         .and_then(|c| c.get(1))
         .and_then(|m| m.as_str().parse::<u32>().ok());
 
@@ -86,12 +86,12 @@ pub(super) fn brands(p: &Profile) -> Vec<Diagnostic> {
         .brands
         .iter()
         .any(|b| b.brand == "Google Chrome");
-    if !has_chrome {
+    if has_chrome {
+        vec![]
+    } else {
         vec![Diagnostic::warn(
             "identity.client_hints.brands",
             "no \"Google Chrome\" entry — real Chrome always emits one",
         )]
-    } else {
-        vec![]
     }
 }

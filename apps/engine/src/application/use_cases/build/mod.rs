@@ -18,7 +18,7 @@ pub enum BuildPhase {
 }
 
 impl BuildPhase {
-    pub fn all() -> &'static [BuildPhase] {
+    pub const fn all() -> &'static [Self] {
         &[
             Self::Prereqs,
             Self::Fetch,
@@ -28,10 +28,10 @@ impl BuildPhase {
             Self::Package,
         ]
     }
-    pub fn from_inclusive(start: BuildPhase) -> Vec<BuildPhase> {
+    pub fn from_inclusive(start: Self) -> Vec<Self> {
         let all = Self::all();
         let idx = all.iter().position(|p| *p == start).unwrap_or(0);
-        all[idx..].to_vec()
+        all.get(idx..).unwrap_or_default().to_vec()
     }
 }
 
@@ -54,7 +54,7 @@ pub struct BuildChromium {
 }
 
 impl BuildChromium {
-    pub fn new(config: BuildConfig) -> Self {
+    pub const fn new(config: BuildConfig) -> Self {
         Self { config }
     }
 

@@ -8,7 +8,7 @@ fn fixture() -> Profile {
 
 fn flag_value<'a>(flags: &'a [String], prefix: &str) -> &'a str {
     let f = flags.iter().find(|f| f.starts_with(prefix)).unwrap();
-    &f[prefix.len()..]
+    f.strip_prefix(prefix).unwrap()
 }
 
 #[test]

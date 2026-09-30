@@ -5,7 +5,7 @@ use super::BuildConfig;
 use super::exec;
 use super::pkg;
 
-pub async fn prereqs(c: &BuildConfig) -> Result<()> {
+pub(super) async fn prereqs(c: &BuildConfig) -> Result<()> {
     if !c.depot_tools.exists() {
         let parent = c.depot_tools.parent().unwrap_or(&c.cosmium_root);
         fs::create_dir_all(parent).await.ok();
@@ -27,21 +27,21 @@ pub async fn prereqs(c: &BuildConfig) -> Result<()> {
     Ok(())
 }
 
-pub async fn fetch(c: &BuildConfig) -> Result<()> {
+pub(super) async fn fetch(c: &BuildConfig) -> Result<()> {
     fs::create_dir_all(&c.cosmium_root).await.ok();
-    if !c.chromium_src.exists() {
+    if c.chromium_src.exists() {
         exec::run(
-            &c.cosmium_root,
-            "fetch",
-            &["--nohooks", "--no-history", "chromium"],
+            &c.chromium_src,
+            "gclient",
+            &["sync", "--nohooks", "--with_branch_heads", "--with_tags"],
             &c.depot_tools,
         )
         .await?;
     } else {
         exec::run(
-            &c.chromium_src,
-            "gclient",
-            &["sync", "--nohooks", "--with_branch_heads", "--with_tags"],
+            &c.cosmium_root,
+            "fetch",
+            &["--nohooks", "--no-history", "chromium"],
             &c.depot_tools,
         )
         .await?;
@@ -64,7 +64,7 @@ pub async fn fetch(c: &BuildConfig) -> Result<()> {
     Ok(())
 }
 
-pub async fn checkout(c: &BuildConfig) -> Result<()> {
+pub(super) async fn checkout(c: &BuildConfig) -> Result<()> {
     let tag_ref = format!("tags/{}", c.chromium_tag);
     let branch = format!("cosmium-{}", c.chromium_tag);
     let tag_fetch = format!("refs/tags/{0}:refs/tags/{0}", c.chromium_tag);
@@ -94,7 +94,7 @@ pub async fn checkout(c: &BuildConfig) -> Result<()> {
     Ok(())
 }
 
-pub async fn apply_patches(c: &BuildConfig) -> Result<()> {
+pub(super) async fn apply_patches(c: &BuildConfig) -> Result<()> {
     let series = fs::read_to_string(&c.patches_series)
         .await
         .with_context(|| format!("reading {}", c.patches_series.display()))?;
@@ -112,13 +112,13 @@ pub async fn apply_patches(c: &BuildConfig) -> Result<()> {
             &c.depot_tools,
         )
         .await
-        .with_context(|| format!("applying {}", trimmed))?;
+        .with_context(|| format!("applying {trimmed}"))?;
         tracing::info!(patch = %trimmed, "applied");
     }
     Ok(())
 }
 
-pub async fn compile(c: &BuildConfig) -> Result<()> {
+pub(super) async fn compile(c: &BuildConfig) -> Result<()> {
     fs::create_dir_all(&c.build_out).await.ok();
     let args_content = fs::read_to_string(&c.args_gn).await?;
     let inline = args_content
@@ -145,7 +145,7 @@ pub async fn compile(c: &BuildConfig) -> Result<()> {
     Ok(())
 }
 
-pub async fn package(c: &BuildConfig) -> Result<()> {
+pub(super) async fn package(c: &BuildConfig) -> Result<()> {
     pkg::run(c).await
 }
 

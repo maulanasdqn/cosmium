@@ -31,15 +31,7 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
     let noise_seed = u32::from_str_radix(&seed_hex, 16).unwrap_or(0xDEAD_BEEF);
 
     let locale = p.locale.languages.first().cloned().unwrap_or_default();
-    let ua = match &p.chrome_version {
-        Some(ver) => {
-            let major = ver.split('.').next().unwrap_or(ver);
-            let re = regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+").unwrap();
-            re.replace(&p.identity.user_agent, format!("Chrome/{major}.0.0.0"))
-                .into_owned()
-        }
-        None => p.identity.user_agent.clone(),
-    };
+    let ua = crate::domain::runtime::user_agent_for(p);
 
     let ext_entries: Vec<serde_json::Value> = p
         .browser_state

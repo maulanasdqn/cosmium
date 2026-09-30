@@ -3,7 +3,7 @@ use super::stealth::StealthConfig;
 impl StealthConfig {
     pub fn navigator_overrides_script(&self) -> String {
         format!(
-            r#"(() => {{
+            r"(() => {{
   const langs = {langs};
   const hc = {hc};
   const dm = {dm};
@@ -12,7 +12,7 @@ impl StealthConfig {
   d(navigator, 'language', langs[0]);
   d(navigator, 'hardwareConcurrency', hc);
   d(navigator, 'deviceMemory', dm);
-}})();"#,
+}})();",
             langs = self.languages_json,
             hc = self.hardware_concurrency,
             dm = self.device_memory,
@@ -21,7 +21,7 @@ impl StealthConfig {
 
     pub fn screen_script(&self) -> String {
         format!(
-            r#"(() => {{
+            r"(() => {{
   const S = screen; const W = window;
   const d = (o, k, v) => Object.defineProperty(o, k, {{ get: () => v, configurable: true }});
   d(S, 'width', {w}); d(S, 'height', {h});
@@ -40,7 +40,7 @@ impl StealthConfig {
     if (dh && parseInt(dh[1]) === {h}) return {{ ...r, matches: true }};
     return r;
   }};
-}})();"#,
+}})();",
             w = self.screen_width,
             h = self.screen_height,
             aw = self.avail_width,
@@ -54,7 +54,7 @@ impl StealthConfig {
 
     pub fn client_rects_script(&self) -> String {
         format!(
-            r#"(() => {{
+            r"(() => {{
   const seed = {seed};
   function hash(a, b, c, d) {{
     let h = seed ^ (a * 374761393 + b * 668265263 + c * 1274126177 + d * 1150885431) | 0;
@@ -79,7 +79,7 @@ impl StealthConfig {
     }}
     return out;
   }};
-}})();"#,
+}})();",
             seed = self.noise_seed,
         )
     }
@@ -87,7 +87,7 @@ impl StealthConfig {
     pub fn intl_script(&self) -> String {
         let q = |s: &str| serde_json::to_string(s).unwrap_or_default();
         format!(
-            r#"(() => {{
+            r"(() => {{
   const loc = {locale}; const tz = {tz};
   const wrap = (Ctor) => {{
     const Orig = Ctor;
@@ -102,7 +102,7 @@ impl StealthConfig {
   if (Intl.RelativeTimeFormat) Intl.RelativeTimeFormat = wrap(Intl.RelativeTimeFormat);
   if (Intl.DisplayNames) Intl.DisplayNames = wrap(Intl.DisplayNames);
   if (Intl.PluralRules) Intl.PluralRules = wrap(Intl.PluralRules);
-}})();"#,
+}})();",
             locale = q(&self.locale),
             tz = q(&self.timezone),
         )
@@ -110,7 +110,7 @@ impl StealthConfig {
 
     pub fn browser_state_script(&self) -> String {
         format!(
-            r#"(() => {{
+            r"(() => {{
   const HL = {hl};
   const origDesc = Object.getOwnPropertyDescriptor(History.prototype, 'length');
   Object.defineProperty(History.prototype, 'length', {{
@@ -160,7 +160,7 @@ impl StealthConfig {
       _pf.add(chrome.management.getSelf);
     }}
   }}
-}})();"#,
+}})();",
             hl = self.history_length,
             dl = self.download_count,
             exts = self.extensions_json,

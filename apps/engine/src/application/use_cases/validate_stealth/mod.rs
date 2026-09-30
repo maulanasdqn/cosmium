@@ -96,7 +96,7 @@ async fn run_target(scraper: &ChromiumScraper, target: &ValidationTarget) -> Val
         Ok(v) => v,
         Err(e) => format!("ERROR: {e}"),
     };
-    let duration_ms = start.elapsed().as_millis() as u64;
+    let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     let (verdict, detail) = targets::evaluate(&target.name, &raw);
     ValidationResult {
         target: target.name.clone(),

@@ -4,4 +4,6 @@ pub mod flags;
 
 pub use browser::BrowserRuntime;
 pub use error::{RuntimeError, RuntimeResult};
-pub use flags::{profile_to_env, profile_to_flags, session_cache_dir, user_data_dir};
+pub use flags::{
+    profile_to_env, profile_to_flags, session_cache_dir, user_agent_for, user_data_dir,
+};

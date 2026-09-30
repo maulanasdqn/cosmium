@@ -1,6 +1,6 @@
 use super::stealth::StealthConfig;
 
-const WEBGL_TEMPLATE: &str = r#"(() => {
+const WEBGL_TEMPLATE: &str = r"(() => {
   const V = __VENDOR__;
   const R = __RENDERER__;
   const pf = window.__cosmiumPf;
@@ -16,9 +16,9 @@ const WEBGL_TEMPLATE: &str = r#"(() => {
   };
   patch(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
   patch(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
-})();"#;
+})();";
 
-const CANVAS_TEMPLATE: &str = r#"(() => {
+const CANVAS_TEMPLATE: &str = r"(() => {
   const seed = __SEED__;
   const pf = window.__cosmiumPf;
   const asFn = (fn) => { if (pf) pf.add(fn); return fn; };
@@ -71,9 +71,9 @@ const CANVAS_TEMPLATE: &str = r#"(() => {
       return origTB.apply(this, arguments);
     });
   }
-})();"#;
+})();";
 
-const AUDIO_TEMPLATE: &str = r#"(() => {
+const AUDIO_TEMPLATE: &str = r"(() => {
   const seed = __SEED__;
   const BL = __BL__;
   const pf = window.__cosmiumPf;
@@ -119,7 +119,7 @@ const AUDIO_TEMPLATE: &str = r#"(() => {
       });
     } catch (_) {}
   }
-})();"#;
+})();";
 
 impl StealthConfig {
     pub fn webgl_script(&self) -> String {

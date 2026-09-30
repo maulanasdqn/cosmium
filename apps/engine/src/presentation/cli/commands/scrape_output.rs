@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -12,10 +12,7 @@ use crate::infrastructure::scraping::ProxyPool;
 use super::scrape::RotationArg;
 use super::scrape::ScrapePageArgs;
 
-pub fn build_json_output(
-    result: &ScrapePageOutput,
-    output_dir: &Option<PathBuf>,
-) -> Result<String> {
+pub fn build_json_output(result: &ScrapePageOutput, output_dir: Option<&Path>) -> Result<String> {
     let mut obj = serde_json::Map::new();
     obj.insert(
         "url".into(),
@@ -50,7 +47,7 @@ pub fn build_json_output(
         let mut extracted = serde_json::Map::new();
         for (k, v) in &result.page.script_results {
             let parsed: serde_json::Value =
-                serde_json::from_str(v).unwrap_or(serde_json::Value::String(v.clone()));
+                serde_json::from_str(v).unwrap_or_else(|_| serde_json::Value::String(v.clone()));
             extracted.insert(k.clone(), parsed);
         }
         obj.insert("extracted".into(), serde_json::Value::Object(extracted));
@@ -78,22 +75,19 @@ pub fn build_json_output(
 pub fn print_result(
     format: &str,
     result: &ScrapePageOutput,
-    output_dir: &Option<PathBuf>,
+    output_dir: Option<&Path>,
 ) -> Result<()> {
-    match format {
-        "html" => {
-            let html = String::from_utf8_lossy(&result.page.html);
-            println!("{html}");
-        }
-        _ => {
-            let output = build_json_output(result, output_dir)?;
-            println!("{output}");
-        }
+    if format == "html" {
+        let html = String::from_utf8_lossy(&result.page.html);
+        println!("{html}");
+    } else {
+        let output = build_json_output(result, output_dir)?;
+        println!("{output}");
     }
     Ok(())
 }
 
-pub fn save_artifacts(output_dir: &Option<PathBuf>, result: &ScrapePageOutput) -> Result<()> {
+pub fn save_artifacts(output_dir: Option<&Path>, result: &ScrapePageOutput) -> Result<()> {
     let Some(dir) = output_dir else {
         return Ok(());
     };
@@ -149,7 +143,7 @@ pub fn build_proxy_pool(args: &ScrapePageArgs) -> Result<Option<Arc<ProxyPool>>>
     Ok(Some(Arc::new(ProxyPool::new(proxies, config))))
 }
 
-pub fn build_workflow(extract: &[String], script: &Option<String>) -> Vec<WorkflowStep> {
+pub fn build_workflow(extract: &[String], script: Option<&str>) -> Vec<WorkflowStep> {
     let mut workflow = Vec::new();
     for sel in extract {
         workflow.push(WorkflowStep::Extract {
@@ -162,7 +156,7 @@ pub fn build_workflow(extract: &[String], script: &Option<String>) -> Vec<Workfl
     if let Some(code) = script {
         workflow.push(WorkflowStep::Script {
             name: "script".into(),
-            code: code.clone(),
+            code: code.to_owned(),
             timeout_seconds: 30,
         });
     }

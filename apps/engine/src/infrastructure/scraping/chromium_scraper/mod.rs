@@ -27,7 +27,7 @@ pub struct ChromiumScraper {
 }
 
 impl ChromiumScraper {
-    pub fn from_browser(browser: Browser, stealth_config: Option<StealthConfig>) -> Self {
+    pub const fn from_browser(browser: Browser, stealth_config: Option<StealthConfig>) -> Self {
         Self {
             browser,
             stealth_config,
@@ -69,7 +69,7 @@ impl ChromiumScraper {
     pub(crate) async fn navigate_tolerant(page: &Page, url: &str, wait_ms: u64) {
         let timeout = Duration::from_secs(DEFAULT_NAV_TIMEOUT_SECS);
         match tokio::time::timeout(timeout, page.goto(url)).await {
-            Ok(Ok(_)) | Ok(Err(_)) | Err(_) => {}
+            Ok(Ok(_) | Err(_)) | Err(_) => {}
         }
         if wait_ms > 0 {
             tokio::time::sleep(Duration::from_millis(wait_ms)).await;

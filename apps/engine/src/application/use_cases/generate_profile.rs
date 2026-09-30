@@ -63,7 +63,7 @@ impl GenerateProfile {
         let mut profile: Profile = serde_json::from_str(&resp.content)
             .with_context(|| format!("parsing LLM JSON: {}", truncate(&resp.content, 400)))?;
         if profile.name.is_empty() {
-            profile.name = input.name.clone();
+            profile.name.clone_from(&input.name);
         }
         let diagnostics = validation::validate(&profile);
         Ok(GenerateProfileOutput {
@@ -78,7 +78,7 @@ fn truncate(s: &str, n: usize) -> String {
     if s.len() <= n {
         s.to_owned()
     } else {
-        format!("{}…", &s[..n])
+        format!("{}…", crate::domain::text::prefix(s, n))
     }
 }
 

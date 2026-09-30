@@ -3,7 +3,7 @@ use crate::domain::profile::validation::Diagnostic;
 
 use super::platform::platform_of;
 
-pub fn webgl_renderer(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn webgl_renderer(p: &Profile) -> Vec<Diagnostic> {
     let r = &p.gpu.renderer;
     if r.contains("SwiftShader") || r.contains("0x0000C0DE") {
         vec![Diagnostic::err(
@@ -15,7 +15,7 @@ pub fn webgl_renderer(p: &Profile) -> Vec<Diagnostic> {
     }
 }
 
-pub fn gpu_vendor_matches_platform(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn gpu_vendor_matches_platform(p: &Profile) -> Vec<Diagnostic> {
     let Some(os) = platform_of(&p.identity) else {
         return vec![];
     };

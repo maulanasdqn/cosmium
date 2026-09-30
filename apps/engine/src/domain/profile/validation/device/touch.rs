@@ -1,7 +1,7 @@
 use crate::domain::profile::Profile;
 use crate::domain::profile::validation::Diagnostic;
 
-pub fn touch_points_match_form_factor(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn touch_points_match_form_factor(p: &Profile) -> Vec<Diagnostic> {
     let ua = &p.identity.user_agent;
     let mobile_ua = ua.contains("Mobile") || ua.contains("Android") || ua.contains("iPhone");
     let touches = p.hardware.max_touch_points;

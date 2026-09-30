@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Args;
@@ -18,7 +19,7 @@ pub struct RunCmd {
 }
 
 pub async fn execute(cmd: RunCmd, state: &CliState) -> Result<()> {
-    let uc = RunBrowser::new(state.profile_repo.clone(), state.runtime.clone());
+    let uc = RunBrowser::new(Arc::clone(&state.profile_repo), Arc::clone(&state.runtime));
     uc.execute(RunBrowserInput {
         profile: cmd.profile,
         binary: cmd.binary.unwrap_or_else(|| state.binary.clone()),

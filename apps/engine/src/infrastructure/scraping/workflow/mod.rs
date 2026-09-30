@@ -116,7 +116,7 @@ fn json_strings(items: &[String]) -> String {
 async fn evaluate(page: &Page, code: &str, seconds: u64, name: &str) -> Option<String> {
     let evaluation = tokio::time::timeout(Duration::from_secs(seconds), page.evaluate(code)).await;
     match evaluation {
-        Ok(Ok(result)) => Some(serialise(result.into_value::<Value>().ok())),
+        Ok(Ok(result)) => Some(serialise(result.into_value::<Value>().ok().as_ref())),
         Ok(Err(err)) => {
             tracing::warn!(script = %name, error = %err, "workflow script failed");
             None
@@ -128,8 +128,6 @@ async fn evaluate(page: &Page, code: &str, seconds: u64, name: &str) -> Option<S
     }
 }
 
-fn serialise(value: Option<Value>) -> String {
-    value
-        .as_ref()
-        .map_or_else(|| "null".to_owned(), ToString::to_string)
+fn serialise(value: Option<&Value>) -> String {
+    value.map_or_else(|| "null".to_owned(), ToString::to_string)
 }

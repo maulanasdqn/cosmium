@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Args, Subcommand, ValueEnum};
 
 use crate::application::use_cases::scrape_page::{ScrapePage, ScrapePageInput};
@@ -92,7 +92,7 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
         tracing::info!(count = p.len(), "proxy pool initialized");
     }
 
-    let workflow = build_workflow(&args.extract, &args.script);
+    let workflow = build_workflow(&args.extract, args.script.as_deref());
     let max_attempts = 1 + args.retries;
     let mut result = None;
 
@@ -103,7 +103,7 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
         }
 
         let session = Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
-        let uc = ScrapePage::new(state.profile_repo.clone(), session);
+        let uc = ScrapePage::new(Arc::clone(&state.profile_repo), session);
 
         let input = ScrapePageInput {
             profile: args.profile.clone(),
@@ -133,9 +133,9 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
         result = Some(r);
     }
 
-    let result = result.unwrap();
-    print_result(&args.format, &result, &args.output_dir)?;
-    save_artifacts(&args.output_dir, &result)?;
+    let result = result.context("no scrape attempt was made")?;
+    print_result(&args.format, &result, args.output_dir.as_deref())?;
+    save_artifacts(args.output_dir.as_deref(), &result)?;
 
     if let Some(ref p) = pool {
         for s in &p.stats() {

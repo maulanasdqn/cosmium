@@ -5,7 +5,7 @@ use chromiumoxide::Page;
 pub async fn in_page_fetch(page: &Page, target_url: &str) -> Option<String> {
     let safe = target_url.replace('\'', "\\'");
     let js = format!(
-        r#"
+        r"
 (async () => {{
     try {{
         const resp = await fetch('{safe}', {{
@@ -26,7 +26,7 @@ pub async fn in_page_fetch(page: &Page, target_url: &str) -> Option<String> {
         return JSON.stringify({{ error: e.message }});
     }}
 }})()
-"#
+"
     );
     tracing::info!("probing target URL via in-page fetch");
     let probe_timeout = Duration::from_secs(15);
@@ -50,7 +50,7 @@ pub async fn in_page_fetch(page: &Page, target_url: &str) -> Option<String> {
 
     tracing::info!("in-page fetch probe passed, fetching full HTML");
     let fetch_js = format!(
-        r#"
+        r"
 (async () => {{
     const resp = await fetch('{safe}', {{
         credentials: 'include',
@@ -62,7 +62,7 @@ pub async fn in_page_fetch(page: &Page, target_url: &str) -> Option<String> {
     }});
     return await resp.text();
 }})()
-"#
+"
     );
     let fetch_timeout = Duration::from_secs(20);
     match tokio::time::timeout(fetch_timeout, page.evaluate(fetch_js.as_str())).await {

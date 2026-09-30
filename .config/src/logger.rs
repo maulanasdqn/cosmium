@@ -3,8 +3,7 @@ use tracing_subscriber::fmt;
 
 pub fn init() {
     let filter = EnvFilter::try_from_env("COSMIUM_LOG")
-        .or_else(|_| EnvFilter::try_new("info,cosmium=debug,engine=debug"))
-        .expect("valid log filter");
+        .unwrap_or_else(|_| EnvFilter::new("info,cosmium=debug,engine=debug"));
 
     fmt()
         .with_env_filter(filter)

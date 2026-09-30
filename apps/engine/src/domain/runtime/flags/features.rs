@@ -1,6 +1,6 @@
 use crate::domain::profile::IpHandlingPolicy;
 
-pub(super) fn disable_features_list() -> &'static str {
+pub(super) const fn disable_features_list() -> &'static str {
     "Translate,\
      InterestFeedContentSuggestions,\
      PrivacySandboxAdsAPIs,\
@@ -17,7 +17,7 @@ pub(super) fn disable_features_list() -> &'static str {
      MediaEngagementBypassAutoplayPolicies"
 }
 
-pub(super) fn webrtc_flags(policy: &IpHandlingPolicy) -> Vec<String> {
+pub(super) fn webrtc_flags(policy: IpHandlingPolicy) -> Vec<String> {
     let value = match policy {
         IpHandlingPolicy::Default => "default",
         IpHandlingPolicy::DefaultPublicInterfaceOnly => "default_public_interface_only",

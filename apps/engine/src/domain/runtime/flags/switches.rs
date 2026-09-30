@@ -13,12 +13,16 @@ use super::features::{disable_features_list, webrtc_flags};
 ///
 /// which aborts the browser during startup rather than failing softly, so
 /// every `cosmium run` with a header-form profile died before loading a page.
+#[expect(
+    clippy::doc_markdown,
+    reason = "the doc quotes a Chromium CHECK message verbatim"
+)]
 fn accept_lang_switch_value(accept_language: &str) -> String {
     accept_language
         .split(',')
         .filter_map(|part| {
             let lang = part.split(';').next().unwrap_or("").trim();
-            (!lang.is_empty()).then(|| lang.to_string())
+            (!lang.is_empty()).then(|| lang.to_owned())
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -26,19 +30,22 @@ fn accept_lang_switch_value(accept_language: &str) -> String {
 
 fn rewrite_ua_version(ua: &str, full_version: &str) -> String {
     let major = full_version.split('.').next().unwrap_or(full_version);
-    let chrome_re = regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+").unwrap();
+    let Ok(chrome_re) = regex::Regex::new(r"Chrome/\d+\.\d+\.\d+\.\d+") else {
+        return ua.to_owned();
+    };
     let out = chrome_re.replace(ua, format!("Chrome/{major}.0.0.0"));
     out.into_owned()
 }
 
-pub fn profile_to_flags(p: &Profile) -> Vec<String> {
-    let mut f = Vec::new();
+pub fn user_agent_for(p: &Profile) -> String {
+    p.chrome_version.as_ref().map_or_else(
+        || p.identity.user_agent.clone(),
+        |ver| rewrite_ua_version(&p.identity.user_agent, ver),
+    )
+}
 
-    let ua = match &p.chrome_version {
-        Some(ver) => rewrite_ua_version(&p.identity.user_agent, ver),
-        None => p.identity.user_agent.clone(),
-    };
-    f.push(format!("--user-agent={ua}"));
+fn push_identity(f: &mut Vec<String>, p: &Profile) {
+    f.push(format!("--user-agent={}", user_agent_for(p)));
     f.push(format!("--lang={}", primary_lang(&p.locale.languages)));
     f.push(format!(
         "--accept-lang={}",
@@ -56,6 +63,9 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         "--cosmium-languages={}",
         p.locale.languages.join(",")
     ));
+}
+
+fn push_hardware(f: &mut Vec<String>, p: &Profile) {
     f.push(format!(
         "--cosmium-hardware-concurrency={}",
         p.hardware.hardware_concurrency
@@ -88,6 +98,29 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
         "--cosmium-audio-max-channels={}",
         p.audio.max_channel_count
     ));
+}
+
+fn push_battery(f: &mut Vec<String>, p: &Profile) {
+    let Some(bat) = &p.hardware.battery else {
+        return;
+    };
+    f.push(format!("--cosmium-battery-charging={}", bat.charging));
+    f.push(format!("--cosmium-battery-level={}", bat.level));
+    f.push(bat.charging_time_seconds.map_or_else(
+        || "--cosmium-battery-charging-time=Infinity".into(),
+        |t| format!("--cosmium-battery-charging-time={t}"),
+    ));
+    f.push(bat.discharging_time_seconds.map_or_else(
+        || "--cosmium-battery-discharging-time=Infinity".into(),
+        |t| format!("--cosmium-battery-discharging-time={t}"),
+    ));
+}
+
+pub fn profile_to_flags(p: &Profile) -> Vec<String> {
+    let mut f = Vec::new();
+
+    push_identity(&mut f, p);
+    push_hardware(&mut f, p);
     let voices_json = serde_json::to_string(&p.voices).unwrap_or_default();
     f.push(format!("--cosmium-voices={voices_json}"));
     f.push(format!("--cosmium-fonts={}", p.fonts.installed.join(",")));
@@ -118,18 +151,7 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     if let Some(ver) = &p.chrome_version {
         f.push(format!("--cosmium-chrome-version={ver}"));
     }
-    if let Some(bat) = &p.hardware.battery {
-        f.push(format!("--cosmium-battery-charging={}", bat.charging));
-        f.push(format!("--cosmium-battery-level={}", bat.level));
-        match bat.charging_time_seconds {
-            Some(t) => f.push(format!("--cosmium-battery-charging-time={t}")),
-            None => f.push("--cosmium-battery-charging-time=Infinity".into()),
-        }
-        match bat.discharging_time_seconds {
-            Some(t) => f.push(format!("--cosmium-battery-discharging-time={t}")),
-            None => f.push("--cosmium-battery-discharging-time=Infinity".into()),
-        }
-    }
+    push_battery(&mut f, p);
     f.push(format!("--disable-features={}", disable_features_list()));
     f.push("--no-default-browser-check".into());
     f.push("--no-first-run".into());
@@ -141,12 +163,12 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push("--use-mock-keychain".into());
     f.push("--disable-blink-features=AutomationControlled".into());
     f.push("--disable-infobars".into());
-    f.extend(webrtc_flags(&p.webrtc.ip_handling_policy));
+    f.extend(webrtc_flags(p.webrtc.ip_handling_policy));
     f
 }
 
 pub(super) fn primary_lang(langs: &[String]) -> &str {
-    langs.first().map(String::as_str).unwrap_or("en-US")
+    langs.first().map_or("en-US", String::as_str)
 }
 
 #[cfg(test)]

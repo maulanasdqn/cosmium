@@ -8,8 +8,8 @@ use rand::Rng;
 
 use super::{BoundingBox, Point, element_box};
 
-const MOVE_STEPS_MIN: usize = 18;
-const MOVE_STEPS_MAX: usize = 38;
+const MOVE_STEPS_MIN: u32 = 18;
+const MOVE_STEPS_MAX: u32 = 38;
 const STEP_DELAY_MIN_US: u64 = 4000;
 const STEP_DELAY_MAX_US: u64 = 12000;
 const CLICK_DOWN_MIN_MS: u64 = 40;
@@ -48,10 +48,10 @@ fn plan_move(from: Point, to: Point) -> MovePlan {
         x: from.x + dx * rng.random_range(0.6..0.9) + rng.random_range(-20.0..20.0),
         y: from.y + dy * rng.random_range(0.4..1.0) + rng.random_range(-20.0..20.0),
     };
-    let mut path = Vec::with_capacity(steps + 1);
-    let mut delays_us = Vec::with_capacity(steps + 1);
+    let mut path = Vec::with_capacity(MOVE_STEPS_MAX as usize + 1);
+    let mut delays_us = Vec::with_capacity(MOVE_STEPS_MAX as usize + 1);
     for i in 0..=steps {
-        let t = ease_out_quad(i as f64 / steps as f64);
+        let t = ease_out_quad(f64::from(i) / f64::from(steps));
         let mut pt = cubic_bezier(from, cp1, cp2, to, t);
         if i > 0 && i < steps {
             pt.x += rng.random_range(-0.5..0.5);

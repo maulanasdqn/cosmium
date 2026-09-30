@@ -43,15 +43,15 @@ pub enum WorkflowStep {
         #[serde(default)]
         limit: u32,
         #[serde(default)]
-        workflow: Vec<WorkflowStep>,
+        workflow: Vec<Self>,
     },
 }
 
-fn default_script_timeout() -> u32 {
+const fn default_script_timeout() -> u32 {
     30
 }
 
-fn default_scroll_times() -> u32 {
+const fn default_scroll_times() -> u32 {
     1
 }
 

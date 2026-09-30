@@ -82,15 +82,12 @@ impl ScrapePage {
         let proxy_url = proxy.as_ref().map(|p| p.url.clone());
 
         let _forwarder = if let Some(ref p) = proxy {
-            match ProxyForwarder::start(p).await {
-                Some(fwd) => {
-                    flags.push(fwd.chrome_flag());
-                    Some(fwd)
-                }
-                None => {
-                    flags.push(format!("--proxy-server={}", p.url));
-                    None
-                }
+            if let Some(fwd) = ProxyForwarder::start(p).await {
+                flags.push(fwd.chrome_flag());
+                Some(fwd)
+            } else {
+                flags.push(format!("--proxy-server={}", p.url));
+                None
             }
         } else {
             None
@@ -128,7 +125,7 @@ impl ScrapePage {
             .map_err(|e| anyhow::anyhow!("scrape failed: {e}"))?;
 
         let blocked = crate::domain::scraping::detection::is_blocked(
-            page.http_status as i16,
+            page.http_status,
             &page.html,
             &page.final_url,
         );
@@ -152,9 +149,8 @@ impl ScrapePage {
 }
 
 fn resolve_proxy(input: &ScrapePageInput) -> Option<ProxyConfig> {
-    if let Some(ref pool) = input.proxy_pool {
-        pool.next_proxy()
-    } else {
-        input.proxy.clone()
-    }
+    input
+        .proxy_pool
+        .as_ref()
+        .map_or_else(|| input.proxy.clone(), |pool| pool.next_proxy())
 }

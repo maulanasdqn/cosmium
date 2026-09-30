@@ -22,23 +22,22 @@ impl Env {
     pub fn init() -> Result<Self> {
         let _ = dotenvy::dotenv();
 
-        let cosmium_root = std::env::var("COSMIUM_ROOT")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
+        let cosmium_root = match std::env::var("COSMIUM_ROOT") {
+            Ok(root) => PathBuf::from(root),
+            Err(_) => std::env::current_dir()?,
+        };
 
         Ok(Self {
             profiles_dir: std::env::var("COSMIUM_PROFILES_DIR")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| cosmium_root.join("profiles")),
+                .map_or_else(|_| cosmium_root.join("profiles"), PathBuf::from),
             patches_dir: std::env::var("COSMIUM_PATCHES_DIR")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| cosmium_root.join("patches")),
+                .map_or_else(|_| cosmium_root.join("patches"), PathBuf::from),
             build_out: std::env::var("COSMIUM_BUILD_OUT")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| cosmium_root.join("out").join("cosmium")),
-            binary: std::env::var("COSMIUM_BINARY")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| cosmium_root.join("out").join("cosmium").join("chrome")),
+                .map_or_else(|_| cosmium_root.join("out").join("cosmium"), PathBuf::from),
+            binary: std::env::var("COSMIUM_BINARY").map_or_else(
+                |_| cosmium_root.join("out").join("cosmium").join("chrome"),
+                PathBuf::from,
+            ),
             openrouter: OpenRouterEnv {
                 api_key: std::env::var("OPENROUTER_API_KEY").ok(),
                 base_url: std::env::var("OPENROUTER_BASE_URL")

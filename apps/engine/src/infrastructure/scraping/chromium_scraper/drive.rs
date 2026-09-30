@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use chromiumoxide::Page;
+
 use crate::domain::scraping::error::ScrapeResult;
 use crate::domain::scraping::page::ScrapedPage;
 use crate::domain::scraping::request::ScrapeRequest;
@@ -41,25 +43,8 @@ impl ChromiumScraper {
         let need_navigation = request.wait_for_api.is_some();
 
         if !need_navigation {
-            if let Some(fetched_html) = fetch::in_page_fetch(&page, &request.url).await {
-                tracing::info!("in-page fetch bypass succeeded");
-                let screenshot = if request.screenshot {
-                    capture_screenshot(&page).await
-                } else {
-                    Vec::new()
-                };
-                let page_cookies = cookies::collect(&page).await;
-                let user_agent = cookies::user_agent(&page).await;
-                let script_results = workflow::run(&page, &request.workflow).await;
-                return Ok(ScrapedPage {
-                    http_status: 200,
-                    html: fetched_html.into_bytes(),
-                    screenshot,
-                    final_url: request.url.clone(),
-                    cookies: page_cookies,
-                    user_agent,
-                    script_results,
-                });
+            if let Some(scraped) = fetch_bypass(&page, request).await {
+                return Ok(scraped);
             }
         }
 
@@ -100,11 +85,7 @@ impl ChromiumScraper {
             Some(w) => w.status_for(&final_url).await,
             None => 200,
         };
-        let screenshot = if request.screenshot {
-            capture_screenshot(&page).await
-        } else {
-            Vec::new()
-        };
+        let screenshot = maybe_screenshot(&page, request).await;
         let page_cookies = cookies::collect(&page).await;
         let user_agent = cookies::user_agent(&page).await;
 
@@ -121,5 +102,31 @@ impl ChromiumScraper {
             user_agent,
             script_results,
         })
+    }
+}
+
+async fn fetch_bypass(page: &Page, request: &ScrapeRequest) -> Option<ScrapedPage> {
+    let fetched_html = fetch::in_page_fetch(page, &request.url).await?;
+    tracing::info!("in-page fetch bypass succeeded");
+    let screenshot = maybe_screenshot(page, request).await;
+    let page_cookies = cookies::collect(page).await;
+    let user_agent = cookies::user_agent(page).await;
+    let script_results = workflow::run(page, &request.workflow).await;
+    Some(ScrapedPage {
+        http_status: 200,
+        html: fetched_html.into_bytes(),
+        screenshot,
+        final_url: request.url.clone(),
+        cookies: page_cookies,
+        user_agent,
+        script_results,
+    })
+}
+
+async fn maybe_screenshot(page: &Page, request: &ScrapeRequest) -> Vec<u8> {
+    if request.screenshot {
+        capture_screenshot(page).await
+    } else {
+        Vec::new()
     }
 }

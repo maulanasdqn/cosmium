@@ -16,8 +16,7 @@ fn bcp47_to_posix_utf8(tag: &str) -> String {
     let base = parts.next().unwrap_or("en").to_ascii_lowercase();
     let region = parts
         .next()
-        .map(|r| r.to_ascii_uppercase())
-        .unwrap_or_else(|| base.to_ascii_uppercase());
+        .map_or_else(|| base.to_ascii_uppercase(), str::to_ascii_uppercase);
     format!("{base}_{region}.UTF-8")
 }
 

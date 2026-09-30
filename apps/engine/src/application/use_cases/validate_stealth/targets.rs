@@ -72,7 +72,10 @@ fn evaluate_creepjs(raw: &str) -> (Verdict, String) {
     }
     (
         Verdict::Warn,
-        format!("could not parse score: {}", &raw[..raw.len().min(100)]),
+        format!(
+            "could not parse score: {}",
+            crate::domain::text::prefix(raw, 100)
+        ),
     )
 }
 
@@ -89,7 +92,7 @@ fn evaluate_pixelscan(raw: &str) -> (Verdict, String) {
     }
     (
         Verdict::Warn,
-        format!("unclear result: {}", &raw[..raw.len().min(100)]),
+        format!("unclear result: {}", crate::domain::text::prefix(raw, 100)),
     )
 }
 
@@ -98,7 +101,7 @@ fn evaluate_browserleaks(raw: &str) -> (Verdict, String) {
         return (Verdict::Warn, "no data extracted".into());
     }
     let v: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
-    let count = v.as_object().map_or(0, |o| o.len());
+    let count = v.as_object().map_or(0, serde_json::Map::len);
     if count > 5 {
         (Verdict::Pass, format!("{count} properties extracted"))
     } else {
@@ -108,8 +111,15 @@ fn evaluate_browserleaks(raw: &str) -> (Verdict, String) {
 
 fn evaluate_botcheck(raw: &str) -> (Verdict, String) {
     let v: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
-    let body = v["body"].as_str().unwrap_or("").to_lowercase();
-    let url = v["url"].as_str().unwrap_or("");
+    let body = v
+        .get("body")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("")
+        .to_lowercase();
+    let url = v
+        .get("url")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
     let blocked = [
         "captcha",
         "access denied",

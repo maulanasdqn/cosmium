@@ -1,4 +1,4 @@
-const BLOCKED_STATUSES: [i16; 3] = [403, 429, 503];
+const BLOCKED_STATUSES: [i32; 3] = [403, 429, 503];
 
 const BLOCKED_MARKERS: [&str; 6] = [
     "captcha",
@@ -37,8 +37,8 @@ const CHALLENGE_MARKERS: [&str; 13] = [
 
 const SNIFF_BYTES: usize = 4096;
 
-pub fn is_blocked(http_status: i16, body: &[u8], final_url: &str) -> bool {
-    let head = String::from_utf8_lossy(&body[..body.len().min(SNIFF_BYTES)]).to_lowercase();
+pub fn is_blocked(http_status: i32, body: &[u8], final_url: &str) -> bool {
+    let head = String::from_utf8_lossy(body.get(..SNIFF_BYTES).unwrap_or(body)).to_lowercase();
     if BLOCKED_STATUSES.contains(&http_status) {
         if is_challenge_page(&head) {
             return true;

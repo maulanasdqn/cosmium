@@ -1,7 +1,7 @@
 use crate::domain::profile::Profile;
 use crate::domain::profile::validation::Diagnostic;
 
-pub fn screen_dimensions(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn screen_dimensions(p: &Profile) -> Vec<Diagnostic> {
     let s = &p.screen;
     let mut out = Vec::new();
     if s.avail_width > s.width {
@@ -25,13 +25,13 @@ pub fn screen_dimensions(p: &Profile) -> Vec<Diagnostic> {
     out
 }
 
-pub fn pixel_depth(p: &Profile) -> Vec<Diagnostic> {
-    if p.screen.color_depth != p.screen.pixel_depth {
+pub(crate) fn pixel_depth(p: &Profile) -> Vec<Diagnostic> {
+    if p.screen.color_depth == p.screen.pixel_depth {
+        vec![]
+    } else {
         vec![Diagnostic::err(
             "screen.pixel_depth",
             "real browsers report color_depth == pixel_depth",
         )]
-    } else {
-        vec![]
     }
 }

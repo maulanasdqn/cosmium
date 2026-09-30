@@ -1,13 +1,13 @@
 use super::probe::ProbeDef;
 
-pub fn render_html(probes: &[ProbeDef]) -> String {
+pub(super) fn render_html(probes: &[ProbeDef]) -> String {
     let entries: String = probes
         .iter()
         .map(|p| {
             format!(
                 "[{},{}]",
-                serde_json::to_string(p.id).unwrap(),
-                serde_json::to_string(&p.expression).unwrap()
+                serde_json::to_string(p.id).unwrap_or_default(),
+                serde_json::to_string(&p.expression).unwrap_or_default()
             )
         })
         .collect::<Vec<_>>()

@@ -2,7 +2,7 @@ use chromiumoxide::Page;
 
 use super::js_string;
 
-pub async fn extract(
+pub(super) async fn extract(
     page: &Page,
     selector: &str,
     attribute: Option<&str>,
@@ -22,7 +22,7 @@ pub async fn extract(
     apply_limit(eval_strings(page, code).await, limit)
 }
 
-pub async fn collect_urls(
+pub(super) async fn collect_urls(
     page: &Page,
     selector: &str,
     attribute: Option<&str>,
@@ -57,8 +57,9 @@ fn apply_limit(mut items: Vec<String>, limit: u32) -> Vec<String> {
 }
 
 async fn eval_strings(page: &Page, code: String) -> Vec<String> {
-    match page.evaluate(code).await {
-        Ok(result) => result.into_value::<Vec<String>>().unwrap_or_default(),
-        Err(_) => Vec::new(),
-    }
+    page.evaluate(code)
+        .await
+        .ok()
+        .and_then(|result| result.into_value::<Vec<String>>().ok())
+        .unwrap_or_default()
 }

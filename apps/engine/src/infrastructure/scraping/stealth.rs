@@ -45,7 +45,7 @@ impl StealthConfig {
     pub fn ua_data_script(&self) -> String {
         let q = |s: &str| serde_json::to_string(s).unwrap_or_default();
         format!(
-            r#"(() => {{
+            r"(() => {{
   const brands = {b}; const fvl = {fvl};
   const mobile = {m}; const platform = {p};
   const he = {{
@@ -75,7 +75,7 @@ impl StealthConfig {
     }}
   }});
   Function.prototype.toString.__cosmiumProxy = true;
-}})();"#,
+}})();",
             b = self.brands_json,
             fvl = self.full_version_list_json,
             m = if self.mobile { "true" } else { "false" },

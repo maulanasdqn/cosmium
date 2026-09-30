@@ -5,7 +5,7 @@ use tokio::fs;
 
 use crate::domain::profile::{Diagnostic, Profile, Severity};
 
-pub fn print_diagnostics(diagnostics: &[Diagnostic]) {
+pub(super) fn print_diagnostics(diagnostics: &[Diagnostic]) {
     if diagnostics.is_empty() {
         println!("  coherent (0 diagnostics)");
         return;
@@ -21,7 +21,7 @@ pub fn print_diagnostics(diagnostics: &[Diagnostic]) {
     println!("  {errors} error(s), {warnings} warning(s)");
 }
 
-pub fn count(diagnostics: &[Diagnostic]) -> (usize, usize) {
+pub(super) fn count(diagnostics: &[Diagnostic]) -> (usize, usize) {
     let e = diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
@@ -33,7 +33,7 @@ pub fn count(diagnostics: &[Diagnostic]) -> (usize, usize) {
     (e, w)
 }
 
-pub fn resolve_output(output: Option<PathBuf>, save: bool, name: &str) -> Result<PathBuf> {
+pub(super) fn resolve_output(output: Option<PathBuf>, save: bool, name: &str) -> Result<PathBuf> {
     if let Some(p) = output {
         return Ok(p);
     }
@@ -44,7 +44,7 @@ pub fn resolve_output(output: Option<PathBuf>, save: bool, name: &str) -> Result
     bail!("specify --output or --save");
 }
 
-pub async fn write_profile(p: &Profile, dest: &Path) -> Result<()> {
+pub(super) async fn write_profile(p: &Profile, dest: &Path) -> Result<()> {
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).await.ok();
     }

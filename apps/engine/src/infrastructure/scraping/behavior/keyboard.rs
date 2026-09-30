@@ -31,7 +31,7 @@ fn char_to_code(ch: char) -> (String, i64) {
     }
 }
 
-fn key_evt(
+const fn key_evt(
     kind: DispatchKeyEventType,
     key: Option<String>,
     text: Option<String>,

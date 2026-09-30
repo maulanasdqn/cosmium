@@ -1,10 +1,10 @@
+use super::matcher::Matcher;
 use crate::domain::profile::Profile;
-use regex::Regex;
 
-pub struct ProbeDef {
+pub(crate) struct ProbeDef {
     pub id: &'static str,
     pub expression: String,
-    pub expected: Regex,
+    pub expected: Matcher,
     pub expected_display: String,
     pub negate: bool,
 }
@@ -17,7 +17,15 @@ pub struct ProbeResult {
     pub error: Option<String>,
 }
 
-pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
+pub(crate) fn for_profile(p: &Profile) -> Vec<ProbeDef> {
+    let mut probes = navigator_probes(p);
+    probes.extend(device_probes(p));
+    probes.extend(page_probes(p));
+    probes.shrink_to_fit();
+    probes
+}
+
+fn navigator_probes(p: &Profile) -> Vec<ProbeDef> {
     let lang0 = p.locale.languages.first().cloned().unwrap_or_default();
     let lang_array = format!(
         "[{}]",
@@ -28,9 +36,7 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             .collect::<Vec<_>>()
             .join(",")
     );
-    let webgl_renderer_expr = "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()";
-
-    let mut probes = vec![
+    vec![
         simple("webdriver", "String(navigator.webdriver)", "false"),
         simple(
             "webdriver_worker",
@@ -68,6 +74,12 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             "(await navigator.userAgentData.getHighEntropyValues(['platform'])).platform",
             &p.identity.client_hints.platform,
         ),
+    ]
+}
+
+fn device_probes(p: &Profile) -> Vec<ProbeDef> {
+    let webgl_renderer_expr = "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_RENDERER_WEBGL);})()";
+    vec![
         simple(
             "webgl_vendor",
             "(()=>{const c=document.createElement('canvas').getContext('webgl');const e=c.getExtension('WEBGL_debug_renderer_info');return c.getParameter(e.UNMASKED_VENDOR_WEBGL);})()",
@@ -77,7 +89,7 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
         ProbeDef {
             id: "no_swiftshader",
             expression: webgl_renderer_expr.to_owned(),
-            expected: Regex::new("SwiftShader").expect("compile regex"),
+            expected: Matcher::Contains("SwiftShader"),
             expected_display: "(no SwiftShader)".into(),
             negate: true,
         },
@@ -121,6 +133,11 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
             "String(window.devicePixelRatio)",
             &p.screen.device_pixel_ratio.to_string(),
         ),
+    ]
+}
+
+fn page_probes(p: &Profile) -> Vec<ProbeDef> {
+    vec![
         simple("user_agent", "navigator.userAgent", &p.identity.user_agent),
         simple(
             "ua_data_arch",
@@ -155,27 +172,21 @@ pub fn for_profile(p: &Profile) -> Vec<ProbeDef> {
         simple(
             "intl_locale",
             "new Intl.NumberFormat().resolvedOptions().locale",
-            p.locale
-                .languages
-                .first()
-                .map(String::as_str)
-                .unwrap_or("en-US"),
+            p.locale.languages.first().map_or("en-US", String::as_str),
         ),
         simple(
             "intl_tz",
             "new Intl.DateTimeFormat().resolvedOptions().timeZone",
             &p.locale.timezone,
         ),
-    ];
-    probes.shrink_to_fit();
-    probes
+    ]
 }
 
 fn simple(id: &'static str, expr: &str, expected: &str) -> ProbeDef {
     ProbeDef {
         id,
         expression: expr.to_owned(),
-        expected: Regex::new(&format!("^{}$", regex::escape(expected))).expect("compile regex"),
+        expected: Matcher::Exact(expected.to_owned()),
         expected_display: expected.to_owned(),
         negate: false,
     }

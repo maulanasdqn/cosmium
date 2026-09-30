@@ -1,7 +1,7 @@
 use crate::domain::profile::Profile;
 use crate::domain::profile::validation::Diagnostic;
 
-pub fn hardware_concurrency(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn hardware_concurrency(p: &Profile) -> Vec<Diagnostic> {
     let n = p.hardware.hardware_concurrency;
     let mut out = Vec::new();
     if n < 2 {
@@ -19,21 +19,21 @@ pub fn hardware_concurrency(p: &Profile) -> Vec<Diagnostic> {
     out
 }
 
-pub fn device_memory(p: &Profile) -> Vec<Diagnostic> {
+pub(crate) fn device_memory(p: &Profile) -> Vec<Diagnostic> {
     let m = p.hardware.device_memory_gb;
     let allowed = [0.25_f32, 0.5, 1.0, 2.0, 4.0, 8.0];
-    if !allowed.iter().any(|a| (a - m).abs() < f32::EPSILON) {
+    if allowed.iter().any(|a| (a - m).abs() < f32::EPSILON) {
+        vec![]
+    } else {
         vec![Diagnostic::err(
             "hardware.device_memory_gb",
             format!("Chrome rounds deviceMemory to {allowed:?}; got {m}"),
         )]
-    } else {
-        vec![]
     }
 }
 
-pub fn ram_cores_plausible(p: &Profile) -> Vec<Diagnostic> {
-    let cores = p.hardware.hardware_concurrency as f32;
+pub(crate) fn ram_cores_plausible(p: &Profile) -> Vec<Diagnostic> {
+    let cores = f64::from(p.hardware.hardware_concurrency);
     let ram = p.hardware.device_memory_gb;
     if cores >= 8.0 && ram <= 1.0 {
         return vec![Diagnostic::warn(

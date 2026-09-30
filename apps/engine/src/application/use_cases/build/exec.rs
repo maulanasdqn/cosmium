@@ -3,7 +3,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, bail};
 use tokio::process::Command;
 
-pub async fn run(cwd: &Path, program: &str, args: &[&str], depot_tools: &Path) -> Result<()> {
+pub(super) async fn run(
+    cwd: &Path,
+    program: &str,
+    args: &[&str],
+    depot_tools: &Path,
+) -> Result<()> {
     let mut cmd = Command::new(program);
     cmd.current_dir(cwd);
     cmd.args(args);

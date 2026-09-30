@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use chrono_tz::Tz;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::{Diagnostic, Profile};
@@ -25,14 +24,14 @@ pub(super) fn accept_language(p: &Profile) -> Vec<Diagnostic> {
     vec![]
 }
 
-static BCP47: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?(-[a-zA-Z0-9]{2,8})?$").expect("compile regex")
+static BCP47: std::sync::LazyLock<Option<Regex>> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?(-[a-zA-Z0-9]{2,8})?$").ok()
 });
 
 pub(super) fn languages(p: &Profile) -> Vec<Diagnostic> {
     let mut out = Vec::new();
     for lang in &p.locale.languages {
-        if !BCP47.is_match(lang) {
+        if !BCP47.as_ref().is_some_and(|re| re.is_match(lang)) {
             out.push(Diagnostic::err(
                 "locale.languages",
                 format!("{lang:?} is not a valid BCP-47 tag"),
@@ -62,15 +61,15 @@ pub(super) fn voices(p: &Profile) -> Vec<Diagnostic> {
         .voices
         .iter()
         .any(|v| v.lang.starts_with(primary_base) || v.default);
-    if !has_match {
+    if has_match {
+        vec![]
+    } else {
         vec![Diagnostic::warn(
             "voices",
             format!(
                 "no voice matches primary language {primary_base:?} — real systems usually ship one"
             ),
         )]
-    } else {
-        vec![]
     }
 }
 

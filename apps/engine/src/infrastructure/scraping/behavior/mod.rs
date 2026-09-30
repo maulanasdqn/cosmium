@@ -36,21 +36,21 @@ impl BoundingBox {
 
 pub async fn element_box(page: &chromiumoxide::Page, selector: &str) -> Option<BoundingBox> {
     let js = format!(
-        r#"(() => {{
+        r"(() => {{
   const el = document.querySelector({});
   if (!el) return null;
   const r = el.getBoundingClientRect();
   return JSON.stringify({{ x: r.x, y: r.y, width: r.width, height: r.height }});
-}})()"#,
+}})()",
         serde_json::to_string(selector).unwrap_or_default()
     );
     let val = page.evaluate(js).await.ok()?;
     let s: String = val.into_value().ok()?;
     let v: serde_json::Value = serde_json::from_str(&s).ok()?;
     Some(BoundingBox {
-        x: v["x"].as_f64()?,
-        y: v["y"].as_f64()?,
-        width: v["width"].as_f64()?,
-        height: v["height"].as_f64()?,
+        x: v.get("x")?.as_f64()?,
+        y: v.get("y")?.as_f64()?,
+        width: v.get("width")?.as_f64()?,
+        height: v.get("height")?.as_f64()?,
     })
 }

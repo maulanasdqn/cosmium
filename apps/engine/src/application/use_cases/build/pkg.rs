@@ -30,7 +30,7 @@ const MAC_FILES: &[&str] = &[
     "v8_context_snapshot.x86_64.bin",
 ];
 
-pub async fn run(c: &BuildConfig) -> Result<()> {
+pub(super) async fn run(c: &BuildConfig) -> Result<()> {
     let staged = if cfg!(target_os = "macos") {
         MAC_FILES
     } else {

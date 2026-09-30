@@ -8,9 +8,8 @@ use chromiumoxide::cdp::browser_protocol::network::{
 
 pub async fn preseed_cookies(page: &Page, host: &str, session_dir: &Path) -> bool {
     let cookie_path = session_path(session_dir, host);
-    let data = match tokio::fs::read_to_string(&cookie_path).await {
-        Ok(d) => d,
-        Err(_) => return false,
+    let Ok(data) = tokio::fs::read_to_string(&cookie_path).await else {
+        return false;
     };
     let cookies: Vec<SavedCookie> = match serde_json::from_str(&data) {
         Ok(c) => c,
@@ -96,11 +95,11 @@ pub async fn get_dd_cookie_value(page: &Page) -> Option<String> {
     use chromiumoxide::cdp::browser_protocol::network::GetCookiesParams;
 
     let timeout = Duration::from_secs(5);
-    let result =
-        match tokio::time::timeout(timeout, page.execute(GetCookiesParams::default())).await {
-            Ok(Ok(resp)) => resp,
-            _ => return None,
-        };
+    let Ok(Ok(result)) =
+        tokio::time::timeout(timeout, page.execute(GetCookiesParams::default())).await
+    else {
+        return None;
+    };
 
     result
         .result

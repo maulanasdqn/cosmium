@@ -51,6 +51,10 @@ pub struct ChatResponse {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the OpenAI-compatible usage payload"
+)]
 pub struct Usage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,

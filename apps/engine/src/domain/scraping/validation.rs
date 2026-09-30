@@ -27,9 +27,9 @@ pub struct ValidationResult {
 impl std::fmt::Display for Verdict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Verdict::Pass => write!(f, "PASS"),
-            Verdict::Warn => write!(f, "WARN"),
-            Verdict::Fail => write!(f, "FAIL"),
+            Self::Pass => write!(f, "PASS"),
+            Self::Warn => write!(f, "WARN"),
+            Self::Fail => write!(f, "FAIL"),
         }
     }
 }

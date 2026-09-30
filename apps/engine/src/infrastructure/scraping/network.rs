@@ -12,7 +12,7 @@ use tokio::task::JoinHandle;
 pub struct ApiCapture {
     pattern: String,
     captured: Arc<Mutex<Vec<CapturedRequest>>>,
-    _task: JoinHandle<()>,
+    task: JoinHandle<()>,
 }
 
 struct CapturedRequest {
@@ -39,7 +39,7 @@ impl ApiCapture {
         let sink = Arc::clone(&captured);
         let pat = pattern.clone();
 
-        let _task = tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             while let Some(event) = listener.next().await {
                 if event.response.url.contains(&pat) {
                     tracing::debug!(url = %event.response.url, "captured API response");
@@ -55,7 +55,7 @@ impl ApiCapture {
         Some(Self {
             pattern,
             captured,
-            _task,
+            task,
         })
     }
 
@@ -64,16 +64,13 @@ impl ApiCapture {
         let poll = Duration::from_millis(500);
 
         while start.elapsed() < timeout {
-            {
-                let items = self.captured.lock().await;
-                if !items.is_empty() {
-                    break;
-                }
+            if !self.captured.lock().await.is_empty() {
+                break;
             }
             tokio::time::sleep(poll).await;
         }
 
-        self._task.abort();
+        self.task.abort();
         tokio::time::sleep(Duration::from_millis(200)).await;
 
         let items = self.captured.lock().await;
@@ -116,6 +113,7 @@ impl ApiCapture {
                 }
             }
         }
+        drop(items);
 
         results
     }

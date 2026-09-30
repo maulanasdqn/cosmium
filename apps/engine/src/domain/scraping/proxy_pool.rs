@@ -6,15 +6,11 @@ use super::request::ProxyConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum RotationStrategy {
+    #[default]
     RoundRobin,
     Random,
-}
-
-impl Default for RotationStrategy {
-    fn default() -> Self {
-        Self::RoundRobin
-    }
 }
 
 impl fmt::Display for RotationStrategy {
@@ -43,7 +39,7 @@ pub struct ProxyEntry {
 }
 
 impl ProxyEntry {
-    pub fn new(config: ProxyConfig) -> Self {
+    pub const fn new(config: ProxyConfig) -> Self {
         Self {
             config,
             health: ProxyHealth::Healthy,
@@ -53,7 +49,7 @@ impl ProxyEntry {
         }
     }
 
-    pub fn is_available(&self, now_epoch: u64, cooldown_secs: u64) -> bool {
+    pub const fn is_available(&self, now_epoch: u64, cooldown_secs: u64) -> bool {
         match self.health {
             ProxyHealth::Healthy => true,
             ProxyHealth::Failed { .. } | ProxyHealth::Cooldown => match self.last_failure_epoch {
@@ -63,19 +59,14 @@ impl ProxyEntry {
         }
     }
 
-    pub fn record_use(&mut self) {
+    pub const fn record_use(&mut self) {
         self.total_uses += 1;
     }
 
-    pub fn record_failure(&mut self, now_epoch: u64) {
+    pub const fn record_failure(&mut self, now_epoch: u64) {
         self.total_failures += 1;
         self.last_failure_epoch = Some(now_epoch);
         match self.health {
-            ProxyHealth::Healthy => {
-                self.health = ProxyHealth::Failed {
-                    consecutive_failures: 1,
-                };
-            }
             ProxyHealth::Failed {
                 consecutive_failures,
             } => {
@@ -83,7 +74,7 @@ impl ProxyEntry {
                     consecutive_failures: consecutive_failures + 1,
                 };
             }
-            ProxyHealth::Cooldown => {
+            ProxyHealth::Healthy | ProxyHealth::Cooldown => {
                 self.health = ProxyHealth::Failed {
                     consecutive_failures: 1,
                 };
@@ -91,7 +82,7 @@ impl ProxyEntry {
         }
     }
 
-    pub fn record_success(&mut self) {
+    pub const fn record_success(&mut self) {
         self.health = ProxyHealth::Healthy;
     }
 }
@@ -116,7 +107,7 @@ impl Default for ProxyPoolConfig {
 pub fn parse_proxy_list(input: &str) -> Vec<ProxyConfig> {
     input
         .lines()
-        .map(|l| l.trim())
+        .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
         .map(|l| ProxyConfig { url: l.to_owned() })
         .collect()
@@ -162,7 +153,7 @@ mod tests {
             ProxyHealth::Failed {
                 consecutive_failures,
             } => assert_eq!(consecutive_failures, 3),
-            _ => panic!("expected Failed"),
+            ProxyHealth::Healthy | ProxyHealth::Cooldown => panic!("expected Failed"),
         }
         assert_eq!(entry.total_failures, 3);
     }

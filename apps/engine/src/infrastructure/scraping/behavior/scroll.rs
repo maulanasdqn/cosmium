@@ -25,7 +25,7 @@ fn plan_scroll(distance: f64) -> ScrollPlan {
     let mut delays_ms = Vec::new();
     let mut scrolled = 0.0;
 
-    while scrolled < total {
+    while scrolled.partial_cmp(&total) == Some(std::cmp::Ordering::Less) {
         let remaining = total - scrolled;
         let base_delta = rng.random_range(DELTA_MIN..=DELTA_MAX);
         let step = base_delta.min(remaining);
@@ -63,12 +63,12 @@ pub async fn scroll_to_bottom(page: &Page, cursor: &Point, times: u32) {
 
 pub async fn scroll_to_element(page: &Page, selector: &str, cursor: &Point) {
     let js = format!(
-        r#"(() => {{
+        r"(() => {{
   const el = document.querySelector({});
   if (!el) return 0;
   const r = el.getBoundingClientRect();
   return r.top;
-}})()"#,
+}})()",
         serde_json::to_string(selector).unwrap_or_default()
     );
     let val = page.evaluate(js).await.ok();

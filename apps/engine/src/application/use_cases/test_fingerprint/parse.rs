@@ -10,7 +10,7 @@ struct Raw {
     error: Option<String>,
 }
 
-pub fn extract(dom: &str, probes: &[ProbeDef]) -> Result<Vec<ProbeResult>> {
+pub(super) fn extract(dom: &str, probes: &[ProbeDef]) -> Result<Vec<ProbeResult>> {
     let raw_lines = extract_pre_lines(dom);
     if raw_lines.is_empty() {
         bail!("no probe results captured in DOM");
@@ -60,11 +60,14 @@ fn extract_pre_lines(dom: &str) -> Vec<String> {
         Some(i) => i + r#"<pre id="out">"#.len(),
         None => return vec![],
     };
-    let end = match dom[start..].find("</pre>") {
-        Some(i) => start + i,
-        None => return vec![],
+    let Some(rest) = dom.get(start..) else {
+        return vec![];
     };
-    dom[start..end]
+    let Some(end) = rest.find("</pre>") else {
+        return vec![];
+    };
+    rest.get(..end)
+        .unwrap_or_default()
         .lines()
         .map(|l| l.trim().to_owned())
         .filter(|l| !l.is_empty())

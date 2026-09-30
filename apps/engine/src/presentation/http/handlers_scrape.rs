@@ -38,7 +38,7 @@ pub async fn scrape(
         }
 
         let session = Arc::new(CdpSessionRuntime::new());
-        let uc = ScrapePage::new(state.profile_repo.clone(), session);
+        let uc = ScrapePage::new(Arc::clone(&state.profile_repo), session);
 
         let input = ScrapePageInput {
             profile: std::path::PathBuf::from(&req.profile),
@@ -69,7 +69,14 @@ pub async fn scrape(
         result = Some((r, attempt));
     }
 
-    let (r, attempts) = result.unwrap();
+    let Some((r, attempts)) = result else {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "no scrape attempt was made".into(),
+            }),
+        ));
+    };
     Ok(Json(build_response(
         url,
         include_html,
@@ -134,7 +141,7 @@ fn build_response(
     let mut extracted = serde_json::Map::new();
     for (k, v) in &result.page.script_results {
         let parsed: serde_json::Value =
-            serde_json::from_str(v).unwrap_or(serde_json::Value::String(v.clone()));
+            serde_json::from_str(v).unwrap_or_else(|_| serde_json::Value::String(v.clone()));
         extracted.insert(k.clone(), parsed);
     }
 
@@ -145,11 +152,7 @@ fn build_response(
         Some(base64::engine::general_purpose::STANDARD.encode(&result.page.screenshot))
     };
 
-    let html = if include_html {
-        Some(String::from_utf8_lossy(&result.page.html).into_owned())
-    } else {
-        None
-    };
+    let html = include_html.then(|| String::from_utf8_lossy(&result.page.html).into_owned());
 
     ScrapeResponse {
         url,
@@ -163,7 +166,7 @@ fn build_response(
         extracted: serde_json::Value::Object(extracted),
         screenshot_base64,
         proxy_used: result.proxy_used.clone(),
-        elapsed_ms: started.elapsed().as_millis() as u64,
+        elapsed_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
         attempts,
     }
 }

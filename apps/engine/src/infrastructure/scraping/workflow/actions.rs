@@ -7,18 +7,18 @@ use crate::infrastructure::scraping::behavior::Point;
 
 const SCROLL_SETTLE_MS: u64 = 1200;
 
-pub async fn click(page: &Page, selector: &str, cursor: &mut Point) {
+pub(super) async fn click(page: &Page, selector: &str, cursor: &mut Point) {
     behavior::mouse::click(page, selector, cursor).await;
 }
 
-pub async fn input(page: &Page, selector: &str, text: &str, cursor: &mut Point) {
+pub(super) async fn input(page: &Page, selector: &str, text: &str, cursor: &mut Point) {
     behavior::mouse::click(page, selector, cursor).await;
     tokio::time::sleep(Duration::from_millis(80)).await;
     behavior::keyboard::clear_field(page, selector).await;
     behavior::keyboard::type_text(page, text).await;
 }
 
-pub async fn scroll(
+pub(super) async fn scroll(
     page: &Page,
     infinite: bool,
     selector: Option<&str>,

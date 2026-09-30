@@ -1,3 +1,4 @@
+mod matcher;
 mod parse;
 pub(crate) mod probe;
 mod probe_render;
@@ -25,7 +26,7 @@ pub struct TestFingerprintOutput {
 }
 
 impl TestFingerprint {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 

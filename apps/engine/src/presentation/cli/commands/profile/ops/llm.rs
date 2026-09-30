@@ -9,7 +9,7 @@ use crate::application::use_cases::repair_profile::{RepairProfile, RepairProfile
 use crate::domain::profile::Severity;
 use crate::presentation::cli::state::CliState;
 
-pub async fn generate(
+pub(crate) async fn generate(
     persona: String,
     name: String,
     output: Option<PathBuf>,
@@ -36,7 +36,11 @@ pub async fn generate(
     Ok(())
 }
 
-pub async fn repair(target: PathBuf, output: Option<PathBuf>, state: &CliState) -> Result<()> {
+pub(crate) async fn repair(
+    target: PathBuf,
+    output: Option<PathBuf>,
+    state: &CliState,
+) -> Result<()> {
     let llm = state
         .llm
         .clone()
@@ -64,7 +68,7 @@ pub async fn repair(target: PathBuf, output: Option<PathBuf>, state: &CliState) 
     Ok(())
 }
 
-pub async fn mutate(
+pub(crate) async fn mutate(
     target: PathBuf,
     count: usize,
     hint: Option<String>,

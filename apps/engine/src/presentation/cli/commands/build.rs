@@ -22,9 +22,10 @@ pub struct BuildCmd {
 
 pub async fn execute(cmd: BuildCmd) -> Result<()> {
     let env = Env::init()?;
-    let cosmium_root = std::env::var("COSMIUM_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default());
+    let cosmium_root = std::env::var("COSMIUM_ROOT").map_or_else(
+        |_| std::env::current_dir().unwrap_or_default(),
+        PathBuf::from,
+    );
     let chromium_src = cosmium_root.join("src");
     let depot_tools = cosmium_root.join("depot_tools");
     let dist_dir = cosmium_root.join("dist");
@@ -32,11 +33,14 @@ pub async fn execute(cmd: BuildCmd) -> Result<()> {
     let patches_dir = cosmium_root.join("patches");
     let patches_series = patches_dir.join("series");
 
-    let chromium_tag = cmd.tag.map(Ok).unwrap_or_else(|| {
-        std::fs::read_to_string(cosmium_root.join("VERSION"))
-            .map(|s| s.trim().to_owned())
-            .context("reading VERSION")
-    })?;
+    let chromium_tag = cmd.tag.map_or_else(
+        || {
+            std::fs::read_to_string(cosmium_root.join("VERSION"))
+                .map(|s| s.trim().to_owned())
+                .context("reading VERSION")
+        },
+        Ok,
+    )?;
 
     let phases: Vec<BuildPhase> = match (cmd.only, cmd.from) {
         (Some(p), _) => vec![p],

@@ -10,9 +10,8 @@ pub async fn wait_past_challenge(page: &Page, timeout: Duration) -> String {
     let deadline = Instant::now() + timeout;
     let mut clicked_waf = false;
     loop {
-        let html = match page.content().await {
-            Ok(h) => h,
-            Err(_) => return String::new(),
+        let Ok(html) = page.content().await else {
+            return String::new();
         };
         if !is_challenge_page(&html) {
             return html;
@@ -37,14 +36,14 @@ fn is_aws_waf(html: &str) -> bool {
 }
 
 async fn click_waf_begin(page: &Page) {
-    let js = r#"
+    let js = r"
         (function() {
             var btn = document.querySelector('#captcha-container button');
             if (!btn) btn = document.querySelector('button');
             if (btn) { btn.click(); return 'clicked'; }
             return 'no-button';
         })()
-    "#;
+    ";
     match page.evaluate(js).await {
         Ok(v) => {
             let result = v.into_value::<String>().unwrap_or_default();

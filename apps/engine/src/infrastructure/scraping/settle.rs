@@ -126,7 +126,7 @@ pub async fn wait_for_stable_content(page: &Page, initial: String, window: Settl
     html
 }
 
-fn is_stable(previous: usize, current: usize) -> bool {
+const fn is_stable(previous: usize, current: usize) -> bool {
     if current == 0 {
         return false;
     }

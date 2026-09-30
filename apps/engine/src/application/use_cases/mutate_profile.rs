@@ -73,7 +73,7 @@ impl MutateProfile {
         let envelope: LlmEnvelope = serde_json::from_str(&resp.content).with_context(|| {
             format!(
                 "parsing variants JSON: {}",
-                &resp.content[..resp.content.len().min(400)]
+                crate::domain::text::prefix(&resp.content, 400)
             )
         })?;
         let variants = envelope

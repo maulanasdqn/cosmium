@@ -27,7 +27,7 @@ impl OpenRouterClient {
             http: Client::builder()
                 .user_agent("cosmium/0.1")
                 .build()
-                .expect("build reqwest client"),
+                .unwrap_or_default(),
             base_url: cfg.base_url,
             api_key: cfg.api_key,
             referer: cfg.referer,
@@ -80,9 +80,9 @@ impl LlmClient for OpenRouterClient {
             content: choice.message.content,
             model: parsed.model,
             usage: parsed.usage.map(|u| Usage {
-                prompt_tokens: u.prompt_tokens,
-                completion_tokens: u.completion_tokens,
-                total_tokens: u.total_tokens,
+                prompt_tokens: u.prompt,
+                completion_tokens: u.completion,
+                total_tokens: u.total,
             }),
         })
     }
@@ -142,7 +142,10 @@ struct WireResponseMessage {
 
 #[derive(Deserialize)]
 struct WireUsage {
-    prompt_tokens: u32,
-    completion_tokens: u32,
-    total_tokens: u32,
+    #[serde(rename = "prompt_tokens")]
+    prompt: u32,
+    #[serde(rename = "completion_tokens")]
+    completion: u32,
+    #[serde(rename = "total_tokens")]
+    total: u32,
 }

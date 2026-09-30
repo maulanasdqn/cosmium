@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand};
@@ -81,11 +82,11 @@ async fn run_fingerprint(args: FingerprintArgs, state: &CliState) -> Result<()> 
 }
 
 async fn run_stealth(args: StealthArgs, state: &CliState) -> Result<()> {
-    let session = std::sync::Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
+    let session = Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
     let binary = args.binary.unwrap_or_else(|| state.binary.clone());
     let targets = builtin_targets(args.bot_check_url.as_deref());
 
-    let uc = ValidateStealth::new(state.profile_repo.clone(), session);
+    let uc = ValidateStealth::new(Arc::clone(&state.profile_repo), session);
     let out = uc
         .execute(ValidateStealthInput {
             profile: args.profile,

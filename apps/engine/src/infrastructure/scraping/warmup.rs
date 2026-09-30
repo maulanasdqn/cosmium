@@ -23,15 +23,16 @@ pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
     tokio::time::sleep(Duration::from_secs(3)).await;
 
     tracing::debug!("simulating mouse/scroll presence");
-    match tokio::time::timeout(Duration::from_secs(15), simulate_presence(page)).await {
-        Ok(()) => tracing::debug!("mouse/scroll simulation done"),
-        Err(_) => tracing::debug!("mouse/scroll simulation timed out (15s), continuing"),
+    if tokio::time::timeout(Duration::from_secs(15), simulate_presence(page)).await == Ok(()) {
+        tracing::debug!("mouse/scroll simulation done");
+    } else {
+        tracing::debug!("mouse/scroll simulation timed out (15s), continuing");
     }
 
     tracing::debug!("waiting for DataDome cookie to rotate (c.js)");
     wait_for_cookie_rotation(page, initial_cookie.as_deref()).await;
 
-    let extra = { rand::rng().random_range(0..1500) as u64 };
+    let extra = { rand::rng().random_range(0..1500_u64) };
     tracing::debug!(pause_ms = POST_WARMUP_PAUSE_MS + extra, "post-warmup pause");
     tokio::time::sleep(Duration::from_millis(POST_WARMUP_PAUSE_MS + extra)).await;
     tracing::info!("warmup complete");
@@ -76,7 +77,7 @@ async fn simulate_presence(page: &Page) {
         (
             t,
             rng.random_range(80.0..200.0),
-            rng.random_range(200..500) as u64,
+            rng.random_range(200..500_u64),
         )
     };
 
@@ -88,7 +89,7 @@ async fn simulate_presence(page: &Page) {
             height: 20.0,
         };
         mouse::click_box(page, &bbox, &mut cursor).await;
-        let pause = { rand::rng().random_range(150..350) as u64 };
+        let pause = { rand::rng().random_range(150..350_u64) };
         tokio::time::sleep(Duration::from_millis(pause)).await;
     }
 
@@ -130,9 +131,8 @@ async fn get_datadome_cookie_for_urls(page: &Page, urls: Option<Vec<String>>) ->
 
     let params = GetCookiesParams { urls };
     let timeout = Duration::from_secs(5);
-    let result = match tokio::time::timeout(timeout, page.execute(params)).await {
-        Ok(Ok(resp)) => resp,
-        _ => return None,
+    let Ok(Ok(result)) = tokio::time::timeout(timeout, page.execute(params)).await else {
+        return None;
     };
     result
         .result
@@ -151,9 +151,7 @@ pub async fn cdp_content_timeout(page: &Page, timeout: Duration) -> Option<Strin
 
 async fn navigate(page: &Page, url: &str) {
     match tokio::time::timeout(NAV_TIMEOUT, page.goto(url)).await {
-        Ok(Ok(_)) => {}
-        Ok(Err(_)) => {}
-        Err(_) => {}
+        Ok(Ok(_) | Err(_)) | Err(_) => {}
     }
 }
 

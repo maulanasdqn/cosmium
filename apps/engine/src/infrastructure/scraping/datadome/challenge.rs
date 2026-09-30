@@ -58,17 +58,14 @@ pub async fn wait_for_resolution(page: &Page) -> (String, DdVerdict) {
     let mut reloaded = false;
 
     loop {
-        let html = match cdp_content_with_timeout(page, Duration::from_secs(10)).await {
-            Some(h) => h,
-            None => {
-                tracing::debug!("page.content() slow, switching to cookie-based DataDome wait");
-                let initial = get_dd_cookie_value(page).await;
-                let verdict = wait_for_challenge_js(page, initial.as_deref()).await;
-                let html = cdp_content_with_timeout(page, Duration::from_secs(10))
-                    .await
-                    .unwrap_or_default();
-                return (html, verdict);
-            }
+        let Some(html) = cdp_content_with_timeout(page, Duration::from_secs(10)).await else {
+            tracing::debug!("page.content() slow, switching to cookie-based DataDome wait");
+            let initial = get_dd_cookie_value(page).await;
+            let verdict = wait_for_challenge_js(page, initial.as_deref()).await;
+            let html = cdp_content_with_timeout(page, Duration::from_secs(10))
+                .await
+                .unwrap_or_default();
+            return (html, verdict);
         };
 
         let verdict = classify(&html);

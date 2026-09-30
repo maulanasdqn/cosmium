@@ -8,7 +8,7 @@ use crate::domain::runtime::{BrowserRuntime, RuntimeError, RuntimeResult, browse
 pub struct TokioProcessRuntime;
 
 impl TokioProcessRuntime {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 }

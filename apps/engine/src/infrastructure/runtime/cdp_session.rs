@@ -63,7 +63,7 @@ impl BrowserSession for CdpSessionRuntime {
 
         let config = builder.build().map_err(|e| RuntimeError::Spawn {
             binary: binary.to_path_buf(),
-            source: std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
+            source: std::io::Error::other(e),
         })?;
 
         let (browser, mut handler) =
@@ -71,7 +71,7 @@ impl BrowserSession for CdpSessionRuntime {
                 .await
                 .map_err(|e| RuntimeError::Spawn {
                     binary: binary.to_path_buf(),
-                    source: std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
+                    source: std::io::Error::other(e.to_string()),
                 })?;
 
         let handler_task = tokio::spawn(async move {
@@ -90,9 +90,8 @@ impl BrowserSession for CdpSessionRuntime {
     }
 
     async fn shutdown(&self) -> RuntimeResult<()> {
-        if let Some(_state) = self.state.lock().await.take() {
-            drop(_state);
-        }
+        let state = self.state.lock().await.take();
+        drop(state);
         Ok(())
     }
 }
