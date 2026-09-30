@@ -62,4 +62,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: scan
-        run: scripts/check-no-comments.sh
+        run: |
+          set -euo pipefail
+          cat > /tmp/no-comments.awk <<'AWK'
+          FNR == 1 { block = 0 }
+          {
+            line = $0
+            gsub(/"([^"\\]|\\.)*"/, "\"\"", line)
+            if (FILENAME !~ /\.rs$/) gsub(/'([^'\\]|\\.)*'/, "''", line)
+            gsub(/[A-Za-z]+:\/\//, "", line)
+            gsub(/\*\/\*/, "", line)
+            if (line ~ /^[[:space:]]*\/\/ @ts-check[[:space:]]*$/) next
+            if (block || line ~ /\/\// || line ~ /\/\*/) {
+              print FILENAME ":" FNR ": " $0
+              block = (line ~ /\/\*/ && line !~ /\*\//) || (block && line !~ /\*\//)
+            }
+          }
+          AWK
+          offenders=$(git ls-files -- '*.rs' '*.ts' '*.tsx' '*.js' '*.mjs' '*.css' \
+            | grep -v '^patches/' | xargs -r awk -f /tmp/no-comments.awk)
+          if [ -n "$offenders" ]; then
+            echo "Comments are not allowed:"
+            echo "$offenders"
+            exit 1
+          fi

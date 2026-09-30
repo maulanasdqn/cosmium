@@ -15,10 +15,6 @@ pre-commit:
       run: cargo test --workspace --locked --quiet
       fail_text: "Tests fail locally. Fix before committing."
 
-    no-comments:
-      run: scripts/check-no-comments.sh
-      fail_text: "Comments are not allowed. Remove them and re-stage."
-
     loc-limit:
       glob: "*.rs"
       run: |
@@ -51,10 +47,6 @@ pre-push:
     test:
       run: cargo test --workspace --locked
       fail_text: "Tests fail locally. Don't push red."
-
-    no-comments:
-      run: scripts/check-no-comments.sh
-      fail_text: "Comments are not allowed. Remove them and re-stage."
 
     loc-limit:
       run: |
