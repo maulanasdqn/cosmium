@@ -1,9 +1,13 @@
+diff --git a/third_party/blink/renderer/core/frame/screen.cc b/third_party/blink/renderer/core/frame/screen.cc
+index 0fbdd38b94..b40031211a 100644
 --- a/third_party/blink/renderer/core/frame/screen.cc
 +++ b/third_party/blink/renderer/core/frame/screen.cc
-@@ -44,6 +44,16 @@
+@@ -43,6 +43,20 @@
  
- namespace {
+ namespace blink {
  
++namespace {
++
 +// cosmium: read an integer screen dimension from the command line. Returns
 +// false when the switch is absent or unparseable so the caller falls through
 +// to the real value rather than reporting a zero.
@@ -14,10 +18,12 @@
 +  return base::StringToInt(cosmium_cmd->GetSwitchValueASCII(switch_name), out);
 +}
 +
- }  // namespace
- 
++}  // namespace
++
  Screen::Screen(LocalDOMWindow* window, int64_t display_id)
-@@ -100,12 +110,18 @@
+     : ExecutionContextClient(window), display_id_(display_id) {}
+ 
+@@ -90,12 +104,18 @@ bool Screen::AreWebExposedScreenPropertiesEqual(
  }
  
  int Screen::height() const {
@@ -36,7 +42,7 @@
    if (!DomWindow())
      return 0;
    return GetRect(/*available=*/false).width();
-@@ -130,25 +146,42 @@
+@@ -129,25 +149,42 @@ unsigned Screen::pixelDepth() const {
    return colorDepth();
  }
  

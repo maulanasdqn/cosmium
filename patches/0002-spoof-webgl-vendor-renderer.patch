@@ -1,33 +1,36 @@
 diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+index 26c0a088cc..42bf83c59d 100644
 --- a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
 +++ b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
-@@ -33,6 +33,7 @@
+@@ -30,6 +30,7 @@
  #include <memory>
  #include <utility>
  
 +#include "base/command_line.h"
  #include "base/bit_cast.h"
- #include "base/containers/contains.h"
- #include "base/feature_list.h"
-@@ -3855,5 +3856,10 @@
+ #include "base/byte_size.h"
+ #include "base/compiler_specific.h"
+@@ -4200,6 +4201,11 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
+       return ScriptValue::CreateNull(script_state->GetIsolate());
      case WebGLDebugRendererInfo::kUnmaskedRendererWebgl:
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 +        const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +        if (cosmium_cmd->HasSwitch("cosmium-webgl-renderer")) {
-+          return WebGLAny(script_state, String::FromUTF8(
++          return WebGLAny(script_state, String::FromUtf8(
 +              cosmium_cmd->GetSwitchValueASCII("cosmium-webgl-renderer")));
 +        }
-         if (IdentifiabilityStudySettings::Get()->ShouldSampleType(
-                 blink::IdentifiableSurface::Type::kWebGLParameter)) {
-           RecordIdentifiableGLParameterDigest(
-@@ -3870,5 +3876,10 @@
+         return WebGLAny(script_state,
+                         String(ContextGL()->GetString(GL_RENDERER)));
+       }
+@@ -4209,6 +4215,11 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
+       return ScriptValue::CreateNull(script_state->GetIsolate());
      case WebGLDebugRendererInfo::kUnmaskedVendorWebgl:
        if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
 +        const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +        if (cosmium_cmd->HasSwitch("cosmium-webgl-vendor")) {
-+          return WebGLAny(script_state, String::FromUTF8(
++          return WebGLAny(script_state, String::FromUtf8(
 +              cosmium_cmd->GetSwitchValueASCII("cosmium-webgl-vendor")));
 +        }
-         if (IdentifiabilityStudySettings::Get()->ShouldSampleType(
-                 blink::IdentifiableSurface::Type::kWebGLParameter)) {
-           RecordIdentifiableGLParameterDigest(
+         return WebGLAny(script_state,
+                         String(ContextGL()->GetString(GL_VENDOR)));
+       }

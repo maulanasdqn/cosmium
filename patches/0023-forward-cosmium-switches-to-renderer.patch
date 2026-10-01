@@ -1,8 +1,8 @@
 diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
-index 2bc557c1d9..9c8abe7aff 100644
+index 0d96dedc4d..4cdd7a7adf 100644
 --- a/content/browser/renderer_host/render_process_host_impl.cc
 +++ b/content/browser/renderer_host/render_process_host_impl.cc
-@@ -3345,6 +3345,34 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+@@ -3851,6 +3851,34 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
    // Propagate the following switches to the renderer command line (along
    // with any associated values) if present in the browser command line.
    static const char* const kSwitchNames[] = {
@@ -35,5 +35,5 @@ index 2bc557c1d9..9c8abe7aff 100644
 +      "cosmium-avail-left",
 +      "cosmium-avail-top",
        switches::kDisableInProcessStackTraces,
+       sandbox::policy::switches::kDisableLandlockSandbox,
        sandbox::policy::switches::kDisableSeccompFilterSandbox,
-       sandbox::policy::switches::kNoSandbox,

@@ -1,4 +1,5 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+index 05fa33e456..0d9259a85c 100644
 --- a/third_party/blink/renderer/core/frame/navigator_device_memory.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
 @@ -4,6 +4,8 @@
@@ -8,9 +9,9 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/
 +#include "base/command_line.h"
 +#include "base/strings/string_number_conversions.h"
  #include "third_party/blink/public/common/device_memory/approximated_device_memory.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_metric_builder.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_metrics.h"
-@@ -14,7 +16,16 @@
+ #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-shared.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+@@ -12,6 +14,15 @@
  namespace blink {
  
  float NavigatorDeviceMemory::deviceMemory() const {
@@ -26,4 +27,3 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/
    return ApproximatedDeviceMemory::GetApproximatedDeviceMemory();
  }
  
- }  // namespace blink

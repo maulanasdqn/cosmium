@@ -1,21 +1,27 @@
+diff --git a/third_party/blink/renderer/core/timezone/timezone_controller.cc b/third_party/blink/renderer/core/timezone/timezone_controller.cc
+index 1ece07d2c3..cb2afc16c3 100644
 --- a/third_party/blink/renderer/core/timezone/timezone_controller.cc
 +++ b/third_party/blink/renderer/core/timezone/timezone_controller.cc
-@@ -231,6 +231,18 @@
-   // override is removed.
-   instance().host_timezone_id_ = timezone_id;
+@@ -271,12 +271,20 @@ void TimeZoneController::OnTimeZoneChange(const String& timezone_id) {
  
-+  // cosmium: the constructor applies --cosmium-timezone and then immediately
-+  // binds this TimeZoneMonitor client, and the browser answers by pushing the
-+  // real host zone -- which lands here and overwrites the override before any
-+  // JS runs. Setting the zone once at startup is therefore not enough; the
-+  // switch has to win here too. host_timezone_id_ is still recorded above so
-+  // the DevTools override path keeps its bookkeeping.
-+  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
-+  if (cosmium_cmd->HasSwitch("cosmium-timezone") &&
-+      !cosmium_cmd->GetSwitchValueASCII("cosmium-timezone").empty()) {
-+    return;
-+  }
+   base::AutoLock locker(instance().lock_);
+ 
++  // cosmium: Init() applies --cosmium-timezone and then binds this
++  // TimeZoneMonitor client, and the browser answers by pushing the real host
++  // zone -- which lands here and would overwrite the override before any JS
++  // runs. The switch wins here too, and it is recorded as the host zone so a
++  // cleared DevTools override restores the spoofed zone, not the real one.
++  const String cosmium_tz = CosmiumTimezoneId();
++  const String& effective_id = cosmium_tz.empty() ? timezone_id : cosmium_tz;
 +
+   // Remember requested timezone id so we can set it when timezone
+   // override is removed.
+-  instance().host_timezone_id_ = timezone_id;
++  instance().host_timezone_id_ = effective_id;
+ 
    if (!HasTimeZoneOverride())
-     SetIcuTimeZoneAndNotifyV8(timezone_id);
+-    SetIcuTimeZoneAndNotifyV8(timezone_id);
++    SetIcuTimeZoneAndNotifyV8(effective_id);
  }
+ 
+ const String& TimeZoneController::GetHostTimezoneId() {

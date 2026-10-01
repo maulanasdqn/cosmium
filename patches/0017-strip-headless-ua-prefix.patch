@@ -1,19 +1,16 @@
 diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedder_support/user_agent_utils.cc
-index 64f9e50f60..04e0e31fe4 100644
+index f9aed6a76a..418015ba2a 100644
 --- a/components/embedder_support/user_agent_utils.cc
 +++ b/components/embedder_support/user_agent_utils.cc
-@@ -228,9 +227,11 @@ const blink::UserAgentBrandList GetUserAgentBrandFullVersionListInternal(
- std::string GetUserAgentInternal(
-     UserAgentReductionEnterprisePolicyState user_agent_reduction) {
-   std::string product = GetProductAndVersion(user_agent_reduction);
+@@ -214,9 +214,8 @@ const blink::UserAgentBrandList GetUserAgentBrandFullVersionListInternal(
+ // depending on the Reduce User-Agent reduction phase features.
+ std::string GetUserAgentInternal() {
+   std::string product = GetProductAndVersion();
 -  if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
 -    product.insert(0, "Headless");
 -  }
 +  // Cosmium: never prepend "Headless" to the User-Agent — it's a dead
 +  // giveaway for bot detectors.  Headless mode should be invisible.
-+  // if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
-+  //   product.insert(0, "Headless");
-+  // }
  
  #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS)
    if (base::CommandLine::ForCurrentProcess()->HasSwitch(kUseMobileUserAgent)) {

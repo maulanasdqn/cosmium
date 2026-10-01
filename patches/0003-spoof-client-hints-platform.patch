@@ -1,4 +1,5 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_ua_data.cc b/third_party/blink/renderer/core/frame/navigator_ua_data.cc
+index 73ad371b32..36372552ca 100644
 --- a/third_party/blink/renderer/core/frame/navigator_ua_data.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_ua_data.cc
 @@ -5,6 +5,7 @@
@@ -8,15 +9,15 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_ua_data.cc b/third_
 +#include "base/command_line.h"
  #include "base/task/single_thread_task_runner.h"
  #include "third_party/blink/public/common/features.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_metric_builder.h"
-@@ -179,6 +180,12 @@ const FrozenArray<NavigatorUABrandVersion>& NavigatorUAData::fullVersionList() c
+ #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink.h"
+@@ -106,6 +107,12 @@ const HeapVector<Member<NavigatorUABrandVersion>>& NavigatorUAData::brands()
  }
  
  const String& NavigatorUAData::platform() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-ua-platform")) {
 +    DEFINE_STATIC_LOCAL(String, cosmium_override,
-+        (String::FromUTF8(cosmium_cmd->GetSwitchValueASCII("cosmium-ua-platform"))));
++        (String::FromUtf8(cosmium_cmd->GetSwitchValueASCII("cosmium-ua-platform"))));
 +    return cosmium_override;
 +  }
    if (GetExecutionContext()) {
