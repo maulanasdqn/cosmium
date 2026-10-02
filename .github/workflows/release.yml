@@ -125,9 +125,9 @@ jobs:
 
             Pre-built `cosmium` CLI binaries for Linux, macOS, and Windows.
 
-            **The patched Chromium binary is NOT included** — it is too large to
-            distribute and must be built locally with `cosmium build` (see
-            `patches/README.md`).
+            The prebuilt patched Chromium for Linux x86_64 is attached to this
+            release as `cosmium-browser-linux-x86_64.tar.gz` once it is uploaded.
+            See https://cosmium.zod.rs/start/download/ for install steps.
 
             ### Install
 

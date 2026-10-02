@@ -35,6 +35,7 @@ export default defineConfig({
           items: [
             { label: "What is Cosmium", slug: "start/what-is-cosmium" },
             { label: "How it works", slug: "start/how-it-works" },
+            { label: "Download", slug: "start/download" },
             { label: "Installation", slug: "start/installation" },
             { label: "Quickstart", slug: "start/quickstart" },
           ],

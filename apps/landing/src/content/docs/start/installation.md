@@ -49,9 +49,12 @@ browser and needs one.
 
 ## The patched Chromium binary
 
-There is no prebuilt download; the binary is built from the pinned Chromium tag
-with the patch series applied. Budget **100 GB of disk, 16 GB of RAM, and around
-six hours** for a first build on a fast machine.
+The quickest route is the prebuilt Linux x86_64 binary on the
+[download page](/start/download/).
+
+To build it yourself instead, the binary is compiled from the pinned Chromium
+tag with the patch series applied. Budget **100 GB of disk, 16 GB of RAM, and
+around six hours** for a first build on a fast machine.
 
 ```bash
 # Build the build container once (~5 min, 2 GB image)
@@ -62,7 +65,7 @@ docker compose -f docker/docker-compose.yml run --rm build \
   cargo run --release -p cosmium-cli -- build --install-build-deps
 ```
 
-Output lands in `dist/cosmium-<tag>.tar.zst`, containing the `chrome` binary
+Output lands in `dist/cosmium-<tag>-linux-x86_64.tar.gz`, containing the `chrome` binary
 plus ICU, locales, and ANGLE. The [building guide](/operations/building/) covers
 phases, incremental rebuilds, and rebasing onto a newer Chromium tag.
 

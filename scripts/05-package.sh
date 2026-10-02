@@ -61,6 +61,17 @@ done
 
 chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 
+strip_tool="${CHROMIUM_SRC}/third_party/llvm-build/Release+Asserts/bin/llvm-strip"
+[[ -x "${strip_tool}" ]] || strip_tool="$(command -v llvm-strip || command -v strip || true)"
+if [[ -n "${strip_tool}" ]]; then
+  log_info "Stripping debug symbols with ${strip_tool}"
+  for bin in chrome chrome_crashpad_handler libEGL.so libGLESv2.so libvk_swiftshader.so libvulkan.so.1; do
+    [[ -f "${stage}/${bin}" ]] && "${strip_tool}" --strip-debug "${stage}/${bin}"
+  done
+else
+  log_warn "No strip tool found, shipping unstripped binaries"
+fi
+
 applied=()
 unapplied=()
 while read -r patch_name; do
@@ -97,9 +108,17 @@ cat > "${stage}/cosmium.json" <<EOF
 }
 EOF
 
-archive="${DIST_DIR}/cosmium-${CHROMIUM_TAG}.tar.zst"
+archive="${DIST_DIR}/cosmium-${CHROMIUM_TAG}-linux-x86_64.tar.gz"
 log_info "Compressing to ${archive}"
-tar --use-compress-program=zstd -cf "${archive}" -C "${DIST_DIR}" "cosmium-${CHROMIUM_TAG}"
+gz="$(command -v pigz || command -v gzip)"
+tar --use-compress-program="${gz} -9" -cf "${archive}" -C "${DIST_DIR}" "cosmium-${CHROMIUM_TAG}"
+
+latest="${DIST_DIR}/cosmium-browser-linux-x86_64.tar.gz"
+cp "${archive}" "${latest}"
+for f in "${archive}" "${latest}"; do
+  (cd "${DIST_DIR}" && sha256sum "$(basename "${f}")" > "$(basename "${f}").sha256")
+done
 
 log_ok "Packaged: ${archive}"
+log_ok "Latest alias: ${latest}"
 log_ok "Size: $(du -h "${archive}" | cut -f1)"
