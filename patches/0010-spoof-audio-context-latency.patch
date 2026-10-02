@@ -10,17 +10,25 @@
 # - test: new AudioContext().baseLatency / .outputLatency
 #         (CreepJS "Audio" probe — base/output latency contribute to hash)
 diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/third_party/blink/renderer/modules/webaudio/audio_context.cc
+index 9136c6e6c1..1453b7c1a7 100644
 --- a/third_party/blink/renderer/modules/webaudio/audio_context.cc
 +++ b/third_party/blink/renderer/modules/webaudio/audio_context.cc
-@@ -5,5 +5,7 @@
- #include "third_party/blink/renderer/modules/webaudio/audio_context.h"
+@@ -7,10 +7,12 @@
+ #include <algorithm>
+ #include <atomic>
  
 +#include "base/command_line.h"
-+#include "base/strings/string_number_conversions.h"
+ #include "base/functional/callback_helpers.h"
  #include "base/metrics/histogram_functions.h"
  #include "base/metrics/histogram_macros.h"
+ #include "base/strings/strcat.h"
++#include "base/strings/string_number_conversions.h"
  #include "base/strings/to_string.h"
-@@ -638,4 +640,13 @@
+ #include "base/trace_event/trace_event.h"
+ #include "build/build_config.h"
+@@ -1239,6 +1241,15 @@ V8AudioContextState AudioContext::state() const {
+ }
+ 
  double AudioContext::baseLatency() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-audio-base-latency")) {
@@ -32,9 +40,11 @@ diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/thir
 +    }
 +  }
    DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
-   DCHECK(destination());
+   DCHECK(destinationNode());
  
-@@ -645,4 +656,13 @@
+@@ -1246,6 +1257,15 @@ double AudioContext::baseLatency() const {
+ }
+ 
  double AudioContext::outputLatency() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-audio-output-latency")) {
@@ -46,5 +56,5 @@ diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/thir
 +    }
 +  }
    DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
-   DCHECK(destination());
+   DCHECK(destinationNode());
  

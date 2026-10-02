@@ -1,7 +1,8 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
+index f5c0db2d1b..235eec44de 100644
 --- a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
-@@ -4,12 +4,23 @@
+@@ -4,11 +4,22 @@
  
  #include "third_party/blink/renderer/core/frame/navigator_concurrent_hardware.h"
  
@@ -24,4 +25,3 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware
    return static_cast<unsigned>(base::SysInfo::NumberOfProcessors());
  }
  
- }  // namespace blink

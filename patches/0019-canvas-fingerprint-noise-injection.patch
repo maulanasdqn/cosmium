@@ -15,8 +15,101 @@
 #         new OffscreenCanvas(1,1).convertToBlob()
 #         ctx.getImageData(0,0,1,1)
 #         (DataDome / CreepJS canvas fingerprint probes)
+diff --git a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+index 6a5f09ae85..b3979d61c2 100644
+--- a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
++++ b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+@@ -123,6 +123,7 @@
+ #include "third_party/blink/renderer/platform/graphics/static_bitmap_image.h"
+ #include "third_party/blink/renderer/platform/graphics/static_bitmap_image_to_video_frame_copier.h"
+ #include "third_party/blink/renderer/platform/graphics/static_bitmap_image_transform.h"
++#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
+ #include "third_party/blink/renderer/platform/graphics/web_graphics_context_3d_video_frame_pool.h"
+ #include "third_party/blink/renderer/platform/heap/thread_state.h"
+ #include "third_party/blink/renderer/platform/image-encoders/image_encoder_utils.h"
+@@ -1416,6 +1417,13 @@ String HTMLCanvasElement::ToDataURLInternal(
+       ImageEncoderUtils::ToEncodingMimeType(mime_type);
+ 
+   scoped_refptr<StaticBitmapImage> image_bitmap = Snapshot(source_buffer);
++  // Cosmium: Apply canvas fingerprint noise if seed is set.
++  {
++    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
++    if (cosmium_canvas_seed != 0) {
++      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
++    }
++  }
+   if (image_bitmap) {
+     std::unique_ptr<ImageDataBuffer> data_buffer =
+         ImageDataBuffer::Create(image_bitmap);
+@@ -1520,6 +1528,13 @@ void HTMLCanvasElement::toBlob(V8BlobCallback* callback,
+ 
+   CanvasAsyncBlobCreator* async_creator = nullptr;
+   scoped_refptr<StaticBitmapImage> image_bitmap = Snapshot(kBackBuffer);
++  // Cosmium: Apply canvas fingerprint noise if seed is set.
++  {
++    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
++    if (cosmium_canvas_seed != 0) {
++      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
++    }
++  }
+   if (image_bitmap) {
+     auto* options = ImageEncodeOptions::Create();
+     options->setType(ImageEncoderUtils::MimeTypeName(encoding_mime_type));
+diff --git a/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc b/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
+index f81d66014f..46ef77f805 100644
+--- a/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
++++ b/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
+@@ -11,6 +11,7 @@
+ #include "base/metrics/histogram_functions.h"
+ #include "base/numerics/safe_conversions.h"
+ #include "base/task/single_thread_task_runner.h"
++#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/platform/platform.h"
+ #include "third_party/blink/public/platform/scheduler/web_agent_group_scheduler.h"
+@@ -554,6 +555,13 @@ ScriptPromise<Blob> OffscreenCanvas::convertToBlob(
+ 
+   base::TimeTicks start_time = base::TimeTicks::Now();
+   scoped_refptr<StaticBitmapImage> image_bitmap = context_->GetImage();
++  // Cosmium: Apply canvas fingerprint noise if seed is set.
++  {
++    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
++    if (cosmium_canvas_seed != 0) {
++      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
++    }
++  }
+   if (image_bitmap) {
+     auto* resolver = MakeGarbageCollected<ScriptPromiseResolver<Blob>>(
+         script_state, exception_state.GetContext());
+diff --git a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
+index 3d7a843995..699063e789 100644
+--- a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
++++ b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
+@@ -25,6 +25,7 @@
+ #include "base/time/time.h"
+ #include "cc/paint/paint_canvas.h"
+ #include "cc/paint/paint_flags.h"
++#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
+ #include "cc/paint/paint_image.h"
+ #include "cc/paint/record_paint_canvas.h"
+ #include "components/viz/common/resources/shared_image_format_utils.h"
+@@ -515,6 +516,13 @@ ImageData* BaseRenderingContext2D::getImageDataInternal(
+       SkIRect bounds =
+           snapshot->PaintImageForCurrentFrame().GetSkImageInfo().bounds();
+       DCHECK(!bounds.intersect(SkIRect::MakeXYWH(sx, sy, sw, sh)));
++    } else {
++      // Cosmium: Apply canvas fingerprint noise to getImageData result.
++      uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
++      if (cosmium_canvas_seed != 0) {
++        cosmium::ApplyCanvasNoiseToPixmap(image_data_pixmap,
++                                          cosmium_canvas_seed);
++      }
+     }
+   }
+ 
 diff --git a/third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h b/third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h
 new file mode 100644
+index 0000000000..f02b28598c
 --- /dev/null
 +++ b/third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h
 @@ -0,0 +1,169 @@
@@ -189,115 +282,3 @@ new file mode 100644
 +}  // namespace blink
 +
 +#endif  // THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COSMIUM_CANVAS_NOISE_H_
-diff --git a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
-index b37a99fc79..cd4ba18685 100644
---- a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
-+++ b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
-@@ -33,6 +33,7 @@
- #include <memory>
- #include <utility>
- 
-+#include "base/command_line.h"
- #include "base/feature_list.h"
- #include "base/functional/callback_helpers.h"
- #include "base/location.h"
-@@ -110,6 +111,7 @@
- #include "third_party/blink/renderer/platform/graphics/static_bitmap_image.h"
- #include "third_party/blink/renderer/platform/graphics/static_bitmap_image_to_video_frame_copier.h"
- #include "third_party/blink/renderer/platform/graphics/static_bitmap_image_transform.h"
-+#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
- #include "third_party/blink/renderer/platform/graphics/web_graphics_context_3d_video_frame_pool.h"
- #include "third_party/blink/renderer/platform/heap/thread_state.h"
- #include "third_party/blink/renderer/platform/image-encoders/image_encoder_utils.h"
-@@ -1274,6 +1276,13 @@ String HTMLCanvasElement::ToDataURLInternal(
- 
-   scoped_refptr<StaticBitmapImage> image_bitmap =
-       Snapshot(FlushReason::kToDataURL, source_buffer);
-+  // Cosmium: Apply canvas fingerprint noise if seed is set.
-+  {
-+    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
-+    if (cosmium_canvas_seed != 0) {
-+      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
-+    }
-+  }
-   if (image_bitmap) {
-     std::unique_ptr<ImageDataBuffer> data_buffer =
-         ImageDataBuffer::Create(image_bitmap);
-@@ -1391,6 +1400,13 @@ void HTMLCanvasElement::toBlob(V8BlobCallback* callback,
-   CanvasAsyncBlobCreator* async_creator = nullptr;
-   scoped_refptr<StaticBitmapImage> image_bitmap =
-       Snapshot(FlushReason::kToBlob, kBackBuffer);
-+  // Cosmium: Apply canvas fingerprint noise if seed is set.
-+  {
-+    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
-+    if (cosmium_canvas_seed != 0) {
-+      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
-+    }
-+  }
-   if (image_bitmap) {
-     auto* options = ImageEncodeOptions::Create();
-     options->setType(ImageEncodingMimeTypeName(encoding_mime_type));
-diff --git a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
-index 2570b5a8e3..a45e6a37ce 100644
---- a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
-+++ b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
-@@ -26,6 +26,7 @@
- #include "base/check.h"
- #include "base/check_deref.h"
- #include "base/check_op.h"
-+#include "base/command_line.h"
- #include "base/compiler_specific.h"
- #include "base/containers/span.h"
- #include "base/feature_list.h"
-@@ -42,6 +43,7 @@
- #include "base/trace_event/trace_event.h"
- #include "cc/paint/paint_canvas.h"
- #include "cc/paint/paint_flags.h"
-+#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
- #include "cc/paint/paint_image.h"
- #include "cc/paint/record_paint_canvas.h"
- #include "cc/paint/refcounted_buffer.h"
-@@ -2963,6 +2965,13 @@ ImageData* BaseRenderingContext2D::getImageDataInternal(
-       SkIRect bounds =
-           snapshot->PaintImageForCurrentFrame().GetSkImageInfo().bounds();
-       DCHECK(!bounds.intersect(SkIRect::MakeXYWH(sx, sy, sw, sh)));
-+    } else {
-+      // Cosmium: Apply canvas fingerprint noise to getImageData result.
-+      uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
-+      if (cosmium_canvas_seed != 0) {
-+        cosmium::ApplyCanvasNoiseToPixmap(image_data_pixmap,
-+                                          cosmium_canvas_seed);
-+      }
-     }
-   }
- 
-diff --git a/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc b/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
-index 3cad5c8488..edefc3a2b0 100644
---- a/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
-+++ b/third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.cc
-@@ -7,9 +7,11 @@
- #include <memory>
- #include <utility>
- 
-+#include "base/command_line.h"
- #include "base/metrics/histogram_functions.h"
- #include "base/numerics/safe_conversions.h"
- #include "base/task/single_thread_task_runner.h"
-+#include "third_party/blink/renderer/platform/graphics/cosmium_canvas_noise.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_metric_builder.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_metrics.h"
- #include "third_party/blink/public/common/privacy_budget/identifiability_study_settings.h"
-@@ -358,6 +360,13 @@ ScriptPromise<Blob> OffscreenCanvas::convertToBlob(
-   base::TimeTicks start_time = base::TimeTicks::Now();
-   scoped_refptr<StaticBitmapImage> image_bitmap =
-       context_->GetImage(FlushReason::kToBlob);
-+  // Cosmium: Apply canvas fingerprint noise if seed is set.
-+  {
-+    uint64_t cosmium_canvas_seed = cosmium::GetCanvasNoiseSeed();
-+    if (cosmium_canvas_seed != 0) {
-+      image_bitmap = cosmium::ApplyCanvasNoiseToImage(image_bitmap, cosmium_canvas_seed);
-+    }
-+  }
-   if (image_bitmap) {
-     auto* resolver = MakeGarbageCollected<ScriptPromiseResolver<Blob>>(
-         script_state, exception_state.GetContext());

@@ -1,8 +1,8 @@
 diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedder_support/user_agent_utils.cc
-index 64f9e50f60..ba4bfae917 100644
+index 5d96c60405..f9aed6a76a 100644
 --- a/components/embedder_support/user_agent_utils.cc
 +++ b/components/embedder_support/user_agent_utils.cc
-@@ -184,10 +184,9 @@ const blink::UserAgentBrandList GetUserAgentBrandList(
+@@ -162,10 +162,9 @@ const blink::UserAgentBrandList GetUserAgentBrandList(
    int major_version_number;
    bool parse_result = base::StringToInt(major_version, &major_version_number);
    DCHECK(parse_result);

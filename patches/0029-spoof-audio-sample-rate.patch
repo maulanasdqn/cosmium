@@ -1,0 +1,94 @@
+# cosmium patch: 0029-spoof-audio-sample-rate
+# Authored: 2026-10-01
+# Chromium base: see ../VERSION
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/modules/webaudio/audio_context.cc,
+#                   third_party/blink/renderer/modules/webaudio/audio_destination_node.cc,
+#                   content/browser/renderer_host/render_process_host_impl.cc
+# - what changed: An AudioContext created without an explicit sampleRate uses
+#                 --cosmium-audio-sample-rate as its rate, and a realtime
+#                 destination's maxChannelCount reports
+#                 --cosmium-audio-max-channels. Both switches are forwarded to
+#                 the renderer.
+# - profile fields read: audio.sample_rate, audio.max_channel_count
+# - test: new AudioContext().sampleRate === 48000 and
+#         new AudioContext().destination.maxChannelCount === 2 with the
+#         switches set; OfflineAudioContext values are unchanged.
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 4cdd7a7adf..84c5695666 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3867,6 +3867,8 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       "cosmium-webgl-renderer",
+       "cosmium-audio-base-latency",
+       "cosmium-audio-output-latency",
++      "cosmium-audio-sample-rate",
++      "cosmium-audio-max-channels",
+       "cosmium-timezone",
+       "cosmium-canvas-seed",
+       "cosmium-battery-charging",
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/third_party/blink/renderer/modules/webaudio/audio_context.cc
+index 1453b7c1a7..b4134f2a68 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_context.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_context.cc
+@@ -454,6 +454,23 @@ AudioContext* AudioContext::Create(ExecutionContext* context,
+   std::optional<float> sample_rate;
+   if (context_options->hasSampleRate()) {
+     sample_rate = context_options->sampleRate();
++  } else {
++    // cosmium: a context created without an explicit sampleRate runs at the
++    // hardware rate, which headless/container hosts report as 44100 while a
++    // typical Windows desktop reports 48000. Treat --cosmium-audio-sample-rate
++    // as the hardware rate so new AudioContext().sampleRate matches the
++    // profile; the audio stack resamples to the real device as it would for
++    // any page-requested rate.
++    const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++    double cosmium_rate = 0.0;
++    if (cosmium_cmd->HasSwitch("cosmium-audio-sample-rate") &&
++        base::StringToDouble(
++            cosmium_cmd->GetSwitchValueASCII("cosmium-audio-sample-rate"),
++            &cosmium_rate) &&
++        audio_utilities::IsValidAudioBufferSampleRate(
++            static_cast<float>(cosmium_rate))) {
++      sample_rate = static_cast<float>(cosmium_rate);
++    }
+   }
+ 
+   std::optional<uint32_t> render_quantum_frames = 128;
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_destination_node.cc b/third_party/blink/renderer/modules/webaudio/audio_destination_node.cc
+index 1d2302a9c4..98dca241fb 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_destination_node.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_destination_node.cc
+@@ -25,6 +25,10 @@
+ 
+ #include "third_party/blink/renderer/modules/webaudio/audio_destination_node.h"
+ 
++#include "base/command_line.h"
++#include "base/strings/string_number_conversions.h"
++#include "third_party/blink/renderer/modules/webaudio/base_audio_context.h"
++
+ #include "third_party/blink/renderer/modules/webaudio/audio_destination_handler.h"
+ #include "third_party/blink/renderer/modules/webaudio/audio_graph_tracer.h"
+ 
+@@ -39,6 +43,20 @@ AudioDestinationHandler& AudioDestinationNode::GetAudioDestinationHandler()
+ }
+ 
+ uint32_t AudioDestinationNode::maxChannelCount() const {
++  // cosmium: only realtime destinations report the output device's channel
++  // count; an OfflineAudioContext's value is the page's own numberOfChannels
++  // and must stay untouched.
++  BaseAudioContext* cosmium_context = context();
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  unsigned cosmium_channels = 0;
++  if (cosmium_context && cosmium_context->HasRealtimeConstraint() &&
++      cosmium_cmd->HasSwitch("cosmium-audio-max-channels") &&
++      base::StringToUint(
++          cosmium_cmd->GetSwitchValueASCII("cosmium-audio-max-channels"),
++          &cosmium_channels) &&
++      cosmium_channels > 0) {
++    return cosmium_channels;
++  }
+   return GetAudioDestinationHandler().MaxChannelCount();
+ }
+ 

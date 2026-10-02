@@ -15,12 +15,13 @@
 #              --cosmium-battery-charging-time, --cosmium-battery-discharging-time
 # - test: navigator.getBattery().then(b => console.log(b.level, b.charging))
 diff --git a/third_party/blink/renderer/modules/battery/battery_manager.cc b/third_party/blink/renderer/modules/battery/battery_manager.cc
-index abcdef1234..5678abcdef 100644
+index 51cdc75cee..c4a16bcb68 100644
 --- a/third_party/blink/renderer/modules/battery/battery_manager.cc
 +++ b/third_party/blink/renderer/modules/battery/battery_manager.cc
-@@ -5,5 +5,9 @@
+@@ -4,6 +4,10 @@
+ 
  #include "third_party/blink/renderer/modules/battery/battery_manager.h"
-
+ 
 +#include <cmath>
 +
 +#include "base/command_line.h"
@@ -28,8 +29,9 @@ index abcdef1234..5678abcdef 100644
  #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink.h"
  #include "third_party/blink/renderer/core/dom/dom_exception.h"
  #include "third_party/blink/renderer/core/dom/events/event.h"
-@@ -82,16 +85,48 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
-
+@@ -80,18 +84,50 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
+ }
+ 
  bool BatteryManager::charging() {
 +  // Cosmium: spoof battery charging state from profile.
 +  const auto* cmd = base::CommandLine::ForCurrentProcess();
@@ -37,7 +39,7 @@ index abcdef1234..5678abcdef 100644
 +    return cmd->GetSwitchValueASCII("cosmium-battery-charging") == "true";
    return battery_status_.Charging();
  }
-
+ 
  double BatteryManager::chargingTime() {
 +  // Cosmium: spoof battery charging time from profile.
 +  const auto* cmd = base::CommandLine::ForCurrentProcess();
@@ -51,7 +53,7 @@ index abcdef1234..5678abcdef 100644
 +  }
    return battery_status_.charging_time().InSecondsF();
  }
-
+ 
  double BatteryManager::dischargingTime() {
 +  // Cosmium: spoof battery discharging time from profile.
 +  const auto* cmd = base::CommandLine::ForCurrentProcess();
@@ -65,7 +67,7 @@ index abcdef1234..5678abcdef 100644
 +  }
    return battery_status_.discharging_time().InSecondsF();
  }
-
+ 
  double BatteryManager::level() {
 +  // Cosmium: spoof battery level from profile.
 +  const auto* cmd = base::CommandLine::ForCurrentProcess();
@@ -77,3 +79,4 @@ index abcdef1234..5678abcdef 100644
 +  }
    return battery_status_.Level();
  }
+ 

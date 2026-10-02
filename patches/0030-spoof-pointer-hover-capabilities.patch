@@ -1,0 +1,60 @@
+# cosmium patch: 0030-spoof-pointer-hover-capabilities
+# Authored: 2026-10-01
+# Chromium base: see ../VERSION
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): ui/base/pointer/pointer_device.cc
+# - what changed: --cosmium-pointer=fine|coarse|none overrides the available
+#                 pointer/hover types the browser reports to WebPreferences;
+#                 the primary pointer/hover types derive from them. Without
+#                 the switch behavior is unchanged. Touch availability and
+#                 maxTouchPoints are not affected.
+# - profile fields read: derived from hardware.max_touch_points (desktop -> fine)
+# - test: matchMedia('(hover:hover)').matches and
+#         matchMedia('(pointer:fine)').matches are true with
+#         --cosmium-pointer=fine under --headless=new.
+diff --git a/ui/base/pointer/pointer_device.cc b/ui/base/pointer/pointer_device.cc
+index 7d9273764f..1b49f0ce15 100644
+--- a/ui/base/pointer/pointer_device.cc
++++ b/ui/base/pointer/pointer_device.cc
+@@ -8,6 +8,7 @@
+ 
+ #include "base/check.h"
+ #include "base/check_op.h"
++#include "base/command_line.h"
+ #include "build/build_config.h"
+ 
+ namespace ui {
+@@ -38,9 +39,29 @@ ScopedSetPointerAndHoverTypesForTesting::
+ }
+ 
+ std::pair<int, int> GetAvailablePointerAndHoverTypes() {
+-  return g_pointer_and_hover_types_for_testing
+-             ? g_pointer_and_hover_types_for_testing->pointer_and_hover_types()
+-             : GetAvailablePointerAndHoverTypesImpl();
++  if (g_pointer_and_hover_types_for_testing) {
++    return g_pointer_and_hover_types_for_testing->pointer_and_hover_types();
++  }
++  // cosmium: a headless Linux host has no mouse device, so every pointer and
++  // hover media query (pointer, any-pointer, hover, any-hover) evaluates to
++  // none -- a headless tell for a desktop profile. --cosmium-pointer reports
++  // the input capabilities of the spoofed device instead. Touch availability
++  // and maxTouchPoints come from separate functions and stay untouched.
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (cosmium_cmd->HasSwitch("cosmium-pointer")) {
++    const std::string cosmium_pointer =
++        cosmium_cmd->GetSwitchValueASCII("cosmium-pointer");
++    if (cosmium_pointer == "fine") {
++      return {POINTER_TYPE_FINE, HOVER_TYPE_HOVER};
++    }
++    if (cosmium_pointer == "coarse") {
++      return {POINTER_TYPE_COARSE, HOVER_TYPE_NONE};
++    }
++    if (cosmium_pointer == "none") {
++      return {POINTER_TYPE_NONE, HOVER_TYPE_NONE};
++    }
++  }
++  return GetAvailablePointerAndHoverTypesImpl();
+ }
+ 
+ #if !BUILDFLAG(IS_ANDROID)

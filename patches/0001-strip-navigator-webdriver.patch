@@ -1,7 +1,10 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator.cc b/third_party/blink/renderer/core/frame/navigator.cc
+index 583f05f8dd..90a9a3a91b 100644
 --- a/third_party/blink/renderer/core/frame/navigator.cc
 +++ b/third_party/blink/renderer/core/frame/navigator.cc
-@@ -84,10 +84,5 @@ bool Navigator::CookieEnabled() const {
+@@ -98,12 +98,7 @@ bool Navigator::cookieEnabled() const {
+ }
+ 
  bool Navigator::webdriver() const {
 -  if (RuntimeEnabledFeatures::AutomationControlledEnabled())
 -    return true;

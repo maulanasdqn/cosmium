@@ -1,58 +1,27 @@
 diff --git a/chrome/browser/devtools/protocol/emulation_handler.cc b/chrome/browser/devtools/protocol/emulation_handler.cc
-index 4dabbbeb7d..c30dc9ee7c 100644
+index 151d098032..23b353ea5c 100644
 --- a/chrome/browser/devtools/protocol/emulation_handler.cc
 +++ b/chrome/browser/devtools/protocol/emulation_handler.cc
-@@ -23,31 +23,12 @@ protocol::Response EmulationHandler::Disable() {
+@@ -139,6 +139,13 @@ Response EmulationHandler::Disable() {
  }
  
- protocol::Response EmulationHandler::SetAutomationOverride(bool enabled) {
--  if (!enabled) {
--    if (automation_info_bar_) {
--      automation_info_bar_->RemoveSelf();
--    }
--    return protocol::Response::FallThrough();
--  }
--  if (automation_info_bar_) {
--    return protocol::Response::FallThrough();
--  }
--
--  infobars::ContentInfoBarManager* info_bar_manager =
--      GetContentInfoBarManager();
--  if (!info_bar_manager) {
--    // Implies the web content cannot have an info bar attached. A priori, the
--    // automation override doesn't matter on the chrome layer.
--    return protocol::Response::FallThrough();
--  }
--
--  // Note since the observer removes itself when the info bar is removed, the
--  // observer is added at most once because of the info bar nullity check
--  // above.
--  automation_info_bar_ = AutomationInfoBarDelegate::Create(info_bar_manager);
--  if (automation_info_bar_) {
--    info_bar_manager->AddObserver(this);
--  }
-+  // Cosmium: silently ignore the Emulation.setAutomationOverride CDP
-+  // command at the browser layer too.  The default implementation
-+  // creates an AutomationInfoBarDelegate (DOM-visible "Chrome is being
-+  // controlled..." bar) which is a primary DataDome detection signal.
-+  // Fall through to the renderer layer (also neutered) without doing
-+  // anything.
-   return protocol::Response::FallThrough();
- }
- 
+ Response EmulationHandler::SetAutomationOverride(bool enabled) {
++  // Cosmium: silently ignore Emulation.setAutomationOverride(true) at the
++  // browser layer too. The default implementation creates the DOM-visible
++  // "Chrome is being controlled..." infobar, a primary DataDome detection
++  // signal. Disabling still runs so any existing bar is removed.
++  if (enabled) {
++    return Response::FallThrough();
++  }
+   bool is_migrated = infobars::IsInfoBarMigrated(
+       infobars::InfoBarDelegate::AUTOMATION_INFOBAR_DELEGATE);
+   if (is_migrated) {
 diff --git a/chrome/test/chromedriver/chrome/devtools_client_impl.cc b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
-index 6373719857..77f5812f16 100644
+index 64dfc3decf..7561dfc4ce 100644
 --- a/chrome/test/chromedriver/chrome/devtools_client_impl.cc
 +++ b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
-@@ -587,16 +587,22 @@ Status DevToolsClientImpl::SetUpDevTools() {
-     SendCommandAndIgnoreResponse("Page.enable", base::Value::Dict());
- 
-     // This is a page or frame level DevToolsClient
-+    // Cosmium: stash pristine builtins under a non-detectable Symbol key.
-+    // Bot detectors (DataDome, etc.) enumerate window properties looking
-+    // for the /^cdc_/ prefix that ChromeDriver normally uses.  A Symbol
-+    // key is invisible to Object.keys / for-in / getOwnPropertyNames.
-     base::Value::Dict params;
+@@ -585,13 +585,15 @@ Status DevToolsClientImpl::SetUpDevTools() {
+     base::DictValue params;
      std::string script =
          "(function () {"
 -        "window.cdc_adoQpoasnfa76pfcZLmcfl_Array = window.Array;"
@@ -75,10 +44,10 @@ index 6373719857..77f5812f16 100644
      params.Set("source", script);
      Status status = SendCommandAndIgnoreResponse(
 diff --git a/chrome/test/chromedriver/chrome_launcher.cc b/chrome/test/chromedriver/chrome_launcher.cc
-index 25969fe473..c01e35b4a0 100644
+index e99f0c78dd..ee34144c4c 100644
 --- a/chrome/test/chromedriver/chrome_launcher.cc
 +++ b/chrome/test/chromedriver/chrome_launcher.cc
-@@ -84,7 +84,11 @@ namespace {
+@@ -86,7 +86,11 @@ namespace {
  
  const char* const kCommonSwitches[] = {
      embedder_support::kDisablePopupBlocking,
@@ -89,9 +58,9 @@ index 25969fe473..c01e35b4a0 100644
 +    // standard Chromium.  All of these are high-signal bot detection
 +    // vectors.
      "allow-pre-commit-input",
- };
- 
-@@ -99,7 +103,8 @@ const char* const kDesktopSwitches[] = {
+     // https://crbug.com/445332809.
+     "disable-features=IgnoreDuplicateNavs",
+@@ -109,7 +113,8 @@ const char* const kDesktopSwitches[] = {
      "log-level=0",
      "password-store=basic",
      "use-mock-keychain",
@@ -240,10 +209,10 @@ index f0ceeea68f..ceb9e8c5b3 100644
 +  s.Symbol = window.Symbol;
 +})();
 diff --git a/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc b/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
-index 5698baa5f9..7baa0b5411 100644
+index 0536c54a0a..589fd5f98a 100644
 --- a/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
 +++ b/chrome/test/chromedriver/test/devtools_client_impl_integrationtest.cc
-@@ -103,8 +103,9 @@ TEST_F(DevToolsClientImplTest, DeleteGlobalJSON) {
+@@ -101,8 +101,9 @@ TEST_F(DevToolsClientImplTest, DeleteGlobalJSON) {
      // global JSON object indeed can be accessed.
      params.clear();
      result.clear();
@@ -255,10 +224,10 @@ index 5698baa5f9..7baa0b5411 100644
          "Runtime.evaluate", params, &timeout, &result);
      EXPECT_TRUE(StatusOk(status));
 diff --git a/content/browser/devtools/protocol/browser_handler.cc b/content/browser/devtools/protocol/browser_handler.cc
-index f1d42bbb09..600582c540 100644
+index 6c6f62cce6..a5167da139 100644
 --- a/content/browser/devtools/protocol/browser_handler.cc
 +++ b/content/browser/devtools/protocol/browser_handler.cc
-@@ -566,22 +566,12 @@ Response BrowserHandler::GetHistogram(
+@@ -675,22 +675,12 @@ Response BrowserHandler::GetHistogram(
  Response BrowserHandler::GetBrowserCommandLine(
      std::unique_ptr<protocol::Array<std::string>>* arguments) {
    *arguments = std::make_unique<protocol::Array<std::string>>();
@@ -286,12 +255,12 @@ index f1d42bbb09..600582c540 100644
 +      "Command line not returned because --enable-automation not set.");
  }
  
- Response BrowserHandler::Crash() {
+ Response BrowserHandler::AddMockCamera(const std::string& device_id) {
 diff --git a/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc b/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
-index 2217e5013b..2a5db04fd5 100644
+index 775f71b0ac..472efac2df 100644
 --- a/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
 +++ b/third_party/blink/renderer/core/inspector/inspector_emulation_agent.cc
-@@ -857,14 +857,18 @@ protocol::Response InspectorEmulationAgent::setDisabledImageTypes(
+@@ -1221,9 +1221,11 @@ protocol::Response InspectorEmulationAgent::setDisabledImageTypes(
  
  protocol::Response InspectorEmulationAgent::setAutomationOverride(
      bool enabled) {
@@ -306,6 +275,9 @@ index 2217e5013b..2a5db04fd5 100644
    return protocol::Response::Success();
  }
  
+@@ -1268,7 +1270,9 @@ InspectorEmulationAgent::setSmallViewportHeightDifferenceOverride(
+ }
+ 
  void InspectorEmulationAgent::ApplyAutomationOverride(bool& enabled) const {
 -  enabled |= automation_override_.Get();
 +  // Cosmium: always report automation as disabled.
@@ -315,10 +287,10 @@ index 2217e5013b..2a5db04fd5 100644
  
  }  // namespace blink
 diff --git a/v8/src/runtime/runtime-debug.cc b/v8/src/runtime/runtime-debug.cc
-index 4e82bd38a8..c25d2d570d 100644
+index 61b7702ae8..75094cf80b 100644
 --- a/v8/src/runtime/runtime-debug.cc
 +++ b/v8/src/runtime/runtime-debug.cc
-@@ -134,14 +134,12 @@ RUNTIME_FUNCTION(Runtime_DebugBreakAtEntry) {
+@@ -177,14 +177,12 @@ RUNTIME_FUNCTION(Runtime_DebugBreakAtEntry) {
  RUNTIME_FUNCTION(Runtime_HandleDebuggerStatement) {
    SealHandleScope shs(isolate);
    DCHECK_EQ(0, args.length());

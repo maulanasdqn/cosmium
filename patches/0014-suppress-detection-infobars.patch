@@ -1,30 +1,24 @@
 diff --git a/chrome/browser/ui/startup/infobar_utils.cc b/chrome/browser/ui/startup/infobar_utils.cc
-index dac3d705a4..5a4b0989d7 100644
+index 598e361a29..9a684b803e 100644
 --- a/chrome/browser/ui/startup/infobar_utils.cc
 +++ b/chrome/browser/ui/startup/infobar_utils.cc
-@@ -149,16 +149,19 @@ void AddInfoBarsIfNecessary(Browser* browser,
-     }
-     infobars_shown = true;
+@@ -246,14 +246,15 @@ void AddInfoBarsIfNecessary(BrowserWindowInterface* browser,
+   }
+   infobars_shown = true;
  
--    if (show_bad_flags_security_warnings) {
--      ShowBadFlagsPrompt(web_contents);
--    }
-+    // Cosmium: suppress bad-flags and missing-API-keys infobars.
-+    // These inject DOM elements that bot detectors (DataDome) can read,
-+    // leaking "Chromium" branding and automation-flag usage.
-+    // if (show_bad_flags_security_warnings) {
-+    //   ShowBadFlagsPrompt(web_contents);
-+    // }
+-  if (show_bad_flags_security_warnings) {
+-    ShowBadFlagsPrompt(web_contents);
+-  }
++  // Cosmium: suppress bad-flags and missing-API-keys infobars.
++  // These inject DOM elements that bot detectors (DataDome) can read,
++  // leaking "Chromium" branding and automation-flag usage.
++  (void)show_bad_flags_security_warnings;
  
-     infobars::ContentInfoBarManager* infobar_manager =
-         infobars::ContentInfoBarManager::FromWebContents(web_contents);
+   infobars::ContentInfoBarManager* infobar_manager =
+       infobars::ContentInfoBarManager::FromWebContents(web_contents);
  
--    if (!google_apis::HasAPIKeyConfigured()) {
--      GoogleApiKeysInfoBarDelegate::Create(infobar_manager);
--    }
-+    // if (!google_apis::HasAPIKeyConfigured()) {
-+    //   GoogleApiKeysInfoBarDelegate::Create(infobar_manager);
-+    // }
- 
-     if (ObsoleteSystem::IsObsoleteNowOrSoon()) {
-       PrefService* local_state = g_browser_process->local_state();
+-  if (!google_apis::HasAPIKeyConfigured()) {
++  if (false && !google_apis::HasAPIKeyConfigured()) {
+     if (infobars::IsInfoBarMigrated(
+             infobars::InfoBarDelegate::GOOGLE_API_KEYS_INFOBAR_DELEGATE)) {
+       if (auto* manager =

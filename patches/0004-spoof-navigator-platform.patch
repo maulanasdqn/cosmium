@@ -1,7 +1,8 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_id.cc b/third_party/blink/renderer/core/frame/navigator_id.cc
+index 22243ebf5e..a246f64175 100644
 --- a/third_party/blink/renderer/core/frame/navigator_id.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_id.cc
-@@ -33,6 +33,7 @@
+@@ -31,6 +31,7 @@
  
  #include "third_party/blink/renderer/core/frame/navigator_id.h"
  
@@ -9,13 +10,13 @@ diff --git a/third_party/blink/renderer/core/frame/navigator_id.cc b/third_party
  #include "base/feature_list.h"
  #include "build/build_config.h"
  #include "third_party/blink/public/common/features.h"
-@@ -65,6 +66,11 @@ String NavigatorID::appVersion() {
+@@ -59,6 +60,11 @@ String NavigatorID::appVersion() {
  }
  
  String NavigatorID::platform() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-platform")) {
-+    return String::FromUTF8(
++    return String::FromUtf8(
 +        cosmium_cmd->GetSwitchValueASCII("cosmium-platform"));
 +  }
  #if BUILDFLAG(IS_MAC)

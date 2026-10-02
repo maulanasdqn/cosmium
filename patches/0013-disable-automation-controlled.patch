@@ -1,8 +1,8 @@
 diff --git a/content/child/runtime_features.cc b/content/child/runtime_features.cc
-index ce9f2e0b5e..1e785ec123 100644
+index eb27b44d69..072ea88c65 100644
 --- a/content/child/runtime_features.cc
 +++ b/content/child/runtime_features.cc
-@@ -447,9 +447,11 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
+@@ -374,9 +374,11 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
        {wrf::EnableTimerThrottlingForBackgroundTabs,
         switches::kDisableBackgroundTimerThrottling, false},
        // End of Stable Features
@@ -14,10 +14,10 @@ index ce9f2e0b5e..1e785ec123 100644
 +      // {wrf::EnableAutomationControlled, switches::kEnableAutomation, true},
 +      // {wrf::EnableAutomationControlled, switches::kHeadless, true},
 +      // {wrf::EnableAutomationControlled, switches::kRemoteDebuggingPipe, true},
-       {wrf::EnableDatabase, switches::kDisableDatabases, false},
        {wrf::EnableFileSystem, switches::kDisableFileSystem, false},
        {wrf::EnableNetInfoDownlinkMax,
-@@ -496,22 +498,8 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
+        switches::kEnableNetworkInformationDownlinkMax, true},
+@@ -417,22 +419,8 @@ void SetRuntimeFeaturesFromCommandLine(const base::CommandLine& command_line) {
      }
    }
  

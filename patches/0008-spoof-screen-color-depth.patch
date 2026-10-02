@@ -1,4 +1,5 @@
 diff --git a/third_party/blink/renderer/core/frame/screen.cc b/third_party/blink/renderer/core/frame/screen.cc
+index ed5028943e..0fbdd38b94 100644
 --- a/third_party/blink/renderer/core/frame/screen.cc
 +++ b/third_party/blink/renderer/core/frame/screen.cc
 @@ -28,6 +28,8 @@
@@ -9,11 +10,11 @@ diff --git a/third_party/blink/renderer/core/frame/screen.cc b/third_party/blink
 +#include "base/strings/string_number_conversions.h"
  #include "base/numerics/safe_conversions.h"
  #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-blink.h"
- #include "third_party/blink/renderer/core/event_target_names.h"
-@@ -110,6 +112,15 @@ int Screen::width() const {
- }
+ #include "third_party/blink/renderer/core/dom/document.h"
+@@ -106,6 +108,15 @@ unsigned Screen::colorDepth() const {
+   // https://drafts.csswg.org/cssom-view/#dom-screen-colordepth
+   unsigned unknown_color_depth = 24u;
  
- unsigned Screen::colorDepth() const {
 +  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +  if (cosmium_cmd->HasSwitch("cosmium-color-depth")) {
 +    unsigned cosmium_value = 0;
@@ -23,6 +24,6 @@ diff --git a/third_party/blink/renderer/core/frame/screen.cc b/third_party/blink
 +      return cosmium_value;
 +    }
 +  }
-   if (!DomWindow())
-     return 0;
-   return base::saturated_cast<unsigned>(GetScreenInfo().depth);
+   if (!DomWindow()) {
+     return unknown_color_depth;
+   }
