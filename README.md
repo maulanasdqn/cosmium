@@ -359,6 +359,24 @@ Available on [crates.io](https://crates.io):
 cargo install cosmium-cli
 ```
 
+## Acceptable use
+
+Use Cosmium only in compliance with applicable law and with the terms of
+service and `robots.txt` of the sites you access. Do not use it for
+unauthorized access, fraud, account abuse, credential testing, spam, or attacks
+on any service. The full terms are at
+[cosmium.zod.rs/about/acceptable-use](https://cosmium.zod.rs/about/acceptable-use/).
+
 ## License
 
-MIT
+Cosmium's own code, patches, and docs are MIT licensed (see `LICENSE`).
+
+The prebuilt browser is a modified Chromium build. The MIT License does not
+cover Chromium or its third-party components: each archive ships
+`LICENSE.chromium`, `THIRD_PARTY_LICENSES.txt`, and a `NOTICE` describing the
+codec, trademark, and warranty terms. See
+[licenses and trademarks](https://cosmium.zod.rs/about/legal/).
+
+Chrome, Windows, NVIDIA, Apple, and other names that appear in profiles are
+trademarks of their respective owners and are used only as technical
+fingerprint values. Cosmium is not affiliated with any of them.

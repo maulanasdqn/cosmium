@@ -83,10 +83,11 @@ A page counts as blocked when:
   `are you a robot`, `access denied`, `cf-browser-verification`,
   `just a moment`, or `unusual traffic`.
 
-Challenge-page recognition is broader still, covering Cloudflare
-(`just a moment`, `checking your browser`, `attention required`), DataDome
-(`captcha-delivery.com`), AWS WAF (`awswaf.com`), PerimeterX (`press & hold`),
-and several localized variants.
+Challenge-page recognition is broader still. It covers common interstitial and
+verification pages by their markers (`just a moment`, `checking your browser`,
+`attention required`, `captcha-delivery.com`, `awswaf.com`, `press & hold`) and
+several localized variants, so a page that is still waiting on a check is never
+mistaken for real content.
 
 The verdict shows up as `"blocked": true` in the JSON result and drives both
 retries and proxy health.

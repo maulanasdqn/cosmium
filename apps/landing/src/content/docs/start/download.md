@@ -10,7 +10,7 @@ release ships a prebuilt binary, so you can skip all of that.
 
 | File | Contents |
 | --- | --- |
-| [`cosmium-browser-linux-x86_64.tar.gz`](https://github.com/maulanasdqn/cosmium/releases/latest/download/cosmium-browser-linux-x86_64.tar.gz) | patched `chrome`, ICU data, locales, SwiftShader, and a `cosmium.json` build manifest |
+| [`cosmium-browser-linux-x86_64.tar.gz`](https://github.com/maulanasdqn/cosmium/releases/latest/download/cosmium-browser-linux-x86_64.tar.gz) | patched `chrome`, ICU data, locales, SwiftShader, a `cosmium.json` build manifest, and the license notices |
 | [`cosmium-browser-linux-x86_64.tar.gz.sha256`](https://github.com/maulanasdqn/cosmium/releases/latest/download/cosmium-browser-linux-x86_64.tar.gz.sha256) | SHA-256 checksum of the archive |
 
 Older versions and release notes are on the
@@ -41,6 +41,14 @@ are compiled in. Check it after extracting:
 ```bash
 jq . /opt/cosmium/cosmium.json
 ```
+
+## Licenses
+
+The browser is a modified Chromium build, distributed under Chromium's
+licenses rather than Cosmium's MIT License. The archive includes
+`LICENSE.chromium`, `THIRD_PARTY_LICENSES.txt`, and a `NOTICE` that also covers
+the bundled proprietary codecs. See [licenses and trademarks](/about/legal/)
+and the [acceptable use](/about/acceptable-use/) terms before you use it.
 
 ## Runtime requirements
 

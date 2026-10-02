@@ -71,6 +71,13 @@ export default defineConfig({
             { label: "Embedding the engine", slug: "operations/embedding" },
           ],
         },
+        {
+          label: "About",
+          items: [
+            { label: "Acceptable use", slug: "about/acceptable-use" },
+            { label: "Licenses and trademarks", slug: "about/legal" },
+          ],
+        },
       ],
     }),
   ],

@@ -61,6 +61,16 @@ done
 
 chmod 4755 "${stage}/chrome_sandbox" 2>/dev/null || true
 
+log_info "Writing license notices"
+cp "${CHROMIUM_SRC}/LICENSE" "${stage}/LICENSE.chromium"
+cp "${COSMIUM_ROOT}/LICENSE" "${stage}/LICENSE.cosmium"
+(cd "${CHROMIUM_SRC}" && PATH="${DEPOT_TOOLS}:${PATH}" python3 tools/licenses/licenses.py \
+  license_file --format txt --target-os linux \
+  --gn-out-dir "${BUILD_OUT}" --gn-target //chrome:chrome \
+  "${stage}/THIRD_PARTY_LICENSES.txt") \
+  || { log_error "Could not generate third-party license notices"; exit 1; }
+cp "${COSMIUM_ROOT}/NOTICE" "${stage}/NOTICE"
+
 strip_tool="${CHROMIUM_SRC}/third_party/llvm-build/Release+Asserts/bin/llvm-strip"
 [[ -x "${strip_tool}" ]] || strip_tool="$(command -v llvm-strip || command -v strip || true)"
 if [[ -n "${strip_tool}" ]]; then

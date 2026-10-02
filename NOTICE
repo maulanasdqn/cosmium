@@ -1,0 +1,40 @@
+Cosmium
+=======
+
+This archive contains a modified build of the Chromium web browser.
+
+Licensing
+---------
+- The Cosmium patch series and tooling are licensed under the MIT License
+  (LICENSE.cosmium).
+- Chromium itself is licensed under the BSD-style license in LICENSE.chromium.
+- Chromium bundles many third-party components, each under its own license.
+  Their notices are reproduced in THIRD_PARTY_LICENSES.txt, generated from the
+  exact set of components linked into this binary.
+- The MIT License covers only Cosmium's own work. It does not relicense
+  Chromium or any third-party component.
+
+Media codecs
+------------
+This build enables proprietary media codecs (including H.264 and AAC through
+FFmpeg). These formats may be covered by patents in some jurisdictions.
+You are responsible for obtaining any licenses your use requires.
+
+Trademarks
+----------
+Chrome, Google Chrome, Windows, Microsoft, NVIDIA, GeForce, Apple, macOS and
+other names that may appear in browser fingerprint values are trademarks of
+their respective owners. Cosmium is an independent project and is not
+affiliated with, endorsed by, or sponsored by any of them. Such names appear
+only as technical identifiers, the way any browser reports them.
+
+No warranty
+-----------
+This software is provided "as is", without warranty of any kind. See the
+licenses above for the full terms.
+
+Acceptable use
+--------------
+Use Cosmium only in compliance with applicable law and with the terms of
+service of the websites you access. See
+https://cosmium.zod.rs/about/acceptable-use/ for details.
