@@ -2,7 +2,7 @@ use crate::domain::profile::Profile;
 
 use super::features::{disable_features_list, webrtc_flags};
 
-fn accept_lang_switch_value(accept_language: &str) -> String {
+pub fn accept_lang_switch_value(accept_language: &str) -> String {
     accept_language
         .split(',')
         .filter_map(|part| {
@@ -64,6 +64,12 @@ fn push_hardware(f: &mut Vec<String>, p: &Profile) {
         "--cosmium-max-touch-points={}",
         p.hardware.max_touch_points
     ));
+    let pointer = if p.identity.client_hints.mobile {
+        "coarse"
+    } else {
+        "fine"
+    };
+    f.push(format!("--cosmium-pointer={pointer}"));
     f.push(format!("--cosmium-webgl-vendor={}", p.gpu.vendor));
     f.push(format!("--cosmium-webgl-renderer={}", p.gpu.renderer));
     f.push(format!(
@@ -101,6 +107,19 @@ fn push_battery(f: &mut Vec<String>, p: &Profile) {
     ));
 }
 
+fn screen_info_switch(s: &crate::domain::profile::Screen) -> String {
+    let right = s
+        .width
+        .saturating_sub(s.avail_width.saturating_add(s.avail_left));
+    let bottom = s
+        .height
+        .saturating_sub(s.avail_height.saturating_add(s.avail_top));
+    format!(
+        "--screen-info={{0,0 {}x{} colorDepth={} devicePixelRatio={} workAreaLeft={} workAreaTop={} workAreaRight={right} workAreaBottom={bottom}}}",
+        s.width, s.height, s.color_depth, s.device_pixel_ratio, s.avail_left, s.avail_top
+    )
+}
+
 pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     let mut f = Vec::new();
 
@@ -119,12 +138,13 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push(format!("--cosmium-avail-height={}", p.screen.avail_height));
     f.push(format!(
         "--window-size={},{}",
-        p.screen.width, p.screen.height
+        p.screen.avail_width, p.screen.avail_height
     ));
     f.push(format!(
         "--force-device-scale-factor={}",
         p.screen.device_pixel_ratio
     ));
+    f.push(screen_info_switch(&p.screen));
     if p.strip_automation_tells {
         f.push("--cosmium-strip-automation-tells".into());
     }
@@ -134,6 +154,7 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     }
     push_battery(&mut f, p);
     f.push(format!("--disable-features={}", disable_features_list()));
+    f.push("--disable-field-trial-config".into());
     f.push("--no-default-browser-check".into());
     f.push("--no-first-run".into());
     f.push("--no-pings".into());

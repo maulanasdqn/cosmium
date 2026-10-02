@@ -42,6 +42,7 @@ impl BrowserSession for CdpSessionRuntime {
 
         let mut builder = BrowserConfig::builder()
             .disable_default_args()
+            .viewport(None)
             .chrome_executable(binary);
 
         if let Some(dir) = spec.user_data_dir.as_ref() {
@@ -53,6 +54,9 @@ impl BrowserSession for CdpSessionRuntime {
         }
 
         for (k, v) in &spec.env {
+            builder = builder.env(k, v);
+        }
+        if let Some((k, v)) = super::fonts::fontconfig_env(spec.fontconfig.as_ref()) {
             builder = builder.env(k, v);
         }
 

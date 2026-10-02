@@ -9,7 +9,7 @@ use super::behavior::scroll;
 const NAV_TIMEOUT: Duration = Duration::from_secs(20);
 const COOKIE_POLL: Duration = Duration::from_secs(2);
 const COOKIE_BUDGET: Duration = Duration::from_secs(30);
-const POST_WARMUP_PAUSE_MS: u64 = 3000;
+const POST_WARMUP_PAUSE_MS: u64 = 800;
 
 pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
     let Some(home) = extract_home_url(target_url) else {
@@ -19,8 +19,8 @@ pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
 
     let initial_cookie = get_datadome_cookie(page).await;
     navigate(page, &home).await;
-    tracing::debug!("homepage loaded, settling 3s");
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    tracing::debug!("homepage loaded, settling");
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     tracing::debug!("simulating mouse/scroll presence");
     if tokio::time::timeout(Duration::from_secs(15), simulate_presence(page)).await == Ok(()) {
@@ -32,7 +32,7 @@ pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
     tracing::debug!("waiting for DataDome cookie to rotate (c.js)");
     wait_for_cookie_rotation(page, initial_cookie.as_deref()).await;
 
-    let extra = { rand::rng().random_range(0..1500_u64) };
+    let extra = { rand::rng().random_range(0..700_u64) };
     tracing::debug!(pause_ms = POST_WARMUP_PAUSE_MS + extra, "post-warmup pause");
     tokio::time::sleep(Duration::from_millis(POST_WARMUP_PAUSE_MS + extra)).await;
     tracing::info!("warmup complete");
@@ -103,6 +103,15 @@ async fn wait_for_cookie_rotation(page: &Page, initial: Option<&str>) {
 
     let page_url = page.url().await.ok().flatten();
     let explicit_urls = page_url.as_ref().map(|u| vec![u.clone()]);
+
+    if initial.is_none()
+        && get_datadome_cookie_for_urls(page, explicit_urls.clone())
+            .await
+            .is_none()
+    {
+        tracing::debug!("no DataDome cookie on this site, skipping rotation wait");
+        return;
+    }
 
     while start.elapsed() < COOKIE_BUDGET {
         tokio::time::sleep(COOKIE_POLL).await;

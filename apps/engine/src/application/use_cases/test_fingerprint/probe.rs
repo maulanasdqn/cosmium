@@ -21,6 +21,7 @@ pub(crate) fn for_profile(p: &Profile) -> Vec<ProbeDef> {
     let mut probes = navigator_probes(p);
     probes.extend(device_probes(p));
     probes.extend(page_probes(p));
+    probes.extend(super::probe_lies::lie_probes());
     probes.shrink_to_fit();
     probes
 }
@@ -41,7 +42,7 @@ fn navigator_probes(p: &Profile) -> Vec<ProbeDef> {
         simple(
             "webdriver_worker",
             r#"await new Promise((res)=>{const b=new Blob(["onmessage=()=>postMessage(String(navigator.webdriver))"],{type:"application/javascript"});const w=new Worker(URL.createObjectURL(b));w.onmessage=(e)=>res(e.data);w.postMessage(0);})"#,
-            "false",
+            "undefined",
         ),
         simple(
             "platform",
@@ -138,7 +139,11 @@ fn device_probes(p: &Profile) -> Vec<ProbeDef> {
 
 fn page_probes(p: &Profile) -> Vec<ProbeDef> {
     vec![
-        simple("user_agent", "navigator.userAgent", &p.identity.user_agent),
+        simple(
+            "user_agent",
+            "navigator.userAgent",
+            &crate::domain::runtime::user_agent_for(p),
+        ),
         simple(
             "ua_data_arch",
             "(await navigator.userAgentData.getHighEntropyValues(['architecture'])).architecture",
@@ -182,7 +187,7 @@ fn page_probes(p: &Profile) -> Vec<ProbeDef> {
     ]
 }
 
-fn simple(id: &'static str, expr: &str, expected: &str) -> ProbeDef {
+pub(super) fn simple(id: &'static str, expr: &str, expected: &str) -> ProbeDef {
     ProbeDef {
         id,
         expression: expr.to_owned(),

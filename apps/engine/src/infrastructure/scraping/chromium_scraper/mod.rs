@@ -1,5 +1,7 @@
+mod adaptive;
 mod drive;
 mod eval;
+mod native;
 
 use async_trait::async_trait;
 use chromiumoxide::Page;
@@ -9,6 +11,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
 };
 use chromiumoxide::page::ScreenshotParams;
 use std::time::Duration;
+use tokio::sync::OnceCell;
 
 use crate::domain::scraping::error::{ScrapeError, ScrapeResult};
 use crate::domain::scraping::page::ScrapedPage;
@@ -24,6 +27,7 @@ const SCREENSHOT_QUALITY: i64 = 80;
 pub struct ChromiumScraper {
     pub(crate) browser: Browser,
     pub(crate) stealth_config: Option<StealthConfig>,
+    native: OnceCell<bool>,
 }
 
 impl ChromiumScraper {
@@ -31,6 +35,7 @@ impl ChromiumScraper {
         Self {
             browser,
             stealth_config,
+            native: OnceCell::const_new(),
         }
     }
 
@@ -40,28 +45,19 @@ impl ChromiumScraper {
             .new_page("about:blank")
             .await
             .map_err(|e| ScrapeError::Connection(e.to_string()))?;
-        let cmd = AddScriptToEvaluateOnNewDocumentParams::new(stealth::STEALTH_SCRIPT);
-        let _ = page.execute(cmd).await;
-        let net_cmd = AddScriptToEvaluateOnNewDocumentParams::new(stealth::STEALTH_NETWORK_SCRIPT);
-        let _ = page.execute(net_cmd).await;
-        if let Some(cfg) = &self.stealth_config {
+        native::block_local_network(&page).await;
+        native::emulate_focus(&page).await;
+        let Some(cfg) = &self.stealth_config else {
+            return Ok(page);
+        };
+        let native = *self
+            .native
+            .get_or_init(|| native::is_native_build(&page, cfg))
+            .await;
+        if native {
             let _ = page.execute(cfg.cdp_ua_override()).await;
-            let scripts = [
-                cfg.navigator_overrides_script(),
-                cfg.ua_data_script(),
-                cfg.screen_script(),
-                cfg.client_rects_script(),
-                cfg.intl_script(),
-                cfg.browser_state_script(),
-                cfg.webgl_script(),
-                cfg.canvas_script(),
-                cfg.audio_script(),
-            ];
-            for s in scripts {
-                let _ = page
-                    .execute(AddScriptToEvaluateOnNewDocumentParams::new(s))
-                    .await;
-            }
+        } else {
+            inject_js_fallback(&page, cfg).await;
         }
         Ok(page)
     }
@@ -81,6 +77,27 @@ impl ChromiumScraper {
 impl PageScraper for ChromiumScraper {
     async fn scrape(&self, request: ScrapeRequest) -> ScrapeResult<ScrapedPage> {
         self.drive(&request).await
+    }
+}
+
+async fn inject_js_fallback(page: &Page, cfg: &StealthConfig) {
+    let _ = page.execute(cfg.cdp_ua_override()).await;
+    let scripts = [
+        stealth::STEALTH_SCRIPT.to_owned(),
+        cfg.navigator_overrides_script(),
+        cfg.ua_data_script(),
+        cfg.screen_script(),
+        cfg.client_rects_script(),
+        cfg.intl_script(),
+        cfg.browser_state_script(),
+        cfg.webgl_script(),
+        cfg.canvas_script(),
+        cfg.audio_script(),
+    ];
+    for s in scripts {
+        let _ = page
+            .execute(AddScriptToEvaluateOnNewDocumentParams::new(s))
+            .await;
     }
 }
 

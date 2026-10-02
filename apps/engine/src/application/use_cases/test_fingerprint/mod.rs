@@ -1,24 +1,35 @@
 mod matcher;
 mod parse;
 pub(crate) mod probe;
+mod probe_lies;
 mod probe_render;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use tokio::fs;
-use tokio::process::Command;
 
+use crate::application::use_cases::stealth_config::build_stealth_config;
 use crate::domain::profile::Profile;
-use crate::domain::runtime::profile_to_flags;
+use crate::domain::runtime::browser::LaunchSpec;
+use crate::domain::runtime::{profile_to_env, profile_to_flags};
+use crate::domain::scraping::port::BrowserSession;
+use crate::infrastructure::scraping::ChromiumScraper;
 
 pub use probe::ProbeResult;
 
-pub struct TestFingerprint;
+const READ_RESULTS: &str = "await new Promise((res) => { const t = () => { const o = document.getElementById('out'); if (o && o.dataset.done) { res(o.textContent); } else { setTimeout(t, 50); } }; t(); })";
+
+pub struct TestFingerprint {
+    session: Arc<dyn BrowserSession>,
+}
 
 pub struct TestFingerprintInput {
     pub binary: PathBuf,
     pub profile: Profile,
+    pub headful: bool,
+    pub geo_sync: bool,
 }
 
 pub struct TestFingerprintOutput {
@@ -26,13 +37,15 @@ pub struct TestFingerprintOutput {
 }
 
 impl TestFingerprint {
-    pub const fn new() -> Self {
-        Self
+    pub fn new(session: Arc<dyn BrowserSession>) -> Self {
+        Self { session }
     }
 
-    pub async fn execute(&self, input: TestFingerprintInput) -> Result<TestFingerprintOutput> {
-        if !input.binary.exists() {
-            bail!("binary not found: {}", input.binary.display());
+    pub async fn execute(&self, mut input: TestFingerprintInput) -> Result<TestFingerprintOutput> {
+        if input.geo_sync {
+            if let Some(tz) = crate::infrastructure::geo::exit_timezone(None).await {
+                input.profile.locale.timezone = tz;
+            }
         }
         let probes = probe::for_profile(&input.profile);
         let temp = tempfile::tempdir()?;
@@ -42,28 +55,33 @@ impl TestFingerprint {
             .context("writing probes.html")?;
 
         let mut flags = profile_to_flags(&input.profile);
-        flags.push("--headless=new".into());
-        flags.push("--no-sandbox".into());
-        flags.push("--dump-dom".into());
-        flags.push(format!("file://{}", html_path.display()));
-
-        let output = Command::new(&input.binary)
-            .args(&flags)
-            .output()
-            .await
-            .context("launching binary")?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            bail!("chrome exit {}: {}", output.status, stderr);
+        if !input.headful {
+            flags.push("--headless=new".into());
         }
-        let dom = String::from_utf8_lossy(&output.stdout);
+        let endpoint = self
+            .session
+            .launch_with_cdp(
+                Path::new(&input.binary),
+                LaunchSpec {
+                    flags,
+                    urls: Vec::new(),
+                    env: profile_to_env(&input.profile),
+                    user_data_dir: Some(temp.path().join("profile")),
+                    fontconfig: Some(crate::domain::runtime::fontconfig_for(&input.profile)),
+                },
+            )
+            .await
+            .with_context(|| format!("launching {}", input.binary.display()))?;
+
+        let scraper = ChromiumScraper::from_browser(
+            endpoint.browser,
+            Some(build_stealth_config(&input.profile)),
+        );
+        let url = format!("file://{}", html_path.display());
+        let raw = scraper.evaluate_on_url(&url, 0, READ_RESULTS).await;
+        let _ = self.session.shutdown().await;
+        let dom = raw.context("evaluating probes")?;
         let results = parse::extract(&dom, &probes)?;
         Ok(TestFingerprintOutput { probes: results })
-    }
-}
-
-impl Default for TestFingerprint {
-    fn default() -> Self {
-        Self::new()
     }
 }

@@ -2,20 +2,29 @@ use super::*;
 use crate::domain::scraping::validation::Verdict;
 
 #[test]
-fn creepjs_high_score_passes() {
-    let (v, _) = evaluate("creepjs", "Trust Score: 85%");
+fn creepjs_clean_passes() {
+    let (v, _) = evaluate(
+        "creepjs",
+        r#"{"headless":0,"stealth":0,"like_headless":31}"#,
+    );
     assert_eq!(v, Verdict::Pass);
 }
 
 #[test]
-fn creepjs_low_score_fails() {
-    let (v, _) = evaluate("creepjs", "Trust Score: 30%");
+fn creepjs_detected_stealth_fails() {
+    let (v, _) = evaluate(
+        "creepjs",
+        r#"{"headless":0,"stealth":40,"like_headless":10}"#,
+    );
     assert_eq!(v, Verdict::Fail);
 }
 
 #[test]
-fn creepjs_mid_score_warns() {
-    let (v, _) = evaluate("creepjs", "Trust Score: 55%");
+fn creepjs_mostly_headless_like_warns() {
+    let (v, _) = evaluate(
+        "creepjs",
+        r#"{"headless":0,"stealth":0,"like_headless":60}"#,
+    );
     assert_eq!(v, Verdict::Warn);
 }
 
@@ -27,13 +36,19 @@ fn creepjs_timeout_warns() {
 
 #[test]
 fn pixelscan_consistent_passes() {
-    let (v, _) = evaluate("pixelscan", "Browser Fingerprint: Consistent");
+    let (v, _) = evaluate(
+        "pixelscan",
+        r#"{"verdict":"consistent","bot":"No automated behavior detected"}"#,
+    );
     assert_eq!(v, Verdict::Pass);
 }
 
 #[test]
 fn pixelscan_inconsistent_fails() {
-    let (v, _) = evaluate("pixelscan", "Inconsistent fingerprint detected");
+    let (v, _) = evaluate(
+        "pixelscan",
+        r#"{"verdict":"inconsistent","location":"Timezone spoofed"}"#,
+    );
     assert_eq!(v, Verdict::Fail);
 }
 

@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent opt-in flags of the JSON request body"
+)]
 pub struct ScrapeRequest {
     pub url: String,
     pub profile: String,
@@ -23,6 +27,8 @@ pub struct ScrapeRequest {
     pub wait_for_api: Option<String>,
     #[serde(default)]
     pub retries: u32,
+    #[serde(default)]
+    pub geo_sync: bool,
 }
 
 #[derive(Debug, Serialize)]

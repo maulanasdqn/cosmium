@@ -6,19 +6,14 @@ use crate::domain::scraping::error::ScrapeResult;
 use crate::domain::scraping::page::ScrapedPage;
 use crate::domain::scraping::request::ScrapeRequest;
 
-use super::super::challenge::wait_past_challenge;
 use super::super::cookies;
 use super::super::datadome;
 use super::super::fetch;
 use super::super::network::ApiCapture;
-use super::super::settle::{SettleWindow, wait_for_stable_content};
-use super::super::status::StatusWatcher;
 use super::super::warmup;
 use super::super::workflow;
-use super::{ChromiumScraper, capture_screenshot};
+use super::{ChromiumScraper, adaptive, capture_screenshot};
 
-const SETTLE_FLOOR_MS: u64 = 500;
-const SETTLE_TIMEOUT_MS: u64 = 8000;
 const API_CAPTURE_TIMEOUT_SECS: u64 = 30;
 
 impl ChromiumScraper {
@@ -26,8 +21,9 @@ impl ChromiumScraper {
         let page = self.new_stealth_page().await?;
 
         let session_dir = crate::domain::runtime::session_cache_dir();
-        if let Some(host) = datadome::url_host(&request.url) {
-            datadome::preseed_cookies(&page, &host, &session_dir).await;
+        let host = datadome::url_host(&request.url);
+        if let Some(h) = host.as_deref() {
+            datadome::preseed_cookies(&page, h, &session_dir).await;
         }
 
         let api_capture = match &request.wait_for_api {
@@ -38,27 +34,30 @@ impl ChromiumScraper {
             None => None,
         };
 
-        warmup::warmup_homepage(&page, &request.url).await;
+        let known_protected = host
+            .as_deref()
+            .is_some_and(|h| adaptive::is_protected(&session_dir, h));
 
-        let need_navigation = request.wait_for_api.is_some();
-
-        if !need_navigation {
-            if let Some(scraped) = fetch_bypass(&page, request).await {
-                return Ok(scraped);
+        if known_protected {
+            tracing::info!("host previously challenged, warming up first");
+            warmup::warmup_homepage(&page, &request.url).await;
+            if request.wait_for_api.is_none() {
+                if let Some(scraped) = fetch_bypass(&page, request).await {
+                    return Ok(scraped);
+                }
             }
         }
 
-        tracing::info!("navigating directly to target page");
-        let watcher = StatusWatcher::attach(&page).await;
-        Self::navigate_tolerant(&page, &request.url, u64::from(request.wait_ms)).await;
-
-        let nav_timeout = Duration::from_secs(super::DEFAULT_NAV_TIMEOUT_SECS);
-        let past_challenge = wait_past_challenge(&page, nav_timeout).await;
-        let window = SettleWindow {
-            floor: Duration::from_millis(SETTLE_FLOOR_MS),
-            timeout: Duration::from_millis(SETTLE_TIMEOUT_MS),
-        };
-        let mut html = wait_for_stable_content(&page, past_challenge, window).await;
+        let mut loaded = adaptive::load_target(&page, request).await;
+        if !known_protected && loaded.blocked() {
+            tracing::info!("target looks protected, escalating to warmup");
+            if let Some(h) = host.as_deref() {
+                adaptive::mark_protected(&session_dir, h).await;
+            }
+            warmup::warmup_homepage(&page, &request.url).await;
+            loaded = adaptive::load_target(&page, request).await;
+        }
+        let mut html = loaded.html;
 
         let mut script_results = workflow::run(&page, &request.workflow).await;
         if !request.workflow.is_empty() {
@@ -75,22 +74,14 @@ impl ChromiumScraper {
             }
         }
 
-        let final_url = page
-            .url()
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| request.url.clone());
-        let http_status = match &watcher {
-            Some(w) => w.status_for(&final_url).await,
-            None => 200,
-        };
+        let final_url = loaded.final_url;
+        let http_status = loaded.http_status;
         let screenshot = maybe_screenshot(&page, request).await;
         let page_cookies = cookies::collect(&page).await;
         let user_agent = cookies::user_agent(&page).await;
 
-        if let Some(host) = datadome::url_host(&request.url) {
-            datadome::save_cookies(&page, &host, &session_dir).await;
+        if let Some(h) = host.as_deref() {
+            datadome::save_cookies(&page, h, &session_dir).await;
         }
 
         Ok(ScrapedPage {

@@ -10,6 +10,7 @@ pub struct LaunchSpec {
     pub urls: Vec<String>,
     pub env: Vec<(String, String)>,
     pub user_data_dir: Option<PathBuf>,
+    pub fontconfig: Option<super::fontconfig::FontConfig>,
 }
 
 #[async_trait]

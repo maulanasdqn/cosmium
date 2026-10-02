@@ -3,13 +3,13 @@ use chromiumoxide::cdp::browser_protocol::emulation::{
 };
 
 pub const STEALTH_SCRIPT: &str = include_str!("stealth.js");
-pub const STEALTH_NETWORK_SCRIPT: &str = include_str!("stealth_network.js");
 
 #[derive(Debug, Clone)]
 pub struct StealthConfig {
     pub brands_json: String,
     pub full_version_list_json: String,
     pub platform: String,
+    pub navigator_platform: String,
     pub platform_version: String,
     pub architecture: String,
     pub bitness: String,
@@ -109,7 +109,7 @@ impl StealthConfig {
         SetUserAgentOverrideParams {
             user_agent: self.user_agent.clone(),
             accept_language: Some(self.accept_language.clone()),
-            platform: Some(self.platform.clone()),
+            platform: Some(self.navigator_platform.clone()),
             user_agent_metadata: Some(meta),
         }
     }

@@ -51,6 +51,7 @@ pub async fn scrape(
             proxy_pool: pool.clone(),
             headful: req.headful,
             wait_for_api: req.wait_for_api.clone(),
+            geo_sync: req.geo_sync,
         };
 
         let r = uc.execute(input).await.map_err(|e| {

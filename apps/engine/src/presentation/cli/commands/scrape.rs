@@ -72,6 +72,8 @@ pub struct ScrapePageArgs {
 
     #[arg(long)]
     pub wait_for_api: Option<String>,
+    #[arg(long)]
+    pub geo_sync: bool,
 }
 
 pub async fn execute(cmd: ScrapeCmd, state: &CliState) -> Result<()> {
@@ -116,6 +118,7 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
             proxy_pool: pool.clone(),
             headful: args.headful,
             wait_for_api: args.wait_for_api.clone(),
+            geo_sync: args.geo_sync,
         };
 
         let r = uc.execute(input).await?;

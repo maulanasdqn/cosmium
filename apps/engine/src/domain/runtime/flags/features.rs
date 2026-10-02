@@ -28,3 +28,8 @@ pub(super) fn webrtc_flags(policy: IpHandlingPolicy) -> Vec<String> {
     };
     vec![format!("--force-webrtc-ip-handling-policy={value}")]
 }
+
+pub fn force_proxied_webrtc(flags: &mut Vec<String>) {
+    flags.retain(|f| !f.starts_with("--force-webrtc-ip-handling-policy="));
+    flags.extend(webrtc_flags(IpHandlingPolicy::DisableNonProxiedUdp));
+}

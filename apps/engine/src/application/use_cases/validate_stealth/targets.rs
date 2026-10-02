@@ -12,7 +12,7 @@ fn creepjs() -> ValidationTarget {
     ValidationTarget {
         name: "creepjs".into(),
         url: "https://abrahamjuliot.github.io/creepjs/".into(),
-        wait_ms: 25000,
+        wait_ms: 0,
         extractor: include_str!("extractors/creepjs.js").into(),
     }
 }
@@ -20,8 +20,8 @@ fn creepjs() -> ValidationTarget {
 fn pixelscan() -> ValidationTarget {
     ValidationTarget {
         name: "pixelscan".into(),
-        url: "https://pixelscan.net/".into(),
-        wait_ms: 10000,
+        url: "https://pixelscan.net/fingerprint-check".into(),
+        wait_ms: 0,
         extractor: include_str!("extractors/pixelscan.js").into(),
     }
 }
@@ -30,7 +30,7 @@ fn browserleaks() -> ValidationTarget {
     ValidationTarget {
         name: "browserleaks".into(),
         url: "https://browserleaks.com/javascript".into(),
-        wait_ms: 8000,
+        wait_ms: 0,
         extractor: include_str!("extractors/browserleaks.js").into(),
     }
 }
@@ -39,7 +39,7 @@ fn bot_check(url: &str) -> ValidationTarget {
     ValidationTarget {
         name: "botcheck".into(),
         url: url.to_owned(),
-        wait_ms: 15000,
+        wait_ms: 0,
         extractor: include_str!("extractors/botcheck.js").into(),
     }
 }
@@ -58,42 +58,53 @@ fn evaluate_creepjs(raw: &str) -> (Verdict, String) {
     if raw.starts_with("TIMEOUT") {
         return (Verdict::Warn, "page did not load in time".into());
     }
-    let lower = raw.to_lowercase();
-    if lower.contains("trust score") || lower.contains('%') {
-        if let Some(pct) = extract_percentage(&lower) {
-            if pct >= 70.0 {
-                return (Verdict::Pass, format!("trust score {pct:.0}%"));
-            }
-            if pct >= 40.0 {
-                return (Verdict::Warn, format!("trust score {pct:.0}%"));
-            }
-            return (Verdict::Fail, format!("trust score {pct:.0}%"));
-        }
-    }
-    (
-        Verdict::Warn,
-        format!(
-            "could not parse score: {}",
-            crate::domain::text::prefix(raw, 100)
-        ),
-    )
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
+    let get = |k: &str| v.get(k).and_then(serde_json::Value::as_u64);
+    let (Some(headless), Some(stealth), Some(like)) =
+        (get("headless"), get("stealth"), get("like_headless"))
+    else {
+        return (
+            Verdict::Warn,
+            format!(
+                "could not parse result: {}",
+                crate::domain::text::prefix(raw, 100)
+            ),
+        );
+    };
+    let detail = format!("headless {headless}%, stealth {stealth}%, like-headless {like}%");
+    let verdict = if headless > 0 || stealth > 0 {
+        Verdict::Fail
+    } else if like >= 50 {
+        Verdict::Warn
+    } else {
+        Verdict::Pass
+    };
+    (verdict, detail)
 }
 
 fn evaluate_pixelscan(raw: &str) -> (Verdict, String) {
     if raw.starts_with("TIMEOUT") {
         return (Verdict::Warn, "page did not load in time".into());
     }
-    let lower = raw.to_lowercase();
-    if lower.contains("consistent") && !lower.contains("inconsistent") {
-        return (Verdict::Pass, "consistent fingerprint".into());
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
+    let field = |k: &str| {
+        v.get(k)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("?")
+            .to_owned()
+    };
+    let verdict = field("verdict");
+    let detail = format!(
+        "{verdict}: {} / {} / {}",
+        field("location"),
+        field("fingerprint"),
+        field("bot")
+    );
+    match verdict.as_str() {
+        "consistent" => (Verdict::Pass, detail),
+        "inconsistent" => (Verdict::Fail, detail),
+        _ => (Verdict::Warn, detail),
     }
-    if lower.contains("inconsistent") {
-        return (Verdict::Fail, "inconsistent fingerprint detected".into());
-    }
-    (
-        Verdict::Warn,
-        format!("unclear result: {}", crate::domain::text::prefix(raw, 100)),
-    )
 }
 
 fn evaluate_browserleaks(raw: &str) -> (Verdict, String) {
@@ -141,11 +152,6 @@ fn evaluate_botcheck(raw: &str) -> (Verdict, String) {
         }
     }
     (Verdict::Pass, "page loaded without block".into())
-}
-
-fn extract_percentage(text: &str) -> Option<f64> {
-    let re = regex::Regex::new(r"(\d+(?:\.\d+)?)%").ok()?;
-    re.captures(text)?.get(1)?.as_str().parse().ok()
 }
 
 #[cfg(test)]

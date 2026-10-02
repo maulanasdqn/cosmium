@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use crate::domain::scraping::error::{ScrapeError, ScrapeResult};
 
-use super::super::warmup;
 use super::ChromiumScraper;
 
 impl ChromiumScraper {
@@ -13,12 +12,11 @@ impl ChromiumScraper {
         script: &str,
     ) -> ScrapeResult<String> {
         let page = self.new_stealth_page().await?;
-        warmup::warmup_homepage(&page, url).await;
         Self::navigate_tolerant(&page, url, wait_ms).await;
         let wrapper = format!(
-            "(async () => {{ try {{ return String(await (async () => {{ {script} }})()) }} catch(e) {{ return 'JS_ERROR:' + e.message }} }})()"
+            "(async () => {{ try {{ return String(await (async () => {{ return ({script}); }})()) }} catch(e) {{ return 'JS_ERROR:' + e.message }} }})()"
         );
-        let eval_timeout = Duration::from_secs(60);
+        let eval_timeout = Duration::from_secs(90);
         let result = tokio::time::timeout(eval_timeout, page.evaluate(wrapper))
             .await
             .map_err(|_| ScrapeError::WorkflowFailed("script timed out after 60s".into()))?

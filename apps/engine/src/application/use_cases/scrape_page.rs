@@ -32,6 +32,7 @@ pub struct ScrapePageInput {
     pub proxy_pool: Option<Arc<ProxyPool>>,
     pub headful: bool,
     pub wait_for_api: Option<String>,
+    pub geo_sync: bool,
 }
 
 pub struct ScrapePageOutput {
@@ -53,16 +54,31 @@ impl ScrapePage {
         self.execute_with_proxy(input, proxy).await
     }
 
+    async fn load_profile(
+        &self,
+        input: &ScrapePageInput,
+        proxy: Option<&ProxyConfig>,
+    ) -> Result<crate::domain::profile::Profile> {
+        let mut profile = self
+            .profile_repo
+            .load(&input.profile)
+            .await
+            .with_context(|| format!("loading {}", input.profile.display()))?;
+        if input.geo_sync {
+            let proxy_url = proxy.map(|p| p.url.as_str());
+            if let Some(tz) = crate::infrastructure::geo::exit_timezone(proxy_url).await {
+                profile.locale.timezone = tz;
+            }
+        }
+        Ok(profile)
+    }
+
     async fn execute_with_proxy(
         &self,
         input: ScrapePageInput,
         proxy: Option<ProxyConfig>,
     ) -> Result<ScrapePageOutput> {
-        let profile = self
-            .profile_repo
-            .load(&input.profile)
-            .await
-            .with_context(|| format!("loading {}", input.profile.display()))?;
+        let profile = self.load_profile(&input, proxy.as_ref()).await?;
 
         let mut flags = profile_to_flags(&profile);
         let env = profile_to_env(&profile);
@@ -80,6 +96,10 @@ impl ScrapePage {
         }
 
         let proxy_url = proxy.as_ref().map(|p| p.url.clone());
+
+        if proxy.is_some() {
+            crate::domain::runtime::force_proxied_webrtc(&mut flags);
+        }
 
         let _forwarder = if let Some(ref p) = proxy {
             if let Some(fwd) = ProxyForwarder::start(p).await {
@@ -102,6 +122,7 @@ impl ScrapePage {
                     urls: Vec::new(),
                     env,
                     user_data_dir: Some(data_dir),
+                    fontconfig: Some(crate::domain::runtime::fontconfig_for(&profile)),
                 },
             )
             .await

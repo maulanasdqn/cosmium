@@ -48,6 +48,7 @@ impl RunBrowser {
                     urls: input.urls,
                     env,
                     user_data_dir: Some(data_dir),
+                    fontconfig: Some(crate::domain::runtime::fontconfig_for(&profile)),
                 },
             )
             .await

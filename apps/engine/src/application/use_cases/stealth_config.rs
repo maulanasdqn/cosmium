@@ -8,24 +8,14 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
         .clone()
         .unwrap_or_else(|| extract_chrome_version(&p.identity.user_agent));
 
-    let brands: Vec<serde_json::Value> = ch
-        .brands
-        .iter()
-        .map(|b| serde_json::json!({"brand": b.brand, "version": b.version}))
-        .collect();
-
-    let fvl: Vec<serde_json::Value> = ch
-        .brands
-        .iter()
-        .map(|b| {
-            let ver = if b.brand == "Google Chrome" || b.brand == "Chromium" {
-                full_ver.clone()
-            } else {
-                format!("{}.0.0.0", b.version)
-            };
-            serde_json::json!({"brand": b.brand, "version": ver})
-        })
-        .collect();
+    let generated = crate::domain::runtime::chrome_brands(&full_ver);
+    let to_json = |list: &[crate::domain::runtime::BrandVersion]| {
+        list.iter()
+            .map(|b| serde_json::json!({"brand": b.brand, "version": b.version}))
+            .collect::<Vec<_>>()
+    };
+    let brands = to_json(&generated.major);
+    let fvl = to_json(&generated.full);
 
     let seed_hex: String = p.canvas_noise.seed.chars().take(8).collect();
     let noise_seed = u32::from_str_radix(&seed_hex, 16).unwrap_or(0xDEAD_BEEF);
@@ -49,6 +39,7 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
         brands_json: serde_json::to_string(&brands).unwrap_or_default(),
         full_version_list_json: serde_json::to_string(&fvl).unwrap_or_default(),
         platform: ch.platform.clone(),
+        navigator_platform: p.identity.navigator_platform.clone(),
         platform_version: ch.platform_version.clone(),
         architecture: ch.architecture.clone(),
         bitness: ch.bitness.clone(),
@@ -68,7 +59,9 @@ pub fn build_stealth_config(p: &Profile) -> StealthConfig {
         timezone: p.locale.timezone.clone(),
         noise_seed,
         user_agent: ua,
-        accept_language: p.locale.accept_language.clone(),
+        accept_language: crate::domain::runtime::accept_lang_switch_value(
+            &p.locale.accept_language,
+        ),
         history_length: p.browser_state.history_length,
         download_count: p.browser_state.download_count,
         extensions_json: serde_json::to_string(&ext_entries).unwrap_or_default(),

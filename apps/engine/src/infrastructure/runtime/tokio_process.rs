@@ -37,6 +37,9 @@ impl BrowserRuntime for TokioProcessRuntime {
         for (k, v) in &spec.env {
             cmd.env(k, v);
         }
+        if let Some((k, v)) = super::fonts::fontconfig_env(spec.fontconfig.as_ref()) {
+            cmd.env(k, v);
+        }
         cmd.args(&spec.flags);
         if let Some(dir) = spec.user_data_dir.as_ref() {
             cmd.arg(format!("--user-data-dir={}", dir.display()));

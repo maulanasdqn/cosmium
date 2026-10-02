@@ -23,6 +23,7 @@ pub struct ValidateStealthInput {
     pub binary: PathBuf,
     pub targets: Vec<ValidationTarget>,
     pub headful: bool,
+    pub geo_sync: bool,
 }
 
 pub struct ValidateStealthOutput {
@@ -38,11 +39,16 @@ impl ValidateStealth {
     }
 
     pub async fn execute(&self, input: ValidateStealthInput) -> Result<ValidateStealthOutput> {
-        let profile = self
+        let mut profile = self
             .profile_repo
             .load(&input.profile)
             .await
             .with_context(|| format!("loading {}", input.profile.display()))?;
+        if input.geo_sync {
+            if let Some(tz) = crate::infrastructure::geo::exit_timezone(None).await {
+                profile.locale.timezone = tz;
+            }
+        }
 
         let mut flags = profile_to_flags(&profile);
         let env = profile_to_env(&profile);
@@ -67,6 +73,7 @@ impl ValidateStealth {
                     urls: Vec::new(),
                     env,
                     user_data_dir: Some(data_dir),
+                    fontconfig: Some(crate::domain::runtime::fontconfig_for(&profile)),
                 },
             )
             .await

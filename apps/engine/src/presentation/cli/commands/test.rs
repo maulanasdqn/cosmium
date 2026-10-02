@@ -22,6 +22,10 @@ pub struct FingerprintArgs {
     pub profile: PathBuf,
     #[arg(long, env = "COSMIUM_BINARY")]
     pub binary: Option<PathBuf>,
+    #[arg(long)]
+    pub headful: bool,
+    #[arg(long)]
+    pub geo_sync: bool,
 }
 
 #[derive(Debug, Args)]
@@ -36,6 +40,8 @@ pub struct StealthArgs {
     pub headful: bool,
     #[arg(long)]
     pub json: bool,
+    #[arg(long)]
+    pub geo_sync: bool,
 }
 
 pub async fn execute(cmd: TestCmd, state: &CliState) -> Result<()> {
@@ -53,8 +59,16 @@ async fn run_fingerprint(args: FingerprintArgs, state: &CliState) -> Result<()> 
         .with_context(|| format!("loading {}", args.profile.display()))?;
     let binary = args.binary.unwrap_or_else(|| state.binary.clone());
 
-    let uc = TestFingerprint::new();
-    let out = uc.execute(TestFingerprintInput { binary, profile }).await?;
+    let session = Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
+    let uc = TestFingerprint::new(session);
+    let out = uc
+        .execute(TestFingerprintInput {
+            binary,
+            profile,
+            headful: args.headful,
+            geo_sync: args.geo_sync,
+        })
+        .await?;
 
     let mut passed = 0usize;
     let mut failed = 0usize;
@@ -93,6 +107,7 @@ async fn run_stealth(args: StealthArgs, state: &CliState) -> Result<()> {
             binary,
             targets,
             headful: args.headful,
+            geo_sync: args.geo_sync,
         })
         .await?;
 
