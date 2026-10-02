@@ -17,7 +17,7 @@ pub async fn wait_past_challenge(page: &Page, timeout: Duration) -> String {
             return html;
         }
         if !clicked_waf && is_aws_waf(&html) {
-            tracing::info!("AWS WAF challenge detected, clicking Begin");
+            tracing::info!("challenge page with a start button detected, clicking it");
             click_waf_begin(page).await;
             clicked_waf = true;
             tokio::time::sleep(Duration::from_secs(5)).await;
@@ -47,8 +47,8 @@ async fn click_waf_begin(page: &Page) {
     match page.evaluate(js).await {
         Ok(v) => {
             let result = v.into_value::<String>().unwrap_or_default();
-            tracing::info!(result, "WAF begin button");
+            tracing::info!(result, "challenge start button");
         }
-        Err(e) => tracing::warn!(error = %e, "failed to click WAF button"),
+        Err(e) => tracing::warn!(error = %e, "failed to click challenge start button"),
     }
 }

@@ -29,7 +29,7 @@ pub async fn warmup_homepage(page: &Page, target_url: &str) -> bool {
         tracing::debug!("mouse/scroll simulation timed out (15s), continuing");
     }
 
-    tracing::debug!("waiting for DataDome cookie to rotate (c.js)");
+    tracing::debug!("waiting for the site's bot-check cookie to update");
     wait_for_cookie_rotation(page, initial_cookie.as_deref()).await;
 
     let extra = { rand::rng().random_range(0..700_u64) };
@@ -109,7 +109,7 @@ async fn wait_for_cookie_rotation(page: &Page, initial: Option<&str>) {
             .await
             .is_none()
     {
-        tracing::debug!("no DataDome cookie on this site, skipping rotation wait");
+        tracing::debug!("no bot-check cookie on this site, skipping wait");
         return;
     }
 
@@ -118,17 +118,17 @@ async fn wait_for_cookie_rotation(page: &Page, initial: Option<&str>) {
         let cookie = get_datadome_cookie_for_urls(page, explicit_urls.clone()).await;
         if let Some(ref current) = cookie {
             if *current != initial_val {
-                tracing::info!("DataDome cookie rotated — c.js resolved");
+                tracing::info!("bot-check cookie updated");
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 return;
             }
         }
         let elapsed = start.elapsed().as_secs();
         if elapsed % 10 == 0 && elapsed > 0 {
-            tracing::debug!(elapsed, "waiting for DataDome cookie rotation");
+            tracing::debug!(elapsed, "waiting for bot-check cookie update");
         }
     }
-    tracing::warn!("DataDome cookie did not rotate within budget (30s)");
+    tracing::warn!("bot-check cookie did not update within 30s");
 }
 
 async fn get_datadome_cookie(page: &Page) -> Option<String> {
@@ -184,8 +184,8 @@ mod tests {
     #[test]
     fn extracts_home_url_from_deep_path() {
         assert_eq!(
-            extract_home_url("https://www.traveloka.com/en-id/hotel/detail?spec=abc"),
-            Some("https://www.traveloka.com/".to_owned())
+            extract_home_url("https://www.example.com/en-id/hotel/detail?spec=abc"),
+            Some("https://www.example.com/".to_owned())
         );
     }
 

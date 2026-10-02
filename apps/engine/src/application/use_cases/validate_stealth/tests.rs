@@ -97,8 +97,8 @@ fn builtin_targets_default_three() {
 
 #[test]
 fn builtin_targets_adds_botcheck() {
-    let targets = builtin_targets(Some("https://traveloka.com"));
+    let targets = builtin_targets(Some("https://example.com"));
     assert_eq!(targets.len(), 4);
     assert_eq!(targets[3].name, "botcheck");
-    assert_eq!(targets[3].url, "https://traveloka.com");
+    assert_eq!(targets[3].url, "https://example.com");
 }

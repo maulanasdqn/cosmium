@@ -40,11 +40,11 @@ pub async fn preseed_cookies(page: &Page, host: &str, session_dir: &Path) -> boo
     let cmd = SetCookiesParams::new(params);
     match page.execute(cmd).await {
         Ok(_) => {
-            tracing::info!(count, "pre-seeded DataDome cookies from cache");
+            tracing::info!(count, "restored session cookies from cache");
             true
         }
         Err(e) => {
-            tracing::warn!(error = %e, "DataDome cookie pre-seed failed");
+            tracing::warn!(error = %e, "restoring session cookies failed");
             false
         }
     }
