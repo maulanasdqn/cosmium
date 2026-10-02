@@ -11,8 +11,9 @@ static CACHE: LazyLock<Mutex<HashMap<String, String>>> =
 
 pub async fn exit_timezone(proxy: Option<&str>) -> Option<String> {
     let key = proxy.unwrap_or_default().to_owned();
-    if let Some(tz) = CACHE.lock().await.get(&key) {
-        return Some(tz.clone());
+    let cached = CACHE.lock().await.get(&key).cloned();
+    if cached.is_some() {
+        return cached;
     }
     let client = client(proxy)?;
     let tz = match ipwho(&client).await {

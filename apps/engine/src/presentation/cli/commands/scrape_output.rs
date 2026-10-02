@@ -92,24 +92,31 @@ pub fn save_artifacts(output_dir: Option<&Path>, result: &ScrapePageOutput) -> R
         return Ok(());
     };
     std::fs::create_dir_all(dir)?;
-
-    let html_path = dir.join("page.html");
-    std::fs::write(&html_path, &result.page.html)?;
-    tracing::info!(path = %html_path.display(), "saved html");
-
+    save_file(dir, "page.html", &result.page.html, "saved html")?;
     if !result.page.screenshot.is_empty() {
-        let ss_path = dir.join("screenshot.jpg");
-        std::fs::write(&ss_path, &result.page.screenshot)?;
-        tracing::info!(path = %ss_path.display(), "saved screenshot");
+        save_file(
+            dir,
+            "screenshot.jpg",
+            &result.page.screenshot,
+            "saved screenshot",
+        )?;
     }
-
     if !result.page.cookies.is_empty() {
-        let cookies_path = dir.join("cookies.json");
         let cookies_json = serde_json::to_string_pretty(&result.page.cookies)?;
-        std::fs::write(&cookies_path, cookies_json)?;
-        tracing::info!(path = %cookies_path.display(), "saved cookies");
+        save_file(
+            dir,
+            "cookies.json",
+            cookies_json.as_bytes(),
+            "saved cookies",
+        )?;
     }
+    Ok(())
+}
 
+fn save_file(dir: &Path, name: &str, bytes: &[u8], what: &str) -> Result<()> {
+    let path = dir.join(name);
+    std::fs::write(&path, bytes)?;
+    tracing::info!(path = %path.display(), "{what}");
     Ok(())
 }
 

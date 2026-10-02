@@ -110,8 +110,8 @@ pub async fn get_dd_cookie_value(page: &Page) -> Option<String> {
 }
 
 pub async fn clear_cookies(page: &Page, host: &str) {
-    for name in &["datadome", "_dd_s"] {
-        let mut params = DeleteCookiesParams::new(name.to_string());
+    for name in ["datadome", "_dd_s"] {
+        let mut params = DeleteCookiesParams::new(name);
         params.domain = Some(format!(".{host}"));
         let _ = page.execute(params).await;
     }

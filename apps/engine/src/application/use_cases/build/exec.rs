@@ -9,12 +9,13 @@ pub(super) async fn run(
     args: &[&str],
     depot_tools: &Path,
 ) -> Result<()> {
-    let mut cmd = Command::new(program);
-    cmd.current_dir(cwd);
-    cmd.args(args);
-    cmd.env("PATH", path_with_depot(depot_tools));
-    cmd.env("DEPOT_TOOLS_UPDATE", "1");
-    let status = cmd.status().await?;
+    let status = Command::new(program)
+        .current_dir(cwd)
+        .args(args)
+        .env("PATH", path_with_depot(depot_tools))
+        .env("DEPOT_TOOLS_UPDATE", "1")
+        .status()
+        .await?;
     if !status.success() {
         bail!(
             "command failed [{}]: {} {}",
