@@ -28,6 +28,15 @@ These are enforced by CI (`.github/workflows/ci.yml`) and lefthook (`lefthook.ym
 5. **Modules use `mod.rs`** (`self_named_module_files`). Do not use `foo.rs` next to `foo/`.
 6. **MSRV is 1.85, edition 2024** (`rust-toolchain.toml`, `clippy.toml`).
 
+## Frontend (`apps/ui`)
+
+- Stack: React 19, TanStack Router (file-based, `src/routes`), Query, Form, Store, and Table v9, zod, axios, and shadcn on Base UI.
+- **No native HTML elements outside `src/components/ui`.** App code (routes, layout, features) composes components only: shadcn components plus the primitives in `components/ui` (`Stack`, `Grid`, `Heading`, `Text`, `CodeBlock`, `Page`, `PageHeader`, `DataTable`, and the `useAppForm` kit). If something is missing, add a primitive to `components/ui`. `npm run check:native` enforces this.
+- API modules live in `src/apis/<feature>/` as `types.ts`, `service.ts`, `hooks.ts`, `index.ts`, with query-key factories and invalidation on mutations. Server state uses TanStack Query, client state uses TanStack Store, and forms use TanStack Form with zod.
+- Style: single quotes, no semicolons, kebab-case files, `T`/`I`/`E` prefixes (TypeScript enums are disabled, so use `T` unions), no `any`, no comments, at most 200 lines per file.
+- Before finishing UI work, run `npm run check` (tsc, oxlint, the native-element check, prettier) and `npm run build`.
+- `cosmium serve` serves `apps/ui/dist` (or `--ui-dir`); in development, `npm run dev` proxies `/api` to `:3000`.
+
 ## Commands
 
 ```sh

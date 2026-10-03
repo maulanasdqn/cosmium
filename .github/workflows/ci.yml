@@ -80,7 +80,7 @@ jobs:
           }
           AWK
           offenders=$(git ls-files -- '*.rs' '*.ts' '*.tsx' '*.js' '*.mjs' '*.css' \
-            | grep -v '^patches/' | xargs -r awk -f /tmp/no-comments.awk)
+            | grep -v '^patches/' | grep -v '\.gen\.ts$' | xargs -r awk -f /tmp/no-comments.awk)
           if [ -n "$offenders" ]; then
             echo "Comments are not allowed:"
             echo "$offenders"
