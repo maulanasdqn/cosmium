@@ -7,9 +7,11 @@ use crate::application::use_cases::generate_profile::{GenerateProfile, GenerateP
 
 use super::AppState;
 use super::dto::{
-    DiagnosticDto, ErrorResponse, GenerateProfileRequest, GenerateProfileResponse,
-    ProfileListResponse, SaveProfileRequest, SaveProfileResponse,
+    ErrorResponse, GenerateProfileRequest, GenerateProfileResponse, ProfileListResponse,
+    SaveProfileRequest, SaveProfileResponse, diagnostics_dto,
 };
+use super::dto_platform::HealthResponse;
+use super::error::sanitize_name;
 
 const INDEX_HTML: &str = include_str!("index.html");
 
@@ -17,25 +19,13 @@ pub async fn index() -> Html<&'static str> {
     Html(INDEX_HTML)
 }
 
-pub async fn health() -> StatusCode {
-    StatusCode::OK
-}
-
-pub async fn verify_token(
-    State(state): State<AppState>,
-    request: axum::http::Request<axum::body::Body>,
-) -> StatusCode {
-    let provided = request
-        .headers()
-        .get("x-api-key")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_default();
-
-    if provided == state.api_key {
-        StatusCode::OK
-    } else {
-        StatusCode::UNAUTHORIZED
-    }
+pub async fn health(State(state): State<AppState>) -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "ok",
+        version: env!("CARGO_PKG_VERSION"),
+        binary_found: state.binary.is_file(),
+        llm_configured: state.llm.is_some(),
+    })
 }
 
 pub async fn list_profiles(
@@ -108,15 +98,7 @@ pub async fn generate_profile(
         )
     })?;
 
-    let diagnostics = output
-        .diagnostics
-        .iter()
-        .map(|d| DiagnosticDto {
-            severity: format!("{:?}", d.severity).to_lowercase(),
-            code: d.field.to_owned(),
-            message: d.message.clone(),
-        })
-        .collect();
+    let diagnostics = diagnostics_dto(&output.diagnostics);
 
     Ok(Json(GenerateProfileResponse {
         profile: profile_value,
@@ -128,19 +110,14 @@ pub async fn save_profile(
     State(state): State<AppState>,
     Json(req): Json<SaveProfileRequest>,
 ) -> Result<Json<SaveProfileResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let name = req
-        .name
-        .chars()
-        .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
-        .collect::<String>();
-    if name.is_empty() {
+    let Some(name) = sanitize_name(&req.name) else {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
                 error: "invalid profile name".into(),
             }),
         ));
-    }
+    };
 
     let path = state.profiles_dir.join(format!("{name}.json"));
     let json = serde_json::to_string_pretty(&req.profile).map_err(|e| {

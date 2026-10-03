@@ -21,20 +21,33 @@ pub struct ServeArgs {
 
     #[arg(long, env = "DEEPSEEK_API_KEY")]
     pub deepseek_api_key: Option<String>,
+
+    #[arg(long, env = "COSMIUM_UI_DIR")]
+    pub ui_dir: Option<std::path::PathBuf>,
+}
+
+fn default_ui_dir() -> Option<std::path::PathBuf> {
+    let root = std::env::var_os("COSMIUM_ROOT")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::current_dir().ok())?;
+    Some(root.join("apps").join("ui").join("dist"))
 }
 
 pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
     let binary = args.binary.unwrap_or_else(|| state.binary.clone());
 
-    let llm = args.deepseek_api_key.map(|key| {
-        let client = OpenRouterClient::new(OpenRouterConfig {
-            api_key: key,
-            base_url: "https://api.deepseek.com".into(),
-            referer: None,
-            title: None,
+    let llm = args
+        .deepseek_api_key
+        .filter(|k| !k.trim().is_empty())
+        .map(|key| {
+            let client = OpenRouterClient::new(OpenRouterConfig {
+                api_key: key,
+                base_url: "https://api.deepseek.com".into(),
+                referer: None,
+                title: None,
+            });
+            Arc::new(client) as Arc<dyn crate::domain::llm::LlmClient>
         });
-        Arc::new(client) as Arc<dyn crate::domain::llm::LlmClient>
-    });
 
     let env = config::env::Env::init()?;
 
@@ -45,6 +58,7 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
         api_key: args.api_key,
         llm,
         llm_model: "deepseek-chat".into(),
+        ui_dir: args.ui_dir.or_else(default_ui_dir),
     };
 
     println!(

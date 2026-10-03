@@ -76,8 +76,26 @@ pub struct GenerateProfileResponse {
 #[derive(Debug, Serialize)]
 pub struct DiagnosticDto {
     pub severity: String,
-    pub code: String,
+    pub field: String,
     pub message: String,
+}
+
+impl From<&crate::domain::profile::Diagnostic> for DiagnosticDto {
+    fn from(d: &crate::domain::profile::Diagnostic) -> Self {
+        let severity = match d.severity {
+            crate::domain::profile::Severity::Error => "error",
+            crate::domain::profile::Severity::Warning => "warning",
+        };
+        Self {
+            severity: severity.to_owned(),
+            field: d.field.to_owned(),
+            message: d.message.clone(),
+        }
+    }
+}
+
+pub fn diagnostics_dto(diags: &[crate::domain::profile::Diagnostic]) -> Vec<DiagnosticDto> {
+    diags.iter().map(DiagnosticDto::from).collect()
 }
 
 #[derive(Debug, Deserialize)]
