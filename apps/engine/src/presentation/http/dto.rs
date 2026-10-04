@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::domain::scraping::workflow::WorkflowStep;
+
 #[derive(Debug, Deserialize)]
 #[expect(
     clippy::struct_excessive_bools,
@@ -17,6 +19,8 @@ pub struct ScrapeRequest {
     #[serde(default)]
     pub extract: Vec<String>,
     pub script: Option<String>,
+    #[serde(default)]
+    pub workflow: Vec<WorkflowStep>,
     pub proxy: Option<String>,
     #[serde(default)]
     pub proxies: Vec<String>,

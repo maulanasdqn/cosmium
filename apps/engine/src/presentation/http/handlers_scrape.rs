@@ -113,6 +113,9 @@ fn build_pool(req: &ScrapeRequest) -> Option<Arc<ProxyPool>> {
 }
 
 fn build_workflow(req: &ScrapeRequest) -> Vec<WorkflowStep> {
+    if !req.workflow.is_empty() {
+        return req.workflow.clone();
+    }
     let mut steps = Vec::new();
     for sel in &req.extract {
         steps.push(WorkflowStep::Extract {
