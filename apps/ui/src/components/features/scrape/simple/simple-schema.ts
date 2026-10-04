@@ -9,7 +9,7 @@ export const simpleScrapeSchema = z
       .string()
       .trim()
       .min(1, 'Paste the address of the page')
-      .transform((value) => (/^https?:\/\//i.test(value) ? value : `https://${value}`))
+      .transform((value) => (/^https?:/i.test(value) ? value : `https://${value}`))
       .refine((value) => URL.canParse(value), 'That does not look like a web address'),
     profile: z.string().min(1, 'Choose a browser profile'),
     presets: z.array(z.enum(presetIds)),
