@@ -1,7 +1,6 @@
 import * as React from 'react'
 
 import { cn } from '@/libs/utils'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 function CodeBlock({
   className,
@@ -10,15 +9,38 @@ function CodeBlock({
   ...props
 }: Omit<React.ComponentProps<'pre'>, 'children'> & { value: string; maxHeight?: string }) {
   return (
-    <ScrollArea className={cn('rounded-lg border bg-muted/40', maxHeight)}>
+    <div
+      data-slot="code-block"
+      className={cn('overflow-auto overscroll-contain rounded-lg border bg-muted/40', maxHeight)}
+    >
       <pre
-        data-slot="code-block"
-        className={cn('p-4 font-mono text-xs leading-5 whitespace-pre-wrap break-all', className)}
+        className={cn('p-4 font-mono text-xs leading-5 whitespace-pre-wrap break-words', className)}
         {...props}
       >
         {value}
       </pre>
-    </ScrollArea>
+    </div>
+  )
+}
+
+function TextBlock({
+  className,
+  value,
+  maxHeight = 'max-h-96',
+  ...props
+}: Omit<React.ComponentProps<'div'>, 'children'> & { value: string; maxHeight?: string }) {
+  return (
+    <div
+      data-slot="text-block"
+      className={cn(
+        'overflow-auto overscroll-contain rounded-lg border bg-muted/20 p-4 text-sm leading-6 whitespace-pre-line break-words',
+        maxHeight,
+        className,
+      )}
+      {...props}
+    >
+      {value}
+    </div>
   )
 }
 
@@ -33,4 +55,4 @@ function ImagePreview({ className, alt, ...props }: React.ComponentProps<'img'>)
   )
 }
 
-export { CodeBlock, ImagePreview }
+export { CodeBlock, ImagePreview, TextBlock }

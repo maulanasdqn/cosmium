@@ -1,4 +1,4 @@
-import { CodeBlock } from '@/components/ui/code-block'
+import { JsonBlock } from '@/components/ui/json-block'
 import { Stack } from '@/components/ui/stack'
 import { Text } from '@/components/ui/typography'
 import type { TProfile } from '@/apis/profiles'
@@ -18,7 +18,7 @@ export function ProfileJson({
         <Text variant="muted">{json.split('\n').length} lines</Text>
         <CopyButton value={json} label="Copy JSON" />
       </Stack>
-      <CodeBlock value={json} maxHeight={maxHeight} />
+      <JsonBlock data={profile} maxHeight={maxHeight} />
     </Stack>
   )
 }

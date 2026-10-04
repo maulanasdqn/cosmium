@@ -1,7 +1,7 @@
 import { CircleAlert } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CodeBlock } from '@/components/ui/code-block'
+import { JsonBlock } from '@/components/ui/json-block'
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ export function RunDetailsDialog({
             </Alert>
           ) : null}
           <Text weight="medium">Request</Text>
-          <CodeBlock value={JSON.stringify(run.payload, null, 2)} maxHeight="max-h-80" />
+          <JsonBlock data={run.payload} maxHeight="max-h-80" />
         </Stack>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react'
 
+import type { TAiRequest } from '@/apis/results'
 import type { TScrapePayload } from '@/apis/scrape'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,11 +12,6 @@ import { PresetPickerField } from './preset-picker-field'
 import { rememberPrefs, type TScrapePrefs } from './scrape-prefs-store'
 import { simpleScrapeSchema, toSimplePayload, type TSimpleScrapeInput } from './simple-schema'
 import { UrlBarField } from './url-bar-field'
-
-export type TAiRequest = {
-  enabled: boolean
-  instruction: string
-}
 
 export function SimpleScrapeForm({
   profiles,

@@ -4,6 +4,7 @@ import { Code, FileText, Image, Info } from 'lucide-react'
 import type { TScrapeResult } from '@/apis/scrape'
 import { Card, CardContent } from '@/components/ui/card'
 import { CodeBlock, ImagePreview } from '@/components/ui/code-block'
+import { JsonBlock } from '@/components/ui/json-block'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResultDetails } from './result-details'
@@ -55,7 +56,7 @@ export function ResultTabs({ result }: { result: TScrapeResult }) {
       </TabsList>
       <Panel value="extracted">
         {extracted ? (
-          <CodeBlock value={JSON.stringify(result.extracted, null, 2)} />
+          <JsonBlock data={result.extracted} />
         ) : (
           <Nothing
             title="Nothing extracted"

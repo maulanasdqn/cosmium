@@ -17,6 +17,7 @@ export type TRunEntry = {
   attempts: number | null
   proxyUsed: string | null
   error: string | null
+  resultId?: string | null
 }
 
 export type THistoryState = {
@@ -68,9 +69,14 @@ function baseEntry(payload: TScrapePayload) {
   return { id: crypto.randomUUID(), startedAt: new Date().toISOString(), payload }
 }
 
-export function runFromResult(payload: TScrapePayload, result: TScrapeResult): TRunEntry {
+export function runFromResult(
+  payload: TScrapePayload,
+  result: TScrapeResult,
+  resultId: string | null = null,
+): TRunEntry {
   return {
     ...baseEntry(payload),
+    resultId,
     status: result.blocked ? 'blocked' : 'success',
     httpStatus: result.http_status,
     finalUrl: result.final_url,

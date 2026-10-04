@@ -1,8 +1,15 @@
-import { FlaskConical, History, LayoutDashboard, ScanSearch, UserRound } from 'lucide-react'
+import {
+  Archive,
+  FlaskConical,
+  History,
+  LayoutDashboard,
+  ScanSearch,
+  UserRound,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export type TNavItem = {
-  to: '/' | '/profiles' | '/scrape' | '/history' | '/tests'
+  to: '/' | '/profiles' | '/scrape' | '/results' | '/history' | '/tests'
   label: string
   icon: LucideIcon
 }
@@ -11,6 +18,7 @@ export const navItems: TNavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/profiles', label: 'Profiles', icon: UserRound },
   { to: '/scrape', label: 'Scrape', icon: ScanSearch },
+  { to: '/results', label: 'Results', icon: Archive },
   { to: '/history', label: 'Run history', icon: History },
   { to: '/tests', label: 'Stealth tests', icon: FlaskConical },
 ]

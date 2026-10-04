@@ -1,4 +1,4 @@
-import type { TScrapePayload, TScrapeResult } from '@/apis/scrape'
+import type { TScrapePayload } from '@/apis/scrape'
 import { Grid, Stack } from '@/components/ui/stack'
 import type { TRunEntry } from '@/stores/history'
 import { RerunNotice } from './rerun-notice'
@@ -10,14 +10,12 @@ export function AdvancedPanel({
   run,
   profile,
   pending,
-  result,
   error,
   onSubmit,
 }: {
   run: TRunEntry | null
   profile?: string
   pending: boolean
-  result?: TScrapeResult
   error: string | null
   onSubmit: (payload: TScrapePayload) => Promise<unknown>
 }) {
@@ -38,7 +36,7 @@ export function AdvancedPanel({
           }}
         />
         <Stack className="xl:sticky xl:top-20 xl:self-start">
-          <ResultPanel pending={pending} result={error ? undefined : result} error={error} />
+          <ResultPanel pending={pending} result={undefined} error={error} />
         </Stack>
       </Grid>
     </Stack>

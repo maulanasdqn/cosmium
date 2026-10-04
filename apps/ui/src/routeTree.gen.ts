@@ -13,11 +13,13 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppHistoryRouteImport } from './routes/_app/history'
+import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppScrapeRouteImport } from './routes/_app/scrape'
 import { Route as AppTestsRouteImport } from './routes/_app/tests'
 import { Route as AppProfilesIndexRouteImport } from './routes/_app/profiles/index'
 import { Route as AppProfilesNameRouteImport } from './routes/_app/profiles/$name'
 import { Route as AppProfilesNewRouteImport } from './routes/_app/profiles/new'
+import { Route as AppScrapeIdRouteImport } from './routes/_app/scrape_.$id'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -36,6 +38,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppHistoryRoute = AppHistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppResultsRoute = AppResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => AppRoute,
 } as any)
 const AppScrapeRoute = AppScrapeRouteImport.update({
@@ -63,25 +70,34 @@ const AppProfilesNewRoute = AppProfilesNewRouteImport.update({
   path: '/profiles/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppScrapeIdRoute = AppScrapeIdRouteImport.update({
+  id: '/scrape_/$id',
+  path: '/scrape/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/history': typeof AppHistoryRoute
+  '/results': typeof AppResultsRoute
   '/scrape': typeof AppScrapeRoute
   '/tests': typeof AppTestsRoute
   '/profiles/$name': typeof AppProfilesNameRoute
   '/profiles/new': typeof AppProfilesNewRoute
+  '/scrape/$id': typeof AppScrapeIdRoute
   '/profiles/': typeof AppProfilesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/history': typeof AppHistoryRoute
+  '/results': typeof AppResultsRoute
   '/scrape': typeof AppScrapeRoute
   '/tests': typeof AppTestsRoute
   '/': typeof AppIndexRoute
   '/profiles/$name': typeof AppProfilesNameRoute
   '/profiles/new': typeof AppProfilesNewRoute
+  '/scrape/$id': typeof AppScrapeIdRoute
   '/profiles': typeof AppProfilesIndexRoute
 }
 export interface FileRoutesById {
@@ -89,11 +105,13 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/history': typeof AppHistoryRoute
+  '/_app/results': typeof AppResultsRoute
   '/_app/scrape': typeof AppScrapeRoute
   '/_app/tests': typeof AppTestsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/profiles/$name': typeof AppProfilesNameRoute
   '/_app/profiles/new': typeof AppProfilesNewRoute
+  '/_app/scrape_/$id': typeof AppScrapeIdRoute
   '/_app/profiles/': typeof AppProfilesIndexRoute
 }
 export interface FileRouteTypes {
@@ -102,31 +120,37 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/history'
+    | '/results'
     | '/scrape'
     | '/tests'
     | '/profiles/$name'
     | '/profiles/new'
+    | '/scrape/$id'
     | '/profiles/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/history'
+    | '/results'
     | '/scrape'
     | '/tests'
     | '/'
     | '/profiles/$name'
     | '/profiles/new'
+    | '/scrape/$id'
     | '/profiles'
   id:
     | '__root__'
     | '/_app'
     | '/login'
     | '/_app/history'
+    | '/_app/results'
     | '/_app/scrape'
     | '/_app/tests'
     | '/_app/'
     | '/_app/profiles/$name'
     | '/_app/profiles/new'
+    | '/_app/scrape_/$id'
     | '/_app/profiles/'
   fileRoutesById: FileRoutesById
 }
@@ -165,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHistoryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/results': {
+      id: '/_app/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof AppResultsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/scrape': {
       id: '/_app/scrape'
       path: '/scrape'
@@ -200,26 +231,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfilesNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/scrape_/$id': {
+      id: '/_app/scrape_/$id'
+      path: '/scrape/$id'
+      fullPath: '/scrape/$id'
+      preLoaderRoute: typeof AppScrapeIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppHistoryRoute: typeof AppHistoryRoute
+  AppResultsRoute: typeof AppResultsRoute
   AppScrapeRoute: typeof AppScrapeRoute
   AppTestsRoute: typeof AppTestsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppProfilesNameRoute: typeof AppProfilesNameRoute
   AppProfilesNewRoute: typeof AppProfilesNewRoute
+  AppScrapeIdRoute: typeof AppScrapeIdRoute
   AppProfilesIndexRoute: typeof AppProfilesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppHistoryRoute: AppHistoryRoute,
+  AppResultsRoute: AppResultsRoute,
   AppScrapeRoute: AppScrapeRoute,
   AppTestsRoute: AppTestsRoute,
   AppIndexRoute: AppIndexRoute,
   AppProfilesNameRoute: AppProfilesNameRoute,
   AppProfilesNewRoute: AppProfilesNewRoute,
+  AppScrapeIdRoute: AppScrapeIdRoute,
   AppProfilesIndexRoute: AppProfilesIndexRoute,
 }
 

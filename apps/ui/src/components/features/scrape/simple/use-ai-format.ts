@@ -5,11 +5,16 @@ import { toErrorMessage } from '@/libs/http'
 import type { TAiState } from './ai-format'
 import { readPageData, readSelectorMatches } from './page-data'
 
-export function useAiFormat() {
-  const format = useFormatScrape()
-  const [ai, setAi] = useState<TAiState>({ status: 'off' })
+export type TAiOutput = {
+  data: unknown
+  model: string
+}
 
-  async function run(result: TScrapeResult, instruction: string) {
+export function useAiFormat(initial: TAiState = { status: 'off' }) {
+  const format = useFormatScrape()
+  const [ai, setAi] = useState<TAiState>(initial)
+
+  async function run(result: TScrapeResult, instruction: string): Promise<TAiOutput | null> {
     setAi({ status: 'pending' })
     try {
       const response = await format.mutateAsync({
@@ -18,10 +23,12 @@ export function useAiFormat() {
         data: { page: readPageData(result), selectors: readSelectorMatches(result) },
       })
       setAi({ status: 'done', data: response.data, model: response.model })
+      return response
     } catch (cause) {
       setAi({ status: 'error', error: toErrorMessage(cause) })
+      return null
     }
   }
 
-  return { ai, run, reset: () => setAi({ status: 'off' }) }
+  return { ai, run }
 }

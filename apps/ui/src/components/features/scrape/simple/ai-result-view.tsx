@@ -1,13 +1,28 @@
 import { Sparkles } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { CodeBlock } from '@/components/ui/code-block'
+import { JsonBlock } from '@/components/ui/json-block'
 import { Spinner } from '@/components/ui/spinner'
 import { Stack } from '@/components/ui/stack'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Text } from '@/components/ui/typography'
 import { pickRows, type TAiState } from './ai-format'
 import { AiRowsTable } from './ai-rows-table'
+import { AiDetailView } from './detail/ai-detail-view'
+import { isRecord } from './detail/values'
+
+function primaryView(data: unknown): { label: string; content: ReactNode } | null {
+  const rows = pickRows(data)
+  if (rows) {
+    return { label: 'Table', content: <AiRowsTable rows={rows} /> }
+  }
+  if (isRecord(data)) {
+    return { label: 'Details', content: <AiDetailView record={data} /> }
+  }
+  return null
+}
 
 export function AiResultView({ ai }: { ai: TAiState }) {
   if (ai.status === 'pending') {
@@ -29,7 +44,8 @@ export function AiResultView({ ai }: { ai: TAiState }) {
   if (ai.status !== 'done') {
     return null
   }
-  const rows = pickRows(ai.data)
+  const primary = primaryView(ai.data)
+  const json = <JsonBlock data={ai.data} maxHeight="max-h-[40rem]" />
   return (
     <Stack gap="md">
       <Stack direction="row" align="center" gap="sm">
@@ -37,8 +53,22 @@ export function AiResultView({ ai }: { ai: TAiState }) {
         <Text variant="muted">Structured by</Text>
         <Badge variant="secondary">{ai.model}</Badge>
       </Stack>
-      {rows ? <AiRowsTable rows={rows} /> : null}
-      <CodeBlock value={JSON.stringify(ai.data, null, 2)} maxHeight="max-h-[32rem]" />
+      {primary ? (
+        <Tabs defaultValue="primary">
+          <TabsList variant="line">
+            <TabsTrigger value="primary">{primary.label}</TabsTrigger>
+            <TabsTrigger value="json">JSON</TabsTrigger>
+          </TabsList>
+          <TabsContent value="primary" className="pt-3">
+            {primary.content}
+          </TabsContent>
+          <TabsContent value="json" className="pt-3">
+            {json}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        json
+      )}
     </Stack>
   )
 }

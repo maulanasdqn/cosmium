@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Info, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react'
+import { Archive, Info, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,16 @@ export function RunActions({ run }: { run: TRunEntry }) {
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {run.resultId ? (
+            <DropdownMenuItem
+              onClick={() =>
+                void navigate({ to: '/scrape/$id', params: { id: run.resultId ?? '' } })
+              }
+            >
+              <Archive />
+              Open result
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             onClick={() => void navigate({ to: '/scrape', search: { from: run.id } })}
           >

@@ -1,9 +1,19 @@
-import { FileText, Heading, Image, Link2, Sparkles, Table2, TextCursorInput } from 'lucide-react'
+import {
+  Braces,
+  FileText,
+  Heading,
+  Image,
+  Link2,
+  Sparkles,
+  Table2,
+  TextCursorInput,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { CodeBlock } from '@/components/ui/code-block'
+import { CodeBlock, TextBlock } from '@/components/ui/code-block'
+import { JsonBlock } from '@/components/ui/json-block'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TAiState } from './ai-format'
@@ -25,7 +35,7 @@ type TSection = {
 function sectionsFor(data: TPageData, matches: TSelectorMatch[]): TSection[] {
   const sections: TSection[] = []
   if (data.text) {
-    const content = <CodeBlock value={data.text} maxHeight="max-h-[32rem]" />
+    const content = <TextBlock value={data.text} maxHeight="max-h-[32rem]" />
     sections.push({ id: 'text', label: 'Text', icon: FileText, content })
   }
   if (data.links) {
@@ -74,13 +84,21 @@ function sectionsFor(data: TPageData, matches: TSelectorMatch[]): TSection[] {
 export function ResultSections({
   data,
   matches,
+  extracted,
   ai,
 }: {
   data: TPageData
   matches: TSelectorMatch[]
+  extracted: Record<string, unknown>
   ai: TAiState
 }) {
-  const raw = sectionsFor(data, matches)
+  const rawSection: TSection = {
+    id: 'raw',
+    label: 'Raw',
+    icon: Braces,
+    content: <JsonBlock data={extracted} maxHeight="max-h-[32rem]" />,
+  }
+  const raw = [...sectionsFor(data, matches), rawSection]
   const aiSection: TSection = {
     id: 'ai',
     label: 'AI result',
