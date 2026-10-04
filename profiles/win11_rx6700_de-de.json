@@ -1,0 +1,120 @@
+{
+  "name": "win11_rx6700_de-de",
+  "version": 1,
+  "identity": {
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "client_hints": {
+      "brands": [
+        { "brand": "Chromium", "version": "154" },
+        { "brand": "Google Chrome", "version": "154" },
+        { "brand": "Not A(Brand", "version": "99" }
+      ],
+      "platform": "Windows",
+      "platform_version": "15.0.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false,
+      "wow64": false
+    },
+    "navigator_platform": "Win32",
+    "navigator_app_version": "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "navigator_vendor": "Google Inc.",
+    "navigator_product": "Gecko",
+    "navigator_product_sub": "20030107"
+  },
+  "locale": {
+    "languages": ["de-DE", "de", "en"],
+    "accept_language": "de-DE,de;q=0.9,en;q=0.8",
+    "timezone": "Europe/Berlin",
+    "currency": "EUR"
+  },
+  "hardware": {
+    "hardware_concurrency": 16,
+    "device_memory_gb": 8,
+    "max_touch_points": 0,
+    "battery": {
+      "charging": true,
+      "level": 1.0,
+      "charging_time_seconds": 0,
+      "discharging_time_seconds": null
+    }
+  },
+  "gpu": {
+    "vendor": "Google Inc. (AMD)",
+    "renderer": "ANGLE (AMD, AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor_id": "0x1002",
+    "device_id": "0x73df",
+    "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "webgpu_adapter": {
+      "vendor": "amd",
+      "architecture": "rdna2",
+      "device": "rx-6700-xt"
+    }
+  },
+  "screen": {
+    "width": 2560,
+    "height": 1440,
+    "avail_width": 2560,
+    "avail_height": 1392,
+    "color_depth": 24,
+    "pixel_depth": 24,
+    "device_pixel_ratio": 1,
+    "avail_left": 0,
+    "avail_top": 0
+  },
+  "audio": {
+    "sample_rate": 48000,
+    "base_latency": 0.01,
+    "output_latency": 0.04,
+    "max_channel_count": 2
+  },
+  "media_devices": [
+    { "kind": "audioinput",  "label": "Default - Mikrofon (Realtek(R) Audio)", "deviceId": "default", "groupId": "g1" },
+    { "kind": "audioinput",  "label": "Mikrofon (Realtek(R) Audio)",           "deviceId": "a1",      "groupId": "g1" },
+    { "kind": "audiooutput", "label": "Default - Lautsprecher (Realtek(R) Audio)", "deviceId": "default", "groupId": "g1" },
+    { "kind": "audiooutput", "label": "Lautsprecher (Realtek(R) Audio)",       "deviceId": "o1",      "groupId": "g1" },
+    { "kind": "videoinput",  "label": "Logitech BRIO",                         "deviceId": "v1",      "groupId": "g2" }
+  ],
+  "voices": [
+    { "name": "Microsoft Hedda - German",  "lang": "de-DE", "default": true,  "localService": true, "voiceURI": "Microsoft Hedda - German" },
+    { "name": "Microsoft Katja - German",  "lang": "de-DE", "default": false, "localService": true, "voiceURI": "Microsoft Katja - German" },
+    { "name": "Microsoft Stefan - German", "lang": "de-DE", "default": false, "localService": true, "voiceURI": "Microsoft Stefan - German" },
+    { "name": "Google Deutsch",            "lang": "de-DE", "default": false, "localService": false, "voiceURI": "Google Deutsch" },
+    { "name": "Google US English",         "lang": "en-US", "default": false, "localService": false, "voiceURI": "Google US English" }
+  ],
+  "fonts": {
+    "installed": [
+      "Arial", "Arial Black", "Arial Narrow", "Bahnschrift", "Calibri", "Cambria", "Cambria Math",
+      "Candara", "Comic Sans MS", "Consolas", "Constantia", "Corbel", "Courier New", "Ebrima",
+      "Franklin Gothic Medium", "Gabriola", "Gadugi", "Georgia", "HoloLens MDL2 Assets",
+      "Impact", "Ink Free", "Javanese Text", "Leelawadee UI", "Lucida Console", "Lucida Sans Unicode",
+      "Malgun Gothic", "Marlett", "Microsoft Himalaya", "Microsoft JhengHei", "Microsoft New Tai Lue",
+      "Microsoft PhagsPa", "Microsoft Sans Serif", "Microsoft Tai Le", "Microsoft YaHei",
+      "Microsoft Yi Baiti", "MingLiU-ExtB", "Mongolian Baiti", "MS Gothic", "MV Boli", "Myanmar Text",
+      "Nirmala UI", "Palatino Linotype", "Segoe MDL2 Assets", "Segoe Print", "Segoe Script",
+      "Segoe UI", "Segoe UI Emoji", "Segoe UI Historic", "Segoe UI Symbol", "SimSun", "Sitka",
+      "Sylfaen", "Symbol", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana", "Webdings", "Wingdings",
+      "Yu Gothic"
+    ]
+  },
+  "webrtc": {
+    "ip_handling_policy": "default_public_interface_only",
+    "stun_servers": []
+  },
+  "canvas_noise": {
+    "seed": "c4d5e6f70819a2b3c4d5e6f708192a3b"
+  },
+  "browser_state": {
+    "history_length": 18,
+    "download_count": 5,
+    "extensions": [
+      { "id": "cjpalhdlnbpafiamejdnhcphjbkeiagm", "name": "uBlock Origin", "version": "1.62.0" },
+      { "id": "eimadpbcbfnmbkopoojfekhnkhdbieeh", "name": "Dark Reader", "version": "4.9.96" },
+      { "id": "aapbdbdomjkkjkaonfhkkikfgjllcleb", "name": "Google Translate", "version": "2.0.13" },
+      { "id": "ghbmnnjooekpmoecnnnilnnbdlolhkhi", "name": "Google Docs Offline", "version": "1.94.0" }
+    ]
+  },
+  "strip_automation_tells": false,
+  "chrome_version": "154.0.8037.57"
+}
