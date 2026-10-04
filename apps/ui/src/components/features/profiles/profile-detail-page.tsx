@@ -1,4 +1,6 @@
+import { BackButton } from '@/components/ui/back-button'
 import { Page, PageHeader } from '@/components/ui/page'
+import { Stack } from '@/components/ui/stack'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useHealth } from '@/apis/health'
 import { useProfile, useProfileValidation } from '@/apis/profiles'
@@ -19,11 +21,14 @@ export function ProfileDetailPage({ name }: { name: string }) {
 
   return (
     <Page>
-      <PageHeader
-        title={name}
-        description="Fingerprint profile"
-        actions={profile.data ? <ProfileDetailActions name={name} llmReady={llmReady} /> : null}
-      />
+      <Stack gap="xs">
+        <BackButton fallback="/profiles" label="All profiles" />
+        <PageHeader
+          title={name}
+          description="Fingerprint profile"
+          actions={profile.data ? <ProfileDetailActions name={name} llmReady={llmReady} /> : null}
+        />
+      </Stack>
       {profile.isPending ? <ProfileDetailLoading /> : null}
       {profile.isError ? <ProfileDetailError name={name} error={profile.error} /> : null}
       {profile.data && validation.data ? <DiagnosticsSummary diagnostics={diagnostics} /> : null}

@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { BackButton } from '@/components/ui/back-button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Page, PageHeader } from '@/components/ui/page'
 import { Stack } from '@/components/ui/stack'
@@ -32,16 +30,13 @@ export function GenerateProfilePage() {
 
   return (
     <Page>
-      <PageHeader
-        title="New profile"
-        description="Generate a coherent fingerprint profile from a persona description."
-        actions={
-          <Button variant="outline" render={<Link to="/profiles" />}>
-            <ArrowLeft />
-            Profiles
-          </Button>
-        }
-      />
+      <Stack gap="xs">
+        <BackButton fallback="/profiles" label="All profiles" />
+        <PageHeader
+          title="New profile"
+          description="Generate a coherent fingerprint profile from a persona description."
+        />
+      </Stack>
       <Stack gap="lg">
         {health.data && !llmReady ? (
           <Alert>

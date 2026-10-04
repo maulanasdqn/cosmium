@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
-export function BackButton() {
+function BackButton({ fallback = '/', label }: { fallback?: string; label?: string }) {
   const router = useRouter()
   const canGoBack = useCanGoBack()
   const navigate = useNavigate()
@@ -12,10 +12,12 @@ export function BackButton() {
       variant="ghost"
       size="sm"
       className="-ml-2 self-start text-muted-foreground"
-      onClick={() => (canGoBack ? router.history.back() : void navigate({ to: '/results' }))}
+      onClick={() => (canGoBack ? router.history.back() : void navigate({ to: fallback }))}
     >
       <ArrowLeft />
-      {canGoBack ? 'Back' : 'All results'}
+      {canGoBack ? 'Back' : (label ?? 'Back')}
     </Button>
   )
 }
+
+export { BackButton }

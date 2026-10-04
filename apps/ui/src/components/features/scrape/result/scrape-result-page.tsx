@@ -16,7 +16,7 @@ import { Stack } from '@/components/ui/stack'
 import { readPageData, readSelectorMatches } from '../simple/page-data'
 import { ResultHero } from '../simple/result-hero'
 import { ResultSections } from '../simple/result-sections'
-import { BackButton } from './back-button'
+import { BackButton } from '@/components/ui/back-button'
 import { BlockedNotice } from './blocked-notice'
 import { ResultActions } from './result-actions'
 import { useSavedAi } from './use-saved-ai'
@@ -29,7 +29,7 @@ function SavedResult({ stored }: { stored: TStoredResult }) {
   return (
     <Page>
       <Stack gap="xs">
-        <BackButton />
+        <BackButton fallback="/results" label="All results" />
         <PageHeader
           title="Scrape result"
           description={`Scraped ${formatRelative(created)} with ${stored.payload.profile}`}
@@ -77,7 +77,7 @@ export function ScrapeResultPage({ id }: { id: string }) {
   if (!query.data) {
     return (
       <Page>
-        <BackButton />
+        <BackButton fallback="/results" label="All results" />
         <Empty className="border">
           <EmptyHeader>
             <EmptyTitle>Result not found</EmptyTitle>
