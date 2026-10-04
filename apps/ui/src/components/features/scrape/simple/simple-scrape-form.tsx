@@ -31,6 +31,8 @@ export function SimpleScrapeForm({
     profile: prefs.profile,
     presets: prefs.presets,
     selector: '',
+    proxy: prefs.proxy,
+    geoSync: prefs.geoSync,
     aiFormat: prefs.aiFormat,
     instruction: '',
   }
@@ -38,7 +40,13 @@ export function SimpleScrapeForm({
     defaultValues,
     validators: { onSubmit: simpleScrapeSchema },
     onSubmit: ({ value }) => {
-      rememberPrefs({ profile: value.profile, presets: value.presets, aiFormat: value.aiFormat })
+      rememberPrefs({
+        profile: value.profile,
+        presets: value.presets,
+        aiFormat: value.aiFormat,
+        proxy: value.proxy,
+        geoSync: value.geoSync,
+      })
       return onSubmit(toSimplePayload(value), {
         enabled: aiAvailable && value.aiFormat,
         instruction: value.instruction,
@@ -80,6 +88,23 @@ export function SimpleScrapeForm({
                           label="Custom CSS selector"
                           description="Optional, e.g. .price or #reviews .item"
                           placeholder=".product-title"
+                        />
+                      )}
+                    </form.AppField>
+                    <form.AppField name="proxy">
+                      {(field) => (
+                        <field.TextField
+                          label="Proxy"
+                          description="Residential proxy URL. Saved for next time."
+                          placeholder="http://user:pass@host:port"
+                        />
+                      )}
+                    </form.AppField>
+                    <form.AppField name="geoSync">
+                      {(field) => (
+                        <field.SwitchField
+                          label="Match timezone to proxy location"
+                          description="Looks up the proxy exit IP and sets the timezone."
                         />
                       )}
                     </form.AppField>

@@ -8,12 +8,16 @@ export type TScrapePrefs = {
   profile: string
   presets: TPreset[]
   aiFormat: boolean
+  proxy: string
+  geoSync: boolean
 }
 
 const fallback: TScrapePrefs = {
   profile: '',
   presets: ['summary', 'text', 'links'],
   aiFormat: true,
+  proxy: '',
+  geoSync: false,
 }
 
 function readPrefs(): TScrapePrefs {
@@ -27,6 +31,8 @@ function readPrefs(): TScrapePrefs {
       profile: typeof parsed.profile === 'string' ? parsed.profile : '',
       presets: Array.isArray(parsed.presets) ? parsed.presets.filter(isPreset) : fallback.presets,
       aiFormat: typeof parsed.aiFormat === 'boolean' ? parsed.aiFormat : fallback.aiFormat,
+      proxy: typeof parsed.proxy === 'string' ? parsed.proxy : '',
+      geoSync: typeof parsed.geoSync === 'boolean' ? parsed.geoSync : fallback.geoSync,
     }
   } catch {
     return fallback

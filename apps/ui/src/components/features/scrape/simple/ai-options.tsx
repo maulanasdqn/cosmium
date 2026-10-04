@@ -10,6 +10,8 @@ const defaultValues: TSimpleScrapeInput = {
   profile: '',
   presets: [],
   selector: '',
+  proxy: '',
+  geoSync: false,
   aiFormat: true,
   instruction: '',
 }
