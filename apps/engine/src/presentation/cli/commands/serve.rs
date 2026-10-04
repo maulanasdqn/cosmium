@@ -5,6 +5,7 @@ use clap::Args;
 
 use crate::infrastructure::llm::OpenRouterClient;
 use crate::infrastructure::llm::openrouter::OpenRouterConfig;
+use crate::infrastructure::results::ResultStore;
 use crate::presentation::cli::state::CliState;
 use crate::presentation::http::AppState;
 
@@ -37,6 +38,9 @@ pub struct ServeArgs {
 
     #[arg(long, env = "COSMIUM_UI_DIR")]
     pub ui_dir: Option<std::path::PathBuf>,
+
+    #[arg(long, env = "COSMIUM_RESULTS_DIR")]
+    pub results_dir: Option<std::path::PathBuf>,
 }
 
 fn default_ui_dir() -> Option<std::path::PathBuf> {
@@ -86,6 +90,9 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
         llm,
         llm_model: args.llm_model.clone(),
         ui_dir: args.ui_dir.or_else(default_ui_dir),
+        results: Arc::new(ResultStore::new(
+            args.results_dir.unwrap_or_else(ResultStore::default_dir),
+        )),
     };
 
     println!(
