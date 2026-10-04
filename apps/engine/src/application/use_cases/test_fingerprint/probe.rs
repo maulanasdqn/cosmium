@@ -174,9 +174,7 @@ fn page_probes(p: &Profile) -> Vec<ProbeDef> {
             "String(screen.height)",
             &p.screen.height.to_string(),
         ),
-        simple(
-            "intl_locale",
-            "new Intl.NumberFormat().resolvedOptions().locale",
+        super::matcher::intl_locale_probe(
             p.locale.languages.first().map_or("en-US", String::as_str),
         ),
         simple(
