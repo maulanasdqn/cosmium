@@ -32,3 +32,14 @@ export type TScrapeResult = {
   elapsed_ms: number
   attempts: number
 }
+
+export type TFormatPayload = {
+  url: string
+  instruction: string | null
+  data: unknown
+}
+
+export type TFormatResult = {
+  data: unknown
+  model: string
+}

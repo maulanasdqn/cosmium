@@ -1,31 +1,20 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { useScrape } from '@/apis/scrape'
+import { useScrape, type TScrapePayload, type TScrapeResult } from '@/apis/scrape'
 import { Page, PageHeader } from '@/components/ui/page'
-import { Grid, Stack } from '@/components/ui/stack'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toErrorMessage } from '@/libs/http'
 import { recordRun, runFromError, runFromResult, useRun } from '@/stores/history'
-import { RerunNotice } from './rerun-notice'
-import { ResultPanel } from './result-panel'
-import { ScrapeForm } from './scrape-form'
-import {
-  fromScrapePayload,
-  scrapeFormDefaults,
-  toScrapePayload,
-  type TScrapeFormValues,
-} from './schema'
+import { AdvancedPanel } from './advanced-panel'
+import { SimpleScrapePanel } from './simple/simple-scrape-panel'
 
 export function ScrapePage({ fromRun, profile }: { fromRun?: string; profile?: string }) {
   const run = useRun(fromRun ?? '')
   const scrape = useScrape()
   const [error, setError] = useState<string | null>(null)
-  const defaultValues = run
-    ? fromScrapePayload(run.payload)
-    : { ...scrapeFormDefaults, profile: profile ?? scrapeFormDefaults.profile }
 
-  async function handleSubmit(values: TScrapeFormValues) {
-    const payload = toScrapePayload(values)
+  async function runScrape(payload: TScrapePayload): Promise<TScrapeResult | null> {
     setError(null)
     try {
       const result = await scrape.mutateAsync(payload)
@@ -35,36 +24,41 @@ export function ScrapePage({ fromRun, profile }: { fromRun?: string; profile?: s
       } else {
         toast.success('Scrape finished', { description: result.final_url })
       }
+      return result
     } catch (cause) {
       const message = toErrorMessage(cause)
       setError(message)
       recordRun(runFromError(payload, message))
       toast.error('Scrape failed', { description: message })
+      return null
     }
+  }
+
+  const shared = {
+    pending: scrape.isPending,
+    result: error ? undefined : scrape.data,
+    error,
+    onSubmit: runScrape,
   }
 
   return (
     <Page>
       <PageHeader
         title="Scrape"
-        description="Load a page through a fingerprint profile and extract what you need."
+        description="Paste a link and choose what to collect. Cosmium opens it in a stealth browser."
       />
-      {run ? <RerunNotice url={run.payload.url} startedAt={run.startedAt} /> : null}
-      <Grid columns={1} gap="lg" className="xl:grid-cols-2">
-        <ScrapeForm
-          key={run?.id ?? profile ?? 'new'}
-          defaultValues={defaultValues}
-          pending={scrape.isPending}
-          onSubmit={handleSubmit}
-        />
-        <Stack className="xl:sticky xl:top-20 xl:self-start">
-          <ResultPanel
-            pending={scrape.isPending}
-            result={error ? undefined : scrape.data}
-            error={error}
-          />
-        </Stack>
-      </Grid>
+      <Tabs defaultValue={run ? 'advanced' : 'simple'}>
+        <TabsList>
+          <TabsTrigger value="simple">Simple</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+        </TabsList>
+        <TabsContent value="simple" className="pt-4">
+          <SimpleScrapePanel initialProfile={profile} {...shared} />
+        </TabsContent>
+        <TabsContent value="advanced" className="pt-4">
+          <AdvancedPanel run={run} profile={profile} {...shared} />
+        </TabsContent>
+      </Tabs>
     </Page>
   )
 }
