@@ -1,8 +1,8 @@
 import type { TScrapePayload } from '@/apis/scrape'
-import { Grid, Stack } from '@/components/ui/stack'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Stack } from '@/components/ui/stack'
 import type { TRunEntry } from '@/stores/history'
 import { RerunNotice } from './rerun-notice'
-import { ResultPanel } from './result-panel'
 import { ScrapeForm } from './scrape-form'
 import { fromScrapePayload, scrapeFormDefaults, toScrapePayload } from './schema'
 
@@ -26,19 +26,20 @@ export function AdvancedPanel({
   return (
     <Stack gap="lg">
       {run ? <RerunNotice url={run.payload.url} startedAt={run.startedAt} /> : null}
-      <Grid columns={1} gap="lg" className="xl:grid-cols-2">
-        <ScrapeForm
-          key={run?.id ?? profile ?? 'new'}
-          defaultValues={defaultValues}
-          pending={pending}
-          onSubmit={async (values) => {
-            await onSubmit(toScrapePayload(values))
-          }}
-        />
-        <Stack className="xl:sticky xl:top-20 xl:self-start">
-          <ResultPanel pending={pending} result={undefined} error={error} />
-        </Stack>
-      </Grid>
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>The scrape failed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <ScrapeForm
+        key={run?.id ?? profile ?? 'new'}
+        defaultValues={defaultValues}
+        pending={pending}
+        onSubmit={async (values) => {
+          await onSubmit(toScrapePayload(values))
+        }}
+      />
     </Stack>
   )
 }
