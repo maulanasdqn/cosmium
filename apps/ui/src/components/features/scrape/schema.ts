@@ -88,6 +88,7 @@ export function toScrapePayload(values: TScrapeFormValues): TScrapePayload {
     geo_sync: values.geo_sync,
     retries: values.retries,
     extract: cleanLines(values.extract),
+    workflow: [],
     script: orNull(values.script),
     proxy: orNull(values.proxy),
     proxies,

@@ -4,6 +4,7 @@ import { useRun } from '@/stores/history'
 import { AdvancedPanel } from './advanced-panel'
 import { SimpleScrapePanel } from './simple/simple-scrape-panel'
 import { useRunScrape } from './use-run-scrape'
+import { WorkflowPanel } from './workflow'
 
 export function ScrapePage({ fromRun, profile }: { fromRun?: string; profile?: string }) {
   const run = useRun(fromRun ?? '')
@@ -19,6 +20,7 @@ export function ScrapePage({ fromRun, profile }: { fromRun?: string; profile?: s
         <TabsList>
           <TabsTrigger value="simple">Simple</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsTrigger value="workflow">Workflow</TabsTrigger>
         </TabsList>
         <TabsContent value="simple" className="pt-4">
           <SimpleScrapePanel
@@ -32,6 +34,14 @@ export function ScrapePage({ fromRun, profile }: { fromRun?: string; profile?: s
           <AdvancedPanel
             run={run}
             profile={profile}
+            pending={scrape.pending}
+            error={scrape.error}
+            onSubmit={(payload) => scrape.run(payload)}
+          />
+        </TabsContent>
+        <TabsContent value="workflow" className="pt-4">
+          <WorkflowPanel
+            initialProfile={profile}
             pending={scrape.pending}
             error={scrape.error}
             onSubmit={(payload) => scrape.run(payload)}

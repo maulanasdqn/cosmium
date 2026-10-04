@@ -1,3 +1,5 @@
+import type { TWorkflowStep } from '@/components/features/scrape/workflow/types'
+
 export type TProxyRotation = 'round-robin' | 'random'
 
 export type TScrapePayload = {
@@ -11,6 +13,7 @@ export type TScrapePayload = {
   retries: number
   extract: string[]
   script: string | null
+  workflow: TWorkflowStep[]
   proxy: string | null
   proxies: string[]
   proxy_rotation: TProxyRotation | null

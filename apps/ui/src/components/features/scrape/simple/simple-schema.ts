@@ -39,6 +39,7 @@ export function toSimplePayload(values: TSimpleScrapeInput): TScrapePayload {
     geo_sync: parsed.geoSync,
     retries: 1,
     extract: selector ? [selector] : [],
+    workflow: [],
     script: buildPresetScript(parsed.presets),
     proxy: parsed.proxy.trim() || null,
     proxies: [],
