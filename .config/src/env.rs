@@ -18,6 +18,10 @@ pub struct OpenRouterEnv {
     pub title: Option<String>,
 }
 
+pub fn load_dotenv() {
+    let _ = dotenvy::dotenv();
+}
+
 impl Env {
     pub fn init() -> Result<Self> {
         let _ = dotenvy::dotenv();

@@ -1,4 +1,5 @@
 pub mod build;
+pub mod format_scrape;
 pub mod generate_profile;
 pub mod list_profiles;
 pub mod mutate_profile;

@@ -3,6 +3,7 @@ pub mod dto;
 pub mod dto_platform;
 pub mod error;
 pub mod handlers;
+pub mod handlers_format;
 pub mod handlers_llm;
 pub mod handlers_profiles;
 pub mod handlers_scrape;
@@ -56,6 +57,7 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/profiles/{name}/repair", post(handlers_llm::repair))
         .route("/v1/profiles/{name}/mutate", post(handlers_llm::mutate))
         .route("/v1/scrape", post(handlers_scrape::scrape))
+        .route("/v1/scrape/format", post(handlers_format::format))
         .route("/v1/tests/fingerprint", post(handlers_tests::fingerprint))
         .route("/v1/tests/stealth", post(handlers_tests::stealth))
         .layer(auth_middleware);

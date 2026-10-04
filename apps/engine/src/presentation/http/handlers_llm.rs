@@ -25,7 +25,7 @@ pub fn check_count(count: usize) -> Result<usize, String> {
     }
 }
 
-fn require_llm(state: &AppState) -> Result<Arc<dyn LlmClient>, ApiError> {
+pub(super) fn require_llm(state: &AppState) -> Result<Arc<dyn LlmClient>, ApiError> {
     state
         .llm
         .clone()

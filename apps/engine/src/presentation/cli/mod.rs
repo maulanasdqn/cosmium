@@ -40,6 +40,7 @@ pub enum Command {
 }
 
 pub async fn run() -> Result<()> {
+    config::env::load_dotenv();
     let cli = Cli::parse();
     let env = Env::init()?;
     let llm = env.openrouter.api_key.as_ref().map(|key| {
