@@ -7,11 +7,14 @@ pub enum LlmError {
     #[error("OPENROUTER_API_KEY not set")]
     MissingApiKey,
 
-    #[error("transport error")]
+    #[error("transport error: {0}")]
     Transport(#[from] reqwest::Error),
 
     #[error("provider returned status {status}: {body}")]
     Provider { status: u16, body: String },
+
+    #[error("request timed out after {seconds}s")]
+    Timeout { seconds: u64 },
 
     #[error("response had no choices")]
     EmptyResponse,

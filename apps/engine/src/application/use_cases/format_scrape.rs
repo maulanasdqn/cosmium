@@ -3,10 +3,14 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use crate::domain::llm::{ChatMessage, ChatRequest, LlmClient};
+use std::time::Duration;
+
+use crate::domain::llm::{ChatMessage, ChatRequest, LlmClient, LlmError};
 use crate::domain::text::prefix;
 
 const MAX_CONTENT_BYTES: usize = 60_000;
+const MAX_ATTEMPTS: u32 = 3;
+const RETRY_DELAY_MS: u64 = 800;
 
 const SYSTEM_PROMPT: &str = "You turn content scraped from a web page into clean, well-structured JSON.\n\
 Use short snake_case keys.\n\
@@ -40,6 +44,32 @@ impl FormatScrape {
         Self { llm, model }
     }
 
+    async fn chat_with_retry(
+        &self,
+        request: ChatRequest,
+    ) -> Result<crate::domain::llm::ChatResponse> {
+        let mut last: Option<LlmError> = None;
+        for attempt in 0..MAX_ATTEMPTS {
+            if attempt > 0 {
+                tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS * u64::from(attempt)))
+                    .await;
+            }
+            match self.llm.chat(request.clone()).await {
+                Ok(response) => return Ok(response),
+                Err(error) if is_transient(&error) => {
+                    tracing::warn!(attempt = attempt + 1, %error, "LLM call failed, retrying");
+                    last = Some(error);
+                }
+                Err(error) => return Err(error).context("LLM chat call"),
+            }
+        }
+        Err(last.map_or_else(
+            || anyhow::anyhow!("LLM chat call made no attempts"),
+            anyhow::Error::new,
+        ))
+        .context("LLM chat call failed after retries")
+    }
+
     pub async fn execute(&self, input: FormatScrapeInput) -> Result<FormatScrapeOutput> {
         let content = serde_json::to_string(&input.content)?;
         let instruction = input
@@ -59,13 +89,21 @@ impl FormatScrape {
             temperature: Some(0.2),
             json_mode: true,
         };
-        let response = self.llm.chat(request).await.context("LLM chat call")?;
+        let response = self.chat_with_retry(request).await?;
         let data = parse_json(&response.content)
             .with_context(|| format!("parsing LLM JSON: {}", prefix(&response.content, 300)))?;
         Ok(FormatScrapeOutput {
             data,
             model: response.model,
         })
+    }
+}
+
+const fn is_transient(error: &LlmError) -> bool {
+    match error {
+        LlmError::Timeout { .. } | LlmError::Transport(_) => true,
+        LlmError::Provider { status, .. } => *status == 429 || *status >= 500,
+        LlmError::MissingApiKey | LlmError::EmptyResponse | LlmError::Malformed(_) => false,
     }
 }
 

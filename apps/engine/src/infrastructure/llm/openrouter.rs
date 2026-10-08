@@ -6,6 +6,8 @@ use crate::domain::llm::{
     ChatMessage, ChatRequest, ChatResponse, LlmClient, LlmError, LlmResult, Role, messages::Usage,
 };
 
+const REQUEST_TIMEOUT_SECS: u64 = 90;
+
 pub struct OpenRouterClient {
     http: Client,
     base_url: String,
@@ -26,6 +28,7 @@ impl OpenRouterClient {
         Self {
             http: Client::builder()
                 .user_agent("cosmium/0.1")
+                .timeout(std::time::Duration::from_secs(REQUEST_TIMEOUT_SECS))
                 .build()
                 .unwrap_or_default(),
             base_url: cfg.base_url,
@@ -60,7 +63,15 @@ impl LlmClient for OpenRouterClient {
             req = req.header("X-Title", t);
         }
 
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(|e| {
+            if e.is_timeout() {
+                LlmError::Timeout {
+                    seconds: REQUEST_TIMEOUT_SECS,
+                }
+            } else {
+                LlmError::Transport(e)
+            }
+        })?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();

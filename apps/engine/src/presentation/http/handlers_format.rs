@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::application::use_cases::format_scrape::{FormatScrape, FormatScrapeInput};
 
 use super::AppState;
-use super::error::{ApiResult, internal};
+use super::error::{ApiResult, internal_chain};
 use super::handlers_llm::require_llm;
 
 #[derive(Debug, Deserialize)]
@@ -35,7 +35,7 @@ pub async fn format(
             content: req.data,
         })
         .await
-        .map_err(internal)?;
+        .map_err(|e| internal_chain(&e))?;
     Ok(Json(FormatResponse {
         data: out.data,
         model: out.model,

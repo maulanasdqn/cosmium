@@ -10,6 +10,7 @@ use serde::Serialize;
 use super::super::stealth::StealthConfig;
 
 const LOCAL_HOSTS: [&str; 4] = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
+const LOCAL_HOST_PATTERNS: [&str; 4] = ["localhost", "127.0.0.1", "0.0.0.0", r"\[\:\:1\]"];
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Serialize)]
@@ -40,16 +41,18 @@ pub(super) async fn block_local_network(page: &Page) {
     let _ = page.execute(EnableParams::default()).await;
     let cmd = SetBlockedUrls {
         urls: LOCAL_HOSTS.iter().map(|h| format!("*://{h}*")).collect(),
-        url_patterns: LOCAL_HOSTS
+        url_patterns: LOCAL_HOST_PATTERNS
             .iter()
-            .map(|h| BlockPattern {
-                url_pattern: format!("*://{h}:*/*"),
-                block: true,
+            .flat_map(|h| {
+                [format!("*://{h}:*/*"), format!("*://{h}/*")].map(|url_pattern| BlockPattern {
+                    url_pattern,
+                    block: true,
+                })
             })
             .collect(),
     };
     if let Err(e) = page.execute(cmd).await {
-        tracing::debug!(error = %e, "local network blocking unavailable");
+        tracing::warn!(error = %e, "local network blocking unavailable");
     }
 }
 
