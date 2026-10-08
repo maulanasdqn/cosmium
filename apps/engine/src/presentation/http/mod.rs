@@ -66,8 +66,11 @@ pub fn router(state: AppState) -> Router {
             "/v1/results",
             get(handlers_results::list)
                 .post(handlers_results::create)
+                .delete(handlers_results::delete_many)
                 .layer(axum::extract::DefaultBodyLimit::max(RESULT_BODY_LIMIT)),
         )
+        .route("/v1/results/stats", get(handlers_results::stats))
+        .route("/v1/results/prune", post(handlers_results::prune))
         .route(
             "/v1/results/{id}",
             get(handlers_results::get).delete(handlers_results::delete),

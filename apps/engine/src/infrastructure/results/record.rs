@@ -29,6 +29,16 @@ pub struct ResultSummary {
     pub has_ai: bool,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ResultStats {
+    pub count: usize,
+    pub bytes: u64,
+    pub oldest_ms: Option<u64>,
+    pub newest_ms: Option<u64>,
+    pub max_results: usize,
+    pub max_age_days: u64,
+}
+
 fn text(value: &Value, key: &str) -> Option<String> {
     value
         .get(key)

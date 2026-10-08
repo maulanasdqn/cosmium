@@ -9,6 +9,8 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toErrorMessage } from '@/libs/http'
 import { resultColumns } from './result-columns'
+import { SelectionBar } from './selection-bar'
+import { StorageCard } from './storage-card'
 
 const EMPTY: TResultSummary[] = []
 
@@ -27,6 +29,7 @@ export function ResultsPage() {
           </Button>
         }
       />
+      <StorageCard />
       {results.isPending ? <Skeleton className="h-64 w-full" /> : null}
       {results.isError ? (
         <Alert variant="destructive">
@@ -44,6 +47,8 @@ export function ResultsPage() {
           emptyDescription="Run a scrape and it will be saved here."
           pageSize={15}
           onRowClick={(row) => void navigate({ to: '/scrape/$id', params: { id: row.id } })}
+          enableSelection
+          selectionBar={(selected, clear) => <SelectionBar selected={selected} onClear={clear} />}
         />
       ) : null}
     </Page>

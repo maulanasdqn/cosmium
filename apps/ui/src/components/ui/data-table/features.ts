@@ -7,6 +7,7 @@ import {
   filterFn_includesString,
   globalFilteringFeature,
   rowPaginationFeature,
+  rowSelectionFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
   sortFn_basic,
@@ -31,6 +32,7 @@ export const dataTableFeatures = tableFeatures({
   filterFns: { includesString: filterFn_includesString },
   rowPaginationFeature,
   paginatedRowModel: createPaginatedRowModel(),
+  rowSelectionFeature,
 })
 
 export type TDataTableFeatures = typeof dataTableFeatures

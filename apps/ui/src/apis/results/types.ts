@@ -49,3 +49,16 @@ export type TSetResultAiPayload = {
   id: string
   ai: TStoredAi
 }
+
+export type TResultStats = {
+  count: number
+  bytes: number
+  oldest_ms: number | null
+  newest_ms: number | null
+  max_results: number
+  max_age_days: number
+}
+
+export type TDeletedCount = {
+  deleted: number
+}

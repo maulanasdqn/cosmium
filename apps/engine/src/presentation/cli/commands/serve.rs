@@ -5,7 +5,7 @@ use clap::Args;
 
 use crate::infrastructure::llm::OpenRouterClient;
 use crate::infrastructure::llm::openrouter::OpenRouterConfig;
-use crate::infrastructure::results::ResultStore;
+use crate::infrastructure::results::{ResultStore, Retention};
 use crate::presentation::cli::state::CliState;
 use crate::presentation::http::AppState;
 
@@ -41,6 +41,12 @@ pub struct ServeArgs {
 
     #[arg(long, env = "COSMIUM_RESULTS_DIR")]
     pub results_dir: Option<std::path::PathBuf>,
+
+    #[arg(long, default_value_t = 200, env = "COSMIUM_MAX_RESULTS")]
+    pub max_results: usize,
+
+    #[arg(long, default_value_t = 30, env = "COSMIUM_MAX_RESULT_AGE_DAYS")]
+    pub max_result_age_days: u64,
 }
 
 fn default_ui_dir() -> Option<std::path::PathBuf> {
@@ -92,6 +98,10 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
         ui_dir: args.ui_dir.or_else(default_ui_dir),
         results: Arc::new(ResultStore::new(
             args.results_dir.unwrap_or_else(ResultStore::default_dir),
+            Retention {
+                max_results: args.max_results,
+                max_age_days: args.max_result_age_days,
+            },
         )),
     };
 

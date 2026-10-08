@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::infrastructure::results::{NewResult, ResultSummary, StoredResult};
+use crate::infrastructure::results::{NewResult, ResultStats, ResultSummary, StoredResult};
 
 use super::AppState;
 use super::error::{ApiResult, api_error, internal};
@@ -19,6 +19,12 @@ pub struct CreateResultRequest {
     pub ai_request: Option<Value>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DeleteManyRequest {
+    #[serde(default)]
+    pub ids: Vec<String>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ResultList {
     pub results: Vec<ResultSummary>,
@@ -27,6 +33,11 @@ pub struct ResultList {
 #[derive(Debug, Serialize)]
 pub struct Deleted {
     pub deleted: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeletedCount {
+    pub deleted: usize,
 }
 
 fn not_found(id: &str) -> super::error::ApiError {
@@ -85,4 +96,21 @@ pub async fn delete(State(state): State<AppState>, Path(id): Path<String>) -> Ap
     } else {
         Err(not_found(&id))
     }
+}
+
+pub async fn delete_many(
+    State(state): State<AppState>,
+    Json(req): Json<DeleteManyRequest>,
+) -> ApiResult<DeletedCount> {
+    let deleted = state.results.delete_many(&req.ids).await;
+    Ok(Json(DeletedCount { deleted }))
+}
+
+pub async fn prune(State(state): State<AppState>) -> ApiResult<DeletedCount> {
+    let deleted = state.results.prune().await.map_err(internal)?;
+    Ok(Json(DeletedCount { deleted }))
+}
+
+pub async fn stats(State(state): State<AppState>) -> ApiResult<ResultStats> {
+    state.results.stats().await.map(Json).map_err(internal)
 }

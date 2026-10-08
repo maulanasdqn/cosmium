@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table'
 import { DataTablePagination } from './data-table-pagination'
 import { dataTableFeatures, type TDataTableColumns } from './features'
+import { SELECTION_COLUMN_ID, withSelectionColumn } from './selection-column'
 
 export type TDataTableProps<TData extends object> = {
   columns: TDataTableColumns<TData>
@@ -26,6 +27,8 @@ export type TDataTableProps<TData extends object> = {
   toolbar?: React.ReactNode
   pageSize?: number
   onRowClick?: (row: TData) => void
+  enableSelection?: boolean
+  selectionBar?: (selected: TData[], clear: () => void) => React.ReactNode
 }
 
 export function DataTable<TData extends object>({
@@ -38,21 +41,33 @@ export function DataTable<TData extends object>({
   toolbar,
   pageSize = 10,
   onRowClick,
+  enableSelection = false,
+  selectionBar,
 }: TDataTableProps<TData>) {
   const initialState = React.useMemo(() => ({ pagination: { pageIndex: 0, pageSize } }), [pageSize])
+  const tableColumns = React.useMemo(
+    () => (enableSelection ? withSelectionColumn(columns) : columns),
+    [columns, enableSelection],
+  )
   const table = useTable(
     {
       features: dataTableFeatures,
-      columns,
+      columns: tableColumns,
       data,
       getRowId,
       initialState,
       globalFilterFn: 'includesString',
+      getColumnCanGlobalFilter: (column) => column.id !== SELECTION_COLUMN_ID,
     },
-    (state) => ({ globalFilter: state.globalFilter, pagination: state.pagination }),
+    (state) => ({
+      globalFilter: state.globalFilter,
+      pagination: state.pagination,
+      rowSelection: state.rowSelection,
+    }),
   )
   const rows = table.getRowModel().rows
   const columnCount = table.getAllLeafColumns().length
+  const selected = table.getSelectedRowModel().rows.map((row) => row.original)
 
   return (
     <div data-slot="data-table" className="flex flex-col gap-3">
@@ -69,6 +84,9 @@ export function DataTable<TData extends object>({
         </InputGroup>
         {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
       </div>
+      {selectionBar && selected.length > 0
+        ? selectionBar(selected, () => table.resetRowSelection())
+        : null}
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>

@@ -1,5 +1,6 @@
 mod id;
 mod record;
+mod retention;
 
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -8,7 +9,8 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 pub use id::is_valid_id;
-pub use record::{ResultSummary, StoredResult};
+pub use record::{ResultStats, ResultSummary, StoredResult};
+pub use retention::Retention;
 
 pub struct NewResult {
     pub title: Option<String>,
@@ -19,6 +21,7 @@ pub struct NewResult {
 
 pub struct ResultStore {
     dir: PathBuf,
+    retention: Retention,
 }
 
 fn now_ms() -> u64 {
@@ -37,8 +40,8 @@ async fn restrict(dir: &std::path::Path) {
 async fn restrict(_dir: &std::path::Path) {}
 
 impl ResultStore {
-    pub const fn new(dir: PathBuf) -> Self {
-        Self { dir }
+    pub const fn new(dir: PathBuf, retention: Retention) -> Self {
+        Self { dir, retention }
     }
 
     pub fn default_dir() -> PathBuf {
@@ -74,6 +77,11 @@ impl ResultStore {
             ai: None,
         };
         self.write(&stored).await?;
+        match self.prune().await {
+            Ok(0) => {}
+            Ok(removed) => tracing::info!(removed, "pruned old results"),
+            Err(e) => tracing::warn!(error = %e, "pruning results failed"),
+        }
         Ok(stored)
     }
 
@@ -104,6 +112,47 @@ impl ResultStore {
         tokio::fs::remove_file(self.path(id, ".json")).await?;
         let _ = tokio::fs::remove_file(self.path(id, ".summary.json")).await;
         Ok(true)
+    }
+
+    pub async fn delete_many(&self, ids: &[String]) -> usize {
+        let mut removed = 0;
+        for id in ids {
+            if self.delete(id).await.unwrap_or(false) {
+                removed += 1;
+            }
+        }
+        removed
+    }
+
+    pub async fn prune(&self) -> Result<usize> {
+        let entries: Vec<(String, u64)> = self
+            .list()
+            .await?
+            .into_iter()
+            .map(|summary| (summary.id, summary.created_at_ms))
+            .collect();
+        let expired = retention::expired_ids(&entries, self.retention, now_ms());
+        Ok(self.delete_many(&expired).await)
+    }
+
+    pub async fn stats(&self) -> Result<ResultStats> {
+        let summaries = self.list().await?;
+        let mut bytes = 0_u64;
+        if let Ok(mut entries) = tokio::fs::read_dir(&self.dir).await {
+            while let Some(entry) = entries.next_entry().await? {
+                if let Ok(meta) = entry.metadata().await {
+                    bytes = bytes.saturating_add(meta.len());
+                }
+            }
+        }
+        Ok(ResultStats {
+            count: summaries.len(),
+            bytes,
+            oldest_ms: summaries.last().map(|s| s.created_at_ms),
+            newest_ms: summaries.first().map(|s| s.created_at_ms),
+            max_results: self.retention.max_results,
+            max_age_days: self.retention.max_age_days,
+        })
     }
 
     pub async fn list(&self) -> Result<Vec<ResultSummary>> {

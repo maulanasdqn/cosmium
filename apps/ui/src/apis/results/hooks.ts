@@ -5,6 +5,7 @@ import type { TCreateResultPayload, TSetResultAiPayload } from './types'
 export const resultKeys = {
   all: ['results'] as const,
   lists: () => [...resultKeys.all, 'list'] as const,
+  stats: () => [...resultKeys.all, 'stats'] as const,
   details: () => [...resultKeys.all, 'detail'] as const,
   detail: (id: string) => [...resultKeys.details(), id] as const,
 }
@@ -13,6 +14,13 @@ export function useResults() {
   return useQuery({
     queryKey: resultKeys.lists(),
     queryFn: () => resultsService.list().then((res) => res.data.results),
+  })
+}
+
+export function useResultStats() {
+  return useQuery({
+    queryKey: resultKeys.stats(),
+    queryFn: () => resultsService.stats().then((res) => res.data),
   })
 }
 
@@ -51,6 +59,22 @@ export function useDeleteResult() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => resultsService.remove(id).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: resultKeys.all }),
+  })
+}
+
+export function useDeleteResults() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: string[]) => resultsService.removeMany(ids).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: resultKeys.all }),
+  })
+}
+
+export function usePruneResults() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => resultsService.prune().then((res) => res.data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: resultKeys.all }),
   })
 }
