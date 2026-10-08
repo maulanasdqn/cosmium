@@ -72,6 +72,12 @@ fn push_hardware(f: &mut Vec<String>, p: &Profile) {
     f.push(format!("--cosmium-pointer={pointer}"));
     f.push(format!("--cosmium-webgl-vendor={}", p.gpu.vendor));
     f.push(format!("--cosmium-webgl-renderer={}", p.gpu.renderer));
+    if let Some(limits) = p.gpu.webgl_limits_switch() {
+        f.push(format!("--cosmium-webgl-limits={limits}"));
+    }
+    if let Some(excluded) = p.gpu.webgl_excluded_extensions_switch() {
+        f.push(format!("--cosmium-webgl-exclude-extensions={excluded}"));
+    }
     f.push(format!(
         "--cosmium-audio-base-latency={}",
         p.audio.base_latency

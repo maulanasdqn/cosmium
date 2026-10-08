@@ -45,6 +45,16 @@
     "renderer": "ANGLE (AMD, AMD Radeon RX 580 (radeonsi, polaris10, LLVM 17.0.6, DRM 3.57, 6.8.0-generic), OpenGL ES 3.2)",
     "vendor_id": "0x1002",
     "device_id": "0x67df",
+    "webgl_limits": {
+      "MAX_TEXTURE_SIZE": "16384",
+      "MAX_CUBE_MAP_TEXTURE_SIZE": "16384",
+      "MAX_RENDERBUFFER_SIZE": "16384",
+      "MAX_VIEWPORT_DIMS": "16384x16384",
+      "MAX_SAMPLES": "8"
+    },
+    "webgl_excluded_extensions": [
+      "WEBGL_compressed_texture_astc"
+    ],
     "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "webgpu_adapter": {
       "vendor": "amd",

@@ -45,6 +45,14 @@
     "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)",
     "vendor_id": "0x106b",
     "device_id": "0x0000",
+    "webgl_limits": {
+      "MAX_TEXTURE_SIZE": "16384",
+      "MAX_CUBE_MAP_TEXTURE_SIZE": "16384",
+      "MAX_RENDERBUFFER_SIZE": "16384",
+      "MAX_VIEWPORT_DIMS": "16384x16384",
+      "MAX_SAMPLES": "4"
+    },
+    "webgl_excluded_extensions": [],
     "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "webgpu_adapter": {
       "vendor": "apple",

@@ -45,6 +45,18 @@
     "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
     "vendor_id": "0x8086",
     "device_id": "0x3e92",
+    "webgl_limits": {
+      "MAX_TEXTURE_SIZE": "16384",
+      "MAX_CUBE_MAP_TEXTURE_SIZE": "16384",
+      "MAX_RENDERBUFFER_SIZE": "16384",
+      "MAX_VIEWPORT_DIMS": "16384x16384",
+      "MAX_SAMPLES": "8"
+    },
+    "webgl_excluded_extensions": [
+      "WEBGL_compressed_texture_astc",
+      "WEBGL_compressed_texture_etc",
+      "WEBGL_compressed_texture_etc1"
+    ],
     "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "webgpu_adapter": {
       "vendor": "intel",

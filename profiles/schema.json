@@ -110,6 +110,18 @@
         "vendor_id": { "type": "string", "description": "PCI vendor id, e.g. '0x10de' for NVIDIA" },
         "device_id": { "type": "string" },
         "webgl_version": { "type": "string", "default": "WebGL 2.0 (OpenGL ES 3.0 Chromium)" },
+        "webgl_limits": {
+          "type": "object",
+          "description": "WebGL getParameter limits reported instead of the renderer's own. Values are integers, or WIDTHxHEIGHT for two-element params such as MAX_VIEWPORT_DIMS.",
+          "additionalProperties": { "type": "string" },
+          "examples": [{ "MAX_TEXTURE_SIZE": "16384", "MAX_VIEWPORT_DIMS": "16384x16384", "MAX_SAMPLES": "8" }]
+        },
+        "webgl_excluded_extensions": {
+          "type": "array",
+          "description": "Extensions hidden from getSupportedExtensions and getExtension. Desktop D3D11 cards do not expose the mobile compressed-texture formats that software rendering advertises.",
+          "items": { "type": "string" },
+          "examples": [["WEBGL_compressed_texture_astc", "WEBGL_compressed_texture_etc"]]
+        },
         "webgpu_adapter": {
           "type": "object",
           "properties": {
