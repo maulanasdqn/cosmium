@@ -1,0 +1,164 @@
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 84c5695666..38bbd104c8 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3865,6 +3865,8 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       "cosmium-color-depth",
+       "cosmium-webgl-vendor",
+       "cosmium-webgl-renderer",
++      "cosmium-webgl-limits",
++      "cosmium-webgl-exclude-extensions",
+       "cosmium-audio-base-latency",
+       "cosmium-audio-output-latency",
+       "cosmium-audio-sample-rate",
+diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+index 42bf83c59d..8d21076433 100644
+--- a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
++++ b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+@@ -32,6 +32,11 @@
+ 
+ #include "base/command_line.h"
+ #include "base/bit_cast.h"
++#include "base/containers/flat_map.h"
++#include "base/containers/flat_set.h"
++#include "base/no_destructor.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/string_split.h"
+ #include "base/byte_size.h"
+ #include "base/compiler_specific.h"
+ #include "base/feature_list.h"
+@@ -206,6 +211,99 @@ unsigned WebGLRenderingContextBase::max_active_webgl_contexts_on_worker_ = 0;
+ 
+ namespace {
+ 
++struct CosmiumGlLimit {
++  GLint first;
++  GLint second;
++  bool has_second;
++};
++
++const base::flat_map<std::string, GLenum>& CosmiumLimitNames() {
++  static const base::NoDestructor<base::flat_map<std::string, GLenum>> names({
++      {"MAX_TEXTURE_SIZE", GL_MAX_TEXTURE_SIZE},
++      {"MAX_CUBE_MAP_TEXTURE_SIZE", GL_MAX_CUBE_MAP_TEXTURE_SIZE},
++      {"MAX_RENDERBUFFER_SIZE", GL_MAX_RENDERBUFFER_SIZE},
++      {"MAX_VIEWPORT_DIMS", GL_MAX_VIEWPORT_DIMS},
++      {"MAX_3D_TEXTURE_SIZE", GL_MAX_3D_TEXTURE_SIZE},
++      {"MAX_ARRAY_TEXTURE_LAYERS", GL_MAX_ARRAY_TEXTURE_LAYERS},
++      {"MAX_SAMPLES", GL_MAX_SAMPLES},
++      {"MAX_VERTEX_UNIFORM_VECTORS", GL_MAX_VERTEX_UNIFORM_VECTORS},
++      {"MAX_FRAGMENT_UNIFORM_VECTORS", GL_MAX_FRAGMENT_UNIFORM_VECTORS},
++      {"MAX_VARYING_VECTORS", GL_MAX_VARYING_VECTORS},
++      {"MAX_TEXTURE_IMAGE_UNITS", GL_MAX_TEXTURE_IMAGE_UNITS},
++      {"MAX_COMBINED_TEXTURE_IMAGE_UNITS", GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS},
++      {"MAX_DRAW_BUFFERS", GL_MAX_DRAW_BUFFERS},
++      {"MAX_COLOR_ATTACHMENTS", GL_MAX_COLOR_ATTACHMENTS},
++  });
++  return *names;
++}
++
++base::flat_map<GLenum, CosmiumGlLimit> CosmiumParseGlLimits() {
++  base::flat_map<GLenum, CosmiumGlLimit> parsed;
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (!cosmium_cmd->HasSwitch("cosmium-webgl-limits")) {
++    return parsed;
++  }
++  const std::string cosmium_raw =
++      cosmium_cmd->GetSwitchValueASCII("cosmium-webgl-limits");
++  for (const auto& cosmium_entry :
++       base::SplitString(cosmium_raw, ",", base::TRIM_WHITESPACE,
++                         base::SPLIT_WANT_NONEMPTY)) {
++    const std::vector<std::string> cosmium_pair = base::SplitString(
++        cosmium_entry, "=", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++    if (cosmium_pair.size() != 2) {
++      continue;
++    }
++    const auto cosmium_name = CosmiumLimitNames().find(cosmium_pair[0]);
++    if (cosmium_name == CosmiumLimitNames().end()) {
++      continue;
++    }
++    const std::vector<std::string> cosmium_dims = base::SplitString(
++        cosmium_pair[1], "x", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++    if (cosmium_dims.empty() || cosmium_dims.size() > 2) {
++      continue;
++    }
++    int cosmium_first = 0;
++    if (!base::StringToInt(cosmium_dims[0], &cosmium_first) ||
++        cosmium_first <= 0) {
++      continue;
++    }
++    int cosmium_second = 0;
++    const bool cosmium_has_second = cosmium_dims.size() == 2;
++    if (cosmium_has_second &&
++        (!base::StringToInt(cosmium_dims[1], &cosmium_second) ||
++         cosmium_second <= 0)) {
++      continue;
++    }
++    parsed[cosmium_name->second] = CosmiumGlLimit{
++        cosmium_first, cosmium_second, cosmium_has_second};
++  }
++  return parsed;
++}
++
++const base::flat_map<GLenum, CosmiumGlLimit>& CosmiumGlLimits() {
++  static const base::NoDestructor<base::flat_map<GLenum, CosmiumGlLimit>>
++      limits(CosmiumParseGlLimits());
++  return *limits;
++}
++
++base::flat_set<std::string> CosmiumParseExcludedExtensions() {
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (!cosmium_cmd->HasSwitch("cosmium-webgl-exclude-extensions")) {
++    return {};
++  }
++  const std::vector<std::string> cosmium_names = base::SplitString(
++      cosmium_cmd->GetSwitchValueASCII("cosmium-webgl-exclude-extensions"), ",",
++      base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++  return base::flat_set<std::string>(cosmium_names.begin(),
++                                     cosmium_names.end());
++}
++
++const base::flat_set<std::string>& CosmiumExcludedExtensions() {
++  static const base::NoDestructor<base::flat_set<std::string>> excluded(
++      CosmiumParseExcludedExtensions());
++  return *excluded;
++}
++
+ enum class WebGLANGLEImplementation {
+   // These values are persisted to logs. Entries should not be renumbered and
+   // numeric values should never be reused.
+@@ -1388,6 +1486,10 @@ WebGLRenderingContextBase::WebGLRenderingContextBase(
+     disabled_extensions_.insert(entry);
+   }
+ 
++  for (const auto& cosmium_excluded : CosmiumExcludedExtensions()) {
++    disabled_extensions_.insert(String::FromUtf8(cosmium_excluded));
++  }
++
+ #define ADD_VALUES_TO_SET(set, values)             \
+   for (size_t i = 0; i < std::size(values); ++i) { \
+     set.insert(values[i]);                         \
+@@ -8013,6 +8115,10 @@ ScriptValue WebGLRenderingContextBase::GetIntParameter(
+     ScriptState* script_state,
+     GLenum pname) {
+   GLint value = 0;
++  const auto cosmium_limit = CosmiumGlLimits().find(pname);
++  if (cosmium_limit != CosmiumGlLimits().end()) {
++    return WebGLAny(script_state, cosmium_limit->second.first);
++  }
+   if (!isContextLost()) {
+     ContextGL()->GetIntegerv(pname, &value);
+     switch (pname) {
+@@ -8091,6 +8197,12 @@ ScriptValue WebGLRenderingContextBase::GetWebGLIntArrayParameter(
+     default:
+       NOTIMPLEMENTED();
+   }
++  const auto cosmium_limit = CosmiumGlLimits().find(pname);
++  if (cosmium_limit != CosmiumGlLimits().end() && length == 2) {
++    value[0] = cosmium_limit->second.first;
++    value[1] = cosmium_limit->second.has_second ? cosmium_limit->second.second
++                                                : cosmium_limit->second.first;
++  }
+   return WebGLAny(script_state,
+                   DOMInt32Array::Create(base::span(value).first(length)));
+ }

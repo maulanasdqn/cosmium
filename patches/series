@@ -29,3 +29,4 @@
 0029-spoof-audio-sample-rate.patch
 0030-spoof-pointer-hover-capabilities.patch
 0031-spoof-speech-synthesis-voices.patch
+0032-spoof-webgl-limits-and-extensions.patch
