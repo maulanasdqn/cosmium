@@ -39,6 +39,15 @@ impl ChromiumScraper {
         }
     }
 
+    pub async fn close(mut self) {
+        if let Err(e) = self.browser.close().await {
+            tracing::debug!(error = %e, "browser close request failed");
+        }
+        if let Err(e) = self.browser.wait().await {
+            tracing::debug!(error = %e, "waiting for browser exit failed");
+        }
+    }
+
     pub(crate) async fn new_stealth_page(&self) -> ScrapeResult<Page> {
         let page = self
             .browser

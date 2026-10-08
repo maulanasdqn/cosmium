@@ -140,10 +140,9 @@ impl ScrapePage {
             wait_for_api: input.wait_for_api,
         };
 
-        let page = scraper
-            .scrape(request)
-            .await
-            .map_err(|e| anyhow::anyhow!("scrape failed: {e}"))?;
+        let outcome = scraper.scrape(request).await;
+        scraper.close().await;
+        let page = outcome.map_err(|e| anyhow::anyhow!("scrape failed: {e}"))?;
 
         let blocked = crate::domain::scraping::detection::is_blocked(
             page.http_status,

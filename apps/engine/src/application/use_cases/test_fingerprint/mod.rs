@@ -79,6 +79,7 @@ impl TestFingerprint {
         );
         let url = format!("file://{}", html_path.display());
         let raw = scraper.evaluate_on_url(&url, 0, READ_RESULTS).await;
+        scraper.close().await;
         let _ = self.session.shutdown().await;
         let dom = raw.context("evaluating probes")?;
         let results = parse::extract(&dom, &probes)?;

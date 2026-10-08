@@ -89,6 +89,7 @@ impl ValidateStealth {
             results.push(r);
         }
 
+        scraper.close().await;
         let _ = self.session.shutdown().await;
         Ok(ValidateStealthOutput { results })
     }
