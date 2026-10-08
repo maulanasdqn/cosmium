@@ -15,7 +15,7 @@ import { useSaveProfile, type TProfileWithDiagnostics } from '@/apis/profiles'
 import { toErrorMessage } from '@/libs/http'
 import { DiagnosticsSummary } from './diagnostics-summary'
 import { DiagnosticsTable } from './diagnostics-table'
-import { ProfileJson } from './profile-json'
+import { ProfileJsonView } from './profile-json-view'
 
 export function RepairDialog({
   name,
@@ -57,7 +57,7 @@ export function RepairDialog({
           <Stack gap="md">
             <DiagnosticsSummary diagnostics={result.diagnostics} />
             <DiagnosticsTable diagnostics={result.diagnostics} />
-            <ProfileJson profile={result.profile} maxHeight="max-h-72" />
+            <ProfileJsonView profile={result.profile} maxHeight="max-h-72" />
           </Stack>
         ) : null}
         <DialogFooter>

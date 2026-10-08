@@ -17,7 +17,7 @@ import { useSaveProfile, type TProfileWithDiagnostics } from '@/apis/profiles'
 import { toErrorMessage } from '@/libs/http'
 import { DiagnosticsSummary } from './diagnostics-summary'
 import { DiagnosticsTable } from './diagnostics-table'
-import { ProfileJson } from './profile-json'
+import { ProfileJsonView } from './profile-json-view'
 
 export function GeneratedProfilePreview({
   name,
@@ -58,7 +58,7 @@ export function GeneratedProfilePreview({
         <Stack gap="md">
           <DiagnosticsSummary diagnostics={result.diagnostics} />
           <DiagnosticsTable diagnostics={result.diagnostics} />
-          <ProfileJson profile={result.profile} maxHeight="max-h-96" />
+          <ProfileJsonView profile={result.profile} maxHeight="max-h-96" />
         </Stack>
       </CardContent>
     </Card>
