@@ -30,3 +30,4 @@
 0030-spoof-pointer-hover-capabilities.patch
 0031-spoof-speech-synthesis-voices.patch
 0032-spoof-webgl-limits-and-extensions.patch
+0033-cosmium-tls-fingerprint-override.patch

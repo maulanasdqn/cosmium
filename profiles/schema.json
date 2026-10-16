@@ -222,6 +222,53 @@
         }
       }
     },
+    "tls": {
+      "type": "object",
+      "description": "TLS fingerprint overrides. Controls cipher suites, signature algorithms, named groups, ALPN, and extension behaviour so the ClientHello matches a target JA3/JA4 hash. Omit the section or individual fields to keep Chromium defaults.",
+      "additionalProperties": false,
+      "properties": {
+        "ciphers": {
+          "type": "string",
+          "description": "OpenSSL-style cipher string for TLS 1.2 suites, e.g. 'ALL:!aPSK:!ECDSA+SHA1:!3DES'. Replaces the default cipher list."
+        },
+        "sigalgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Signature algorithms advertised in the ClientHello, in preference order.",
+          "examples": [["ecdsa_secp256r1_sha256", "rsa_pss_rsae_sha256", "rsa_pkcs1_sha256"]]
+        },
+        "curves": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Supported groups / named curves for key exchange, in preference order.",
+          "examples": [["X25519", "P-256", "P-384"]]
+        },
+        "alpn": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ALPN protocol list, in preference order.",
+          "examples": [["h2", "http/1.1"]]
+        },
+        "min_version": {
+          "type": "string",
+          "enum": ["tls1.2", "tls1.3"],
+          "description": "Minimum TLS protocol version."
+        },
+        "max_version": {
+          "type": "string",
+          "enum": ["tls1.2", "tls1.3"],
+          "description": "Maximum TLS protocol version."
+        },
+        "permute_extensions": {
+          "type": "boolean",
+          "description": "Randomise TLS extension order in each ClientHello. Chrome 110+ enables this by default."
+        },
+        "grease": {
+          "type": "boolean",
+          "description": "Insert GREASE values in cipher suites, extensions, and named groups. Chrome enables this by default."
+        }
+      }
+    },
     "browser_state": {
       "type": "object",
       "description": "Fake browser usage artifacts. Bot detectors check history.length, download count, and installed extensions to distinguish fresh automated browsers from real user browsers.",

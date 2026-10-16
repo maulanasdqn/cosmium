@@ -1,6 +1,6 @@
 use crate::domain::profile::Profile;
 
-use super::switches::primary_lang;
+use super::user_agent::primary_lang;
 
 pub fn profile_to_env(p: &Profile) -> Vec<(String, String)> {
     let locale_utf8 = bcp47_to_posix_utf8(primary_lang(&p.locale.languages));

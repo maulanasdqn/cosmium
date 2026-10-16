@@ -113,6 +113,25 @@
   "canvas_noise": {
     "seed": "e6f70819a2b3c4d5e6f70819a2b3c4d5"
   },
+  "tls": {
+    "ciphers": "ALL:!aPSK:!ECDSA+SHA1:!3DES",
+    "sigalgs": [
+      "ecdsa_secp256r1_sha256",
+      "rsa_pss_rsae_sha256",
+      "rsa_pkcs1_sha256",
+      "ecdsa_secp384r1_sha384",
+      "rsa_pss_rsae_sha384",
+      "rsa_pkcs1_sha384",
+      "rsa_pss_rsae_sha512",
+      "rsa_pkcs1_sha512"
+    ],
+    "curves": ["X25519", "P-256", "P-384"],
+    "alpn": ["h2", "http/1.1"],
+    "min_version": "tls1.2",
+    "max_version": "tls1.3",
+    "permute_extensions": true,
+    "grease": true
+  },
   "browser_state": {
     "history_length": 10,
     "download_count": 7,

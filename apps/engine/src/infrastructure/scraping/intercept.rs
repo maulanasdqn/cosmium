@@ -34,9 +34,11 @@ pub struct NetworkInterceptor {
 
 impl NetworkInterceptor {
     pub async fn start(page: &Page) -> Option<Self> {
-        let patterns = vec![RequestPattern::builder()
-            .request_stage(RequestStage::Request)
-            .build()];
+        let patterns = vec![
+            RequestPattern::builder()
+                .request_stage(RequestStage::Request)
+                .build(),
+        ];
 
         if let Err(e) = page
             .execute(EnableParams::builder().patterns(patterns).build())
@@ -106,8 +108,12 @@ mod tests {
 
     #[test]
     fn blocks_tracking() {
-        assert!(should_block("https://www.google-analytics.com/analytics.js"));
-        assert!(should_block("https://connect.facebook.net/en_US/fbevents.js"));
+        assert!(should_block(
+            "https://www.google-analytics.com/analytics.js"
+        ));
+        assert!(should_block(
+            "https://connect.facebook.net/en_US/fbevents.js"
+        ));
         assert!(should_block("https://fonts.gstatic.com/s/inter.woff2"));
     }
 

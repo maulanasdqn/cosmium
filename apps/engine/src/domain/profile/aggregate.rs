@@ -10,6 +10,7 @@ use super::identity::Identity;
 use super::locale::Locale;
 use super::media_devices::MediaDevice;
 use super::screen::Screen;
+use super::tls::Tls;
 use super::voices::Voice;
 use super::webrtc::WebRtc;
 
@@ -34,6 +35,9 @@ pub struct Profile {
 
     #[serde(default)]
     pub browser_state: BrowserState,
+
+    #[serde(default)]
+    pub tls: Option<Tls>,
 
     #[serde(default)]
     pub strip_automation_tells: bool,

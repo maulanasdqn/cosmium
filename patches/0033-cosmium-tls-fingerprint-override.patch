@@ -1,0 +1,124 @@
+diff --git a/content/browser/service_host/utility_process_host.cc b/content/browser/service_host/utility_process_host.cc
+index 0000000001..0000000002 100644
+--- a/content/browser/service_host/utility_process_host.cc
++++ b/content/browser/service_host/utility_process_host.cc
+@@ -392,6 +392,14 @@
+ #if BUILDFLAG(IS_OZONE)
+         switches::kRenderNodeOverride,
+ #endif
++        "cosmium-tls-ciphers",
++        "cosmium-tls-sigalgs",
++        "cosmium-tls-curves",
++        "cosmium-tls-alpn",
++        "cosmium-tls-min-version",
++        "cosmium-tls-max-version",
++        "cosmium-tls-permute-extensions",
++        "cosmium-tls-grease",
+     };
+     cmd_line->CopySwitchesFrom(browser_command_line, kSwitchNames);
+
+diff --git a/net/socket/ssl_client_socket_impl.cc b/net/socket/ssl_client_socket_impl.cc
+index 0000000003..0000000004 100644
+--- a/net/socket/ssl_client_socket_impl.cc
++++ b/net/socket/ssl_client_socket_impl.cc
+@@ -70,6 +70,8 @@
+ #include "third_party/boringssl/src/include/openssl/evp.h"
+ #include "third_party/boringssl/src/include/openssl/mem.h"
+ #include "third_party/boringssl/src/include/openssl/ssl.h"
++#include "base/command_line.h"
++#include "base/strings/string_split.h"
+
+ namespace net {
+
+@@ -203,6 +205,13 @@
+     SSL_CTX_set_timeout(ssl_ctx_.get(), 1 * 60 * 60 /* one hour */);
+
+     SSL_CTX_set_grease_enabled(ssl_ctx_.get(), 1);
++    {
++      const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++      if (cosmium_cmd->HasSwitch("cosmium-tls-grease")) {
++        SSL_CTX_set_grease_enabled(
++            ssl_ctx_.get(),
++            cosmium_cmd->GetSwitchValueASCII("cosmium-tls-grease") != "0");
++      }
++    }
+
+     // Deduplicate all certificates minted from the SSL_CTX in memory.
+     SSL_CTX_set0_buffer_pool(ssl_ctx_.get(), x509_util::GetBufferPool());
+@@ -820,6 +829,49 @@
+     }
+   }
+
+-  SSL_set_permute_extensions(ssl_.get(), 1);
++  SSL_set_permute_extensions(ssl_.get(), 1);
++
++  {
++    const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-ciphers")) {
++      std::string cosmium_cipher_str =
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-ciphers");
++      if (!SSL_set_strict_cipher_list(ssl_.get(),
++                                      cosmium_cipher_str.c_str())) {
++        return ERR_UNEXPECTED;
++      }
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-sigalgs")) {
++      std::string cosmium_sigalgs =
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-sigalgs");
++      std::replace(cosmium_sigalgs.begin(), cosmium_sigalgs.end(), ',', ':');
++      if (!SSL_set1_sigalgs_list(ssl_.get(), cosmium_sigalgs.c_str())) {
++        return ERR_UNEXPECTED;
++      }
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-curves")) {
++      std::string cosmium_groups =
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-curves");
++      std::replace(cosmium_groups.begin(), cosmium_groups.end(), ',', ':');
++      if (!SSL_set1_groups_list(ssl_.get(), cosmium_groups.c_str())) {
++        return ERR_UNEXPECTED;
++      }
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-alpn")) {
++      std::vector<std::string> protos = base::SplitString(
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-alpn"), ",",
++          base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++      std::vector<uint8_t> wire;
++      for (const auto& p : protos) {
++        wire.push_back(static_cast<uint8_t>(p.size()));
++        wire.insert(wire.end(), p.begin(), p.end());
++      }
++      SSL_set_alpn_protos(ssl_.get(), wire.data(), wire.size());
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-min-version")) {
++      SSL_set_min_proto_version(
++          ssl_.get(),
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-min-version") ==
++                  "tls1.3"
++              ? TLS1_3_VERSION
++              : TLS1_2_VERSION);
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-max-version")) {
++      SSL_set_max_proto_version(
++          ssl_.get(),
++          cosmium_cmd->GetSwitchValueASCII("cosmium-tls-max-version") ==
++                  "tls1.2"
++              ? TLS1_2_VERSION
++              : TLS1_3_VERSION);
++    }
++
++    if (cosmium_cmd->HasSwitch("cosmium-tls-permute-extensions")) {
++      SSL_set_permute_extensions(
++          ssl_.get(),
++          cosmium_cmd->GetSwitchValueASCII(
++              "cosmium-tls-permute-extensions") != "0");
++    }
++  }
+
+   return OK;
+ }
