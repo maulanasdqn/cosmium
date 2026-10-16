@@ -9,6 +9,7 @@ use crate::domain::scraping::request::ScrapeRequest;
 use super::super::cookies;
 use super::super::datadome;
 use super::super::fetch;
+use super::super::intercept::NetworkInterceptor;
 use super::super::network::ApiCapture;
 use super::super::warmup;
 use super::super::workflow;
@@ -19,6 +20,8 @@ const API_CAPTURE_TIMEOUT_SECS: u64 = 30;
 impl ChromiumScraper {
     pub(crate) async fn drive(&self, request: &ScrapeRequest) -> ScrapeResult<ScrapedPage> {
         let page = self.new_stealth_page().await?;
+
+        let _interceptor = NetworkInterceptor::start(&page).await;
 
         let session_dir = crate::domain::runtime::session_cache_dir();
         let host = datadome::url_host(&request.url);

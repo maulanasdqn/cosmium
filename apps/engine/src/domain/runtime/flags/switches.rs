@@ -172,6 +172,10 @@ pub fn profile_to_flags(p: &Profile) -> Vec<String> {
     f.push("--disable-blink-features=AutomationControlled".into());
     f.push("--disable-infobars".into());
     f.extend(webrtc_flags(p.webrtc.ip_handling_policy));
+    if cfg!(target_os = "linux") {
+        f.push("--no-sandbox".into());
+        f.push("--disable-dev-shm-usage".into());
+    }
     f
 }
 
