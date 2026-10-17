@@ -17,8 +17,17 @@ use super::dto::{ErrorResponse, ScrapeRequest, ScrapeResponse};
 
 pub async fn scrape(
     State(state): State<AppState>,
-    Json(req): Json<ScrapeRequest>,
+    Json(mut req): Json<ScrapeRequest>,
 ) -> Result<Json<ScrapeResponse>, (StatusCode, Json<ErrorResponse>)> {
+    if req.url.is_empty() || req.url.len() > 4096 {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "invalid url".into() })));
+    }
+    if !req.url.starts_with("http://") && !req.url.starts_with("https://") {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "url must use http or https".into() })));
+    }
+    req.wait_ms = req.wait_ms.min(60_000);
+    req.retries = req.retries.min(5);
+
     let started = Instant::now();
     let workflow = build_workflow(&req);
     let pool = build_pool(&req);

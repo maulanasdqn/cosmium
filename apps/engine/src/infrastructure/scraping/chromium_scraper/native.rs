@@ -11,6 +11,14 @@ use super::super::stealth::StealthConfig;
 
 const LOCAL_HOSTS: [&str; 4] = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
 const LOCAL_HOST_PATTERNS: [&str; 4] = ["localhost", "127.0.0.1", "0.0.0.0", r"\[\:\:1\]"];
+
+const PRIVATE_RANGE_PATTERNS: [&str; 7] = [
+    "10.*.*.*",
+    "172.16.*.*", "172.17.*.*", "172.18.*.*",
+    "192.168.*.*",
+    "169.254.*.*",
+    "100.64.*.*",
+];
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Serialize)]
@@ -39,18 +47,33 @@ impl Command for SetBlockedUrls {
 
 pub(super) async fn block_local_network(page: &Page) {
     let _ = page.execute(EnableParams::default()).await;
-    let cmd = SetBlockedUrls {
-        urls: LOCAL_HOSTS.iter().map(|h| format!("*://{h}*")).collect(),
-        url_patterns: LOCAL_HOST_PATTERNS
-            .iter()
-            .flat_map(|h| {
-                [format!("*://{h}:*/*"), format!("*://{h}/*")].map(|url_pattern| BlockPattern {
-                    url_pattern,
-                    block: true,
-                })
+
+    let mut urls: Vec<String> = LOCAL_HOSTS.iter().map(|h| format!("*://{h}*")).collect();
+    for pattern in &PRIVATE_RANGE_PATTERNS {
+        urls.push(format!("*://{pattern}*"));
+    }
+
+    let mut url_patterns: Vec<BlockPattern> = LOCAL_HOST_PATTERNS
+        .iter()
+        .flat_map(|h| {
+            [format!("*://{h}:*/*"), format!("*://{h}/*")].map(|url_pattern| BlockPattern {
+                url_pattern,
+                block: true,
             })
-            .collect(),
-    };
+        })
+        .collect();
+    for pattern in &PRIVATE_RANGE_PATTERNS {
+        url_patterns.push(BlockPattern {
+            url_pattern: format!("*://{pattern}:*/*"),
+            block: true,
+        });
+        url_patterns.push(BlockPattern {
+            url_pattern: format!("*://{pattern}/*"),
+            block: true,
+        });
+    }
+
+    let cmd = SetBlockedUrls { urls, url_patterns };
     if let Err(e) = page.execute(cmd).await {
         tracing::warn!(error = %e, "local network blocking unavailable");
     }
