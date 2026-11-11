@@ -9,7 +9,6 @@ use crate::application::use_cases::scrape_page::{ScrapePage, ScrapePageInput, Sc
 use crate::domain::scraping::proxy_pool::{ProxyPoolConfig, RotationStrategy};
 use crate::domain::scraping::request::ProxyConfig;
 use crate::domain::scraping::workflow::WorkflowStep;
-use crate::infrastructure::runtime::CdpSessionRuntime;
 use crate::infrastructure::scraping::ProxyPool;
 
 use super::AppState;
@@ -20,10 +19,20 @@ pub async fn scrape(
     Json(mut req): Json<ScrapeRequest>,
 ) -> Result<Json<ScrapeResponse>, (StatusCode, Json<ErrorResponse>)> {
     if req.url.is_empty() || req.url.len() > 4096 {
-        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "invalid url".into() })));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "invalid url".into(),
+            }),
+        ));
     }
     if !req.url.starts_with("http://") && !req.url.starts_with("https://") {
-        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "url must use http or https".into() })));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "url must use http or https".into(),
+            }),
+        ));
     }
     req.wait_ms = req.wait_ms.min(60_000);
     req.retries = req.retries.min(5);
@@ -38,55 +47,31 @@ pub async fn scrape(
     };
     let url = req.url.clone();
     let include_html = req.include_html;
-    let max_attempts = 1 + req.retries;
-
-    let mut result = None;
-    for attempt in 1..=max_attempts {
-        if attempt > 1 {
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        }
-
-        let session = Arc::new(CdpSessionRuntime::new());
-        let uc = ScrapePage::new(Arc::clone(&state.profile_repo), session);
-
-        let input = ScrapePageInput {
-            profile: std::path::PathBuf::from(&req.profile),
-            binary: state.binary.clone(),
-            url: req.url.clone(),
-            wait_ms: req.wait_ms,
-            screenshot: req.screenshot,
-            workflow: workflow.clone(),
-            proxy: single_proxy.clone(),
-            proxy_pool: pool.clone(),
-            headful: req.headful,
-            wait_for_api: req.wait_for_api.clone(),
-            geo_sync: req.geo_sync,
-        };
-
-        let r = uc.execute(input).await.map_err(|e| {
+    let input = ScrapePageInput {
+        profile: std::path::PathBuf::from(&req.profile),
+        binary: state.binary.clone(),
+        url: req.url.clone(),
+        wait_ms: req.wait_ms,
+        screenshot: req.screenshot,
+        workflow,
+        proxy: single_proxy,
+        proxy_pool: pool,
+        headful: req.headful,
+        wait_for_api: req.wait_for_api.clone(),
+        geo_sync: req.geo_sync,
+    };
+    let uc = ScrapePage::new(Arc::clone(&state.profile_repo), Arc::clone(&state.browsers));
+    let (r, attempts) = uc
+        .execute_with_retries(&input, req.retries)
+        .await
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: e.to_string(),
+                    error: format!("{e:#}"),
                 }),
             )
         })?;
-
-        if !r.blocked || attempt == max_attempts {
-            result = Some((r, attempt));
-            break;
-        }
-        result = Some((r, attempt));
-    }
-
-    let Some((r, attempts)) = result else {
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: "no scrape attempt was made".into(),
-            }),
-        ));
-    };
     Ok(Json(build_response(
         url,
         include_html,

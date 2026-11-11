@@ -48,7 +48,7 @@ CORS is permissive on every route.
 | `proxy_rotation` | string | `round_robin` | `round_robin` or `random` |
 | `include_html` | bool | `false` | inline the full HTML |
 | `wait_for_api` | string | null | wait for a matching response URL |
-| `retries` | number | `0` | extra attempts when blocked |
+| `retries` | number | `0` | extra attempts when blocked or failed, with backoff; capped at `5` |
 
 ```json
 {

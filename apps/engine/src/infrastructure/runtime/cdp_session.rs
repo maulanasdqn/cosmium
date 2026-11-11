@@ -1,8 +1,10 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chromiumoxide::browser::{Browser, BrowserConfig};
+use chromiumoxide::handler::Handler;
 use futures_util::StreamExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -10,6 +12,9 @@ use tokio::task::JoinHandle;
 use crate::domain::runtime::browser::LaunchSpec;
 use crate::domain::runtime::error::{RuntimeError, RuntimeResult};
 use crate::domain::scraping::port::{BrowserSession, CdpEndpoint};
+
+const HANDLER_ERROR_WINDOW: Duration = Duration::from_secs(1);
+const HANDLER_ERROR_BURST: u32 = 16;
 
 pub struct CdpSessionRuntime {
     state: Arc<Mutex<Option<SessionState>>>,
@@ -70,7 +75,7 @@ impl BrowserSession for CdpSessionRuntime {
             source: std::io::Error::other(e),
         })?;
 
-        let (browser, mut handler) =
+        let (browser, handler) =
             Browser::launch(config)
                 .await
                 .map_err(|e| RuntimeError::Spawn {
@@ -78,13 +83,7 @@ impl BrowserSession for CdpSessionRuntime {
                     source: std::io::Error::other(e.to_string()),
                 })?;
 
-        let handler_task = tokio::spawn(async move {
-            while let Some(event) = handler.next().await {
-                if event.is_err() {
-                    break;
-                }
-            }
-        });
+        let handler_task = tokio::spawn(pump(handler));
 
         *self.state.lock().await = Some(SessionState {
             _handler: handler_task,
@@ -97,5 +96,25 @@ impl BrowserSession for CdpSessionRuntime {
         let state = self.state.lock().await.take();
         drop(state);
         Ok(())
+    }
+}
+
+async fn pump(mut handler: Handler) {
+    let mut window_start = Instant::now();
+    let mut burst = 0_u32;
+    while let Some(event) = handler.next().await {
+        let Err(e) = event else {
+            continue;
+        };
+        if window_start.elapsed() > HANDLER_ERROR_WINDOW {
+            window_start = Instant::now();
+            burst = 0;
+        }
+        burst = burst.saturating_add(1);
+        tracing::warn!(error = %e, burst, "CDP handler error");
+        if burst >= HANDLER_ERROR_BURST {
+            tracing::error!("CDP connection keeps failing, dropping it");
+            break;
+        }
     }
 }

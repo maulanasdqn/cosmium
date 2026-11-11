@@ -34,6 +34,10 @@ subcommand is missing, [build from source](/start/installation/#from-source).
 | `--binary` | `COSMIUM_BINARY` | resolved from env | Chromium binary to launch |
 | `--api-key` | `COSMIUM_API_KEY` | `dev-key` | value required in `x-api-key` |
 | `--deepseek-api-key` | `DEEPSEEK_API_KEY` | unset | enables AI profile generation |
+| `--max-browsers` | `COSMIUM_MAX_BROWSERS` | `4` | warm browsers kept at once |
+| `--browser-max-pages` | `COSMIUM_BROWSER_MAX_PAGES` | `50` | scrapes before a browser is recycled |
+| `--browser-max-age-secs` | `COSMIUM_BROWSER_MAX_AGE_SECS` | `1800` | lifetime before a browser is recycled |
+| `--browser-idle-secs` | `COSMIUM_BROWSER_IDLE_SECS` | `300` | idle time before a browser is closed |
 
 ## Authentication
 
@@ -71,6 +75,40 @@ response rather than written to disk, and `include_html` controls whether the
 full HTML is inlined (it is omitted by default, since it dominates the payload).
 
 Full field list in the [HTTP API reference](/reference/http-api/).
+
+## Browser pool
+
+The server keeps Chromium running between requests instead of launching it for
+every scrape. Each profile and proxy pair gets one warm browser, and every
+request opens a fresh tab in it, so only the first request for a pair pays the
+launch cost. Concurrent requests for the same pair share the browser as
+separate tabs.
+
+Each browser stores its state in a data directory under the cache dir. Direct
+scrapes use the profile's directory, and every proxy gets a directory of its
+own (named by a hash of the proxy URL), so cookies earned through one exit IP
+are never replayed through another.
+
+A browser is closed and relaunched on the next request when any of these hold:
+
+- it has served `--browser-max-pages` scrapes or is older than
+  `--browser-max-age-secs`
+- it crashed, stopped answering, or a scrape on it failed
+- the profile file or the request's `headful` or `geo_sync` changed since it
+  launched
+
+Browsers idle for `--browser-idle-secs` are closed in the background. When a
+new pair needs a browser and `--max-browsers` are already open, the one idle
+longest is closed first. If every browser is busy the cap is exceeded rather
+than making the request wait.
+
+Retirement waits for in-flight scrapes on that browser to finish. On `SIGINT` or
+`SIGTERM` the server stops accepting requests, lets running ones complete, and
+closes every pooled browser before it exits.
+
+Retries back off between attempts (1s, 2s, 4s, then 8s, plus up to 0.5s of
+jitter) and cover failed attempts as well as blocked ones. A missing binary or
+an unreadable profile fails immediately without retrying.
 
 ## Profile management
 

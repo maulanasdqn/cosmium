@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Args, Subcommand, ValueEnum};
 
 use crate::application::use_cases::scrape_page::{ScrapePage, ScrapePageInput};
 use crate::domain::scraping::request::ProxyConfig;
+use crate::infrastructure::scraping::{BrowserPool, PoolLimits};
 use crate::presentation::cli::state::CliState;
 
 use super::scrape_output::{build_proxy_pool, build_workflow, print_result, save_artifacts};
@@ -94,49 +95,29 @@ async fn execute_page(args: ScrapePageArgs, state: &CliState) -> Result<()> {
         tracing::info!(count = p.len(), "proxy pool initialized");
     }
 
-    let workflow = build_workflow(&args.extract, args.script.as_deref());
-    let max_attempts = 1 + args.retries;
-    let mut result = None;
+    let browsers = BrowserPool::start(PoolLimits {
+        max_browsers: 1,
+        ..PoolLimits::default()
+    });
+    let uc = ScrapePage::new(Arc::clone(&state.profile_repo), Arc::clone(&browsers));
+    let input = ScrapePageInput {
+        profile: args.profile.clone(),
+        binary: args.binary.clone().unwrap_or_else(|| state.binary.clone()),
+        url: args.url.clone(),
+        wait_ms: args.wait_ms,
+        screenshot: args.screenshot,
+        workflow: build_workflow(&args.extract, args.script.as_deref()),
+        proxy: single_proxy,
+        proxy_pool: pool.clone(),
+        headful: args.headful,
+        wait_for_api: args.wait_for_api.clone(),
+        geo_sync: args.geo_sync,
+    };
+    let outcome = uc.execute_with_retries(&input, args.retries).await;
+    browsers.shutdown().await;
+    let (result, attempts) = outcome?;
+    tracing::info!(attempts, blocked = result.blocked, "scrape finished");
 
-    for attempt in 1..=max_attempts {
-        if attempt > 1 {
-            tracing::info!(attempt, max_attempts, "retrying scrape");
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        }
-
-        let session = Arc::new(crate::infrastructure::runtime::CdpSessionRuntime::new());
-        let uc = ScrapePage::new(Arc::clone(&state.profile_repo), session);
-
-        let input = ScrapePageInput {
-            profile: args.profile.clone(),
-            binary: args.binary.clone().unwrap_or_else(|| state.binary.clone()),
-            url: args.url.clone(),
-            wait_ms: args.wait_ms,
-            screenshot: args.screenshot,
-            workflow: workflow.clone(),
-            proxy: single_proxy.clone(),
-            proxy_pool: pool.clone(),
-            headful: args.headful,
-            wait_for_api: args.wait_for_api.clone(),
-            geo_sync: args.geo_sync,
-        };
-
-        let r = uc.execute(input).await?;
-
-        if let Some(ref url) = r.proxy_used {
-            tracing::info!(proxy = %url, blocked = r.blocked, "attempt finished");
-        }
-
-        if !r.blocked || attempt == max_attempts {
-            result = Some(r);
-            break;
-        }
-
-        tracing::warn!("page blocked, rotating proxy");
-        result = Some(r);
-    }
-
-    let result = result.context("no scrape attempt was made")?;
     print_result(&args.format, &result, args.output_dir.as_deref())?;
     save_artifacts(args.output_dir.as_deref(), &result)?;
 

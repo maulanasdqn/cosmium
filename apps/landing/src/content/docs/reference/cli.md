@@ -106,7 +106,7 @@ cosmium scrape page --profile <PATH> [OPTIONS] <URL>
 | `--headful` | off | show a window; otherwise `--headless=new` |
 | `--format` | `json` | `json` or `html` |
 | `--output-dir` | — | write `page.html`, `screenshot.jpg`, `cookies.json` |
-| `--retries` | `0` | extra attempts when blocked; total = `1 + N` |
+| `--retries` | `0` | extra attempts when blocked or failed, with backoff; total = `1 + N` |
 | `--proxy` | — | single proxy URL, ignored when a pool exists |
 | `--proxy-file` | — | file of proxy URLs, one per line, `#` comments |
 | `--proxy-list` | — | comma-separated proxy URLs |
@@ -121,6 +121,8 @@ selector string. Attributes, custom names, and limits require a
 
 ```
 cosmium serve [--port N] [--binary PATH] [--api-key KEY] [--deepseek-api-key KEY]
+              [--max-browsers N] [--browser-max-pages N]
+              [--browser-max-age-secs N] [--browser-idle-secs N]
 ```
 
 | Flag | Env | Default |
@@ -129,6 +131,10 @@ cosmium serve [--port N] [--binary PATH] [--api-key KEY] [--deepseek-api-key KEY
 | `--binary` | `COSMIUM_BINARY` | resolved from env |
 | `--api-key` | `COSMIUM_API_KEY` | `dev-key` |
 | `--deepseek-api-key` | `DEEPSEEK_API_KEY` | unset |
+| `--max-browsers` | `COSMIUM_MAX_BROWSERS` | `4` |
+| `--browser-max-pages` | `COSMIUM_BROWSER_MAX_PAGES` | `50` |
+| `--browser-max-age-secs` | `COSMIUM_BROWSER_MAX_AGE_SECS` | `1800` |
+| `--browser-idle-secs` | `COSMIUM_BROWSER_IDLE_SECS` | `300` |
 
 See [HTTP server mode](/guides/server/).
 

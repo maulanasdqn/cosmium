@@ -9,6 +9,7 @@ pub mod handlers_profiles;
 pub mod handlers_results;
 pub mod handlers_scrape;
 pub mod handlers_tests;
+mod shutdown;
 pub mod summary;
 pub mod ui;
 
@@ -22,6 +23,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::domain::llm::LlmClient;
 use crate::domain::profile::ProfileRepository;
+use crate::infrastructure::scraping::BrowserPool;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -33,6 +35,7 @@ pub struct AppState {
     pub llm_model: String,
     pub ui_dir: Option<PathBuf>,
     pub results: Arc<crate::infrastructure::results::ResultStore>,
+    pub browsers: Arc<BrowserPool>,
 }
 
 const RESULT_BODY_LIMIT: usize = 64 * 1024 * 1024;
@@ -97,10 +100,16 @@ async fn api_not_found() -> error::ApiError {
 }
 
 pub async fn serve(state: AppState, port: u16) -> anyhow::Result<()> {
+    let browsers = Arc::clone(&state.browsers);
     let app = router(state);
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("listening on http://localhost:{port}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    let served = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown::signal())
+        .await;
+    tracing::info!("closing pooled browsers");
+    browsers.shutdown().await;
+    served?;
     Ok(())
 }

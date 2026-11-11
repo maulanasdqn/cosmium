@@ -10,7 +10,13 @@ use crate::domain::scraping::request::ProxyConfig;
 
 pub struct ProxyForwarder {
     local_addr: SocketAddr,
-    _handle: tokio::task::JoinHandle<()>,
+    handle: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for ProxyForwarder {
+    fn drop(&mut self) {
+        self.handle.abort();
+    }
 }
 
 impl ProxyForwarder {
@@ -32,10 +38,7 @@ impl ProxyForwarder {
             }
         });
 
-        Some(Self {
-            local_addr,
-            _handle: handle,
-        })
+        Some(Self { local_addr, handle })
     }
 
     pub fn chrome_flag(&self) -> String {

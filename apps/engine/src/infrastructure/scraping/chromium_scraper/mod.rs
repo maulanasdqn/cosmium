@@ -6,6 +6,7 @@ mod native;
 use async_trait::async_trait;
 use chromiumoxide::Page;
 use chromiumoxide::browser::Browser;
+use chromiumoxide::cdp::browser_protocol::browser::CloseParams;
 use chromiumoxide::cdp::browser_protocol::page::{
     AddScriptToEvaluateOnNewDocumentParams, CaptureScreenshotFormat,
 };
@@ -23,6 +24,8 @@ use super::stealth::StealthConfig;
 
 const DEFAULT_NAV_TIMEOUT_SECS: u64 = 30;
 const SCREENSHOT_QUALITY: i64 = 80;
+const CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
+const PAGE_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub struct ChromiumScraper {
     pub(crate) browser: Browser,
@@ -40,11 +43,28 @@ impl ChromiumScraper {
     }
 
     pub async fn close(mut self) {
-        if let Err(e) = self.browser.close().await {
-            tracing::debug!(error = %e, "browser close request failed");
+        let browser = &mut self.browser;
+        let graceful = tokio::time::timeout(CLOSE_TIMEOUT, async {
+            if let Err(e) = browser.close().await {
+                tracing::debug!(error = %e, "browser close request failed");
+            }
+            if let Err(e) = browser.wait().await {
+                tracing::debug!(error = %e, "waiting for browser exit failed");
+            }
+        })
+        .await;
+        if graceful.is_err() {
+            tracing::warn!("browser ignored close, killing it");
+            if let Some(Err(e)) = self.browser.kill().await {
+                tracing::warn!(error = %e, "killing browser failed");
+            }
         }
-        if let Err(e) = self.browser.wait().await {
-            tracing::debug!(error = %e, "waiting for browser exit failed");
+    }
+
+    pub async fn request_close(&self) {
+        let close = self.browser.execute(CloseParams::default());
+        if !matches!(tokio::time::timeout(CLOSE_TIMEOUT, close).await, Ok(Ok(_))) {
+            tracing::warn!("browser close request went unanswered");
         }
     }
 
@@ -85,7 +105,18 @@ impl ChromiumScraper {
 #[async_trait]
 impl PageScraper for ChromiumScraper {
     async fn scrape(&self, request: ScrapeRequest) -> ScrapeResult<ScrapedPage> {
-        self.drive(&request).await
+        let page = self.new_stealth_page().await?;
+        let scraped = self.drive(&page, &request).await;
+        close_page(page).await;
+        Ok(scraped)
+    }
+}
+
+async fn close_page(page: Page) {
+    match tokio::time::timeout(PAGE_CLOSE_TIMEOUT, page.close()).await {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => tracing::debug!(error = %e, "closing page failed"),
+        Err(_) => tracing::debug!("closing page timed out"),
     }
 }
 

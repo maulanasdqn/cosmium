@@ -43,6 +43,10 @@ Proxy pool per-entry statistics are only printed at `debug`.
 | `COSMIUM_PORT` | `3000` | `--port` |
 | `COSMIUM_API_KEY` | `dev-key` | `--api-key` |
 | `DEEPSEEK_API_KEY` | unset | `--deepseek-api-key` |
+| `COSMIUM_MAX_BROWSERS` | `4` | `--max-browsers` |
+| `COSMIUM_BROWSER_MAX_PAGES` | `50` | `--browser-max-pages` |
+| `COSMIUM_BROWSER_MAX_AGE_SECS` | `1800` | `--browser-max-age-secs` |
+| `COSMIUM_BROWSER_IDLE_SECS` | `300` | `--browser-idle-secs` |
 
 Change `COSMIUM_API_KEY` before exposing the port. See
 [HTTP server mode](/guides/server/).

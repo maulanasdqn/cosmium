@@ -6,6 +6,7 @@ pub mod datadome;
 pub mod fetch;
 pub mod intercept;
 pub mod network;
+pub mod pool;
 pub mod proxy;
 pub mod proxy_pool;
 pub mod settle;
@@ -18,6 +19,7 @@ pub mod workflow;
 
 pub use chromium_scraper::ChromiumScraper;
 pub use intercept::NetworkInterceptor;
+pub use pool::{BrowserPool, PoolLimits};
 pub use proxy::ProxyForwarder;
 pub use proxy_pool::ProxyPool;
 pub use stealth::StealthConfig;

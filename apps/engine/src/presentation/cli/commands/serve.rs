@@ -6,6 +6,7 @@ use clap::Args;
 use crate::infrastructure::llm::OpenRouterClient;
 use crate::infrastructure::llm::openrouter::OpenRouterConfig;
 use crate::infrastructure::results::{ResultStore, Retention};
+use crate::infrastructure::scraping::{BrowserPool, PoolLimits};
 use crate::presentation::cli::state::CliState;
 use crate::presentation::http::AppState;
 
@@ -47,6 +48,29 @@ pub struct ServeArgs {
 
     #[arg(long, default_value_t = 30, env = "COSMIUM_MAX_RESULT_AGE_DAYS")]
     pub max_result_age_days: u64,
+
+    #[arg(long, default_value_t = 4, env = "COSMIUM_MAX_BROWSERS", value_parser = clap::value_parser!(u16).range(1..))]
+    pub max_browsers: u16,
+
+    #[arg(long, default_value_t = 50, env = "COSMIUM_BROWSER_MAX_PAGES", value_parser = clap::value_parser!(u32).range(1..))]
+    pub browser_max_pages: u32,
+
+    #[arg(long, default_value_t = 1800, env = "COSMIUM_BROWSER_MAX_AGE_SECS")]
+    pub browser_max_age_secs: u64,
+
+    #[arg(long, default_value_t = 300, env = "COSMIUM_BROWSER_IDLE_SECS")]
+    pub browser_idle_secs: u64,
+}
+
+impl ServeArgs {
+    const fn pool_limits(&self) -> PoolLimits {
+        PoolLimits {
+            max_browsers: self.max_browsers as usize,
+            max_pages: self.browser_max_pages,
+            max_age: std::time::Duration::from_secs(self.browser_max_age_secs),
+            idle_ttl: std::time::Duration::from_secs(self.browser_idle_secs),
+        }
+    }
 }
 
 fn default_ui_dir() -> Option<std::path::PathBuf> {
@@ -78,6 +102,7 @@ fn host_of(url: &str) -> &str {
 }
 
 pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
+    let browsers = BrowserPool::start(args.pool_limits());
     let binary = args.binary.unwrap_or_else(|| state.binary.clone());
 
     let llm = build_llm(
@@ -103,6 +128,7 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
                 max_age_days: args.max_result_age_days,
             },
         )),
+        browsers,
     };
 
     println!(
