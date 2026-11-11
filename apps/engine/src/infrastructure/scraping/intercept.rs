@@ -6,6 +6,8 @@ use chromiumoxide::cdp::browser_protocol::fetch::{
 use chromiumoxide::cdp::browser_protocol::network::ErrorReason;
 use futures_util::StreamExt;
 
+use crate::domain::scraping::private_net::targets_private_network;
+
 const BLOCKED_DOMAINS: &[&str] = &[
     "google-analytics.com",
     "googletagmanager.com",
@@ -68,6 +70,16 @@ impl NetworkInterceptor {
                 }
 
                 let url = &event.request.url;
+                if targets_private_network(url) {
+                    let _ = page_clone
+                        .execute(FailRequestParams::new(
+                            event.request_id.clone(),
+                            ErrorReason::BlockedByClient,
+                        ))
+                        .await;
+                    tracing::warn!(url = %url, "blocked request to a private network address");
+                    continue;
+                }
                 if should_block(url) {
                     let _ = page_clone
                         .execute(FailRequestParams::new(

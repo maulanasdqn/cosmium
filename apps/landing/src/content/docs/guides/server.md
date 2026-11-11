@@ -51,6 +51,19 @@ directly. That also means the API key is the *only* thing protecting the
 service. Do not expose it to the public internet without a reverse proxy in
 front.
 
+## Private network access
+
+The scraping browser refuses requests to loopback, private (RFC 1918),
+link-local (including the `169.254.169.254` cloud metadata endpoint), and
+carrier-grade NAT addresses, to `localhost` and `*.localhost`, and to their IPv6
+equivalents. The check runs on every request the page makes, including
+redirects and subresources, so a public page cannot pivot the browser into
+your network. Blocked requests fail with `ERR_BLOCKED_BY_CLIENT`.
+
+The check matches the host as written in the URL. A public hostname whose DNS
+record points at a private address is not caught, so run the server where its
+network position is not sensitive.
+
 ## Scraping over HTTP
 
 ```bash

@@ -2,6 +2,7 @@ pub mod detection;
 pub mod error;
 pub mod page;
 pub mod port;
+pub mod private_net;
 pub mod proxy_pool;
 pub mod request;
 pub mod validation;
