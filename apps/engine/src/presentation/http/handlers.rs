@@ -1,7 +1,7 @@
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
+use axum::response::IntoResponse;
 
 use crate::application::use_cases::generate_profile::{GenerateProfile, GenerateProfileInput};
 
@@ -12,12 +12,6 @@ use super::dto::{
 };
 use super::dto_platform::HealthResponse;
 use super::error::sanitize_name;
-
-const INDEX_HTML: &str = include_str!("index.html");
-
-pub async fn index() -> Html<&'static str> {
-    Html(INDEX_HTML)
-}
 
 pub async fn health(State(state): State<AppState>) -> Json<HealthResponse> {
     Json(HealthResponse {

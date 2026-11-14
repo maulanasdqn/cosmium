@@ -2,8 +2,6 @@
 
 A patched Chromium variant + Rust orchestration layer for stealth scraping inside containers.
 
-**Documentation: [cosmium.zod.rs](https://cosmium.zod.rs)**
-
 Cosmium exists to solve one specific problem: a Chromium binary that does **not** fingerprint as a containerized environment. Generic stealth tooling (patchright, undetected-chromedriver) handles automation-API tells like `navigator.webdriver` but cannot fix the *hardware-absence* tells that betray Docker — SwiftShader WebGL strings, empty `mediaDevices`, leaked Linux Client Hints under a Windows UA, Docker bridge IPs in WebRTC candidates, UTC timezone, missing fonts.
 
 This repo ships:
@@ -365,7 +363,7 @@ Use Cosmium only in compliance with applicable law and with the terms of
 service and `robots.txt` of the sites you access. Do not use it for
 unauthorized access, fraud, account abuse, credential testing, spam, or attacks
 on any service. The full terms are at
-[cosmium.zod.rs/about/acceptable-use](https://cosmium.zod.rs/about/acceptable-use/).
+[docs/acceptable-use.md](docs/acceptable-use.md).
 
 ## License
 
@@ -375,7 +373,7 @@ The prebuilt browser is a modified Chromium build. The MIT License does not
 cover Chromium or its third-party components: each archive ships
 `LICENSE.chromium`, `THIRD_PARTY_LICENSES.txt`, and a `NOTICE` describing the
 codec, trademark, and warranty terms. See
-[licenses and trademarks](https://cosmium.zod.rs/about/legal/).
+[docs/legal.md](docs/legal.md).
 
 Chrome, Windows, NVIDIA, Apple, and other names that appear in profiles are
 trademarks of their respective owners and are used only as technical

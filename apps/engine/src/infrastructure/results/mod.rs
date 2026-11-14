@@ -37,6 +37,10 @@ async fn restrict(dir: &std::path::Path) {
 }
 
 #[cfg(not(unix))]
+#[expect(
+    clippy::unused_async,
+    reason = "signature must match the unix variant awaited by callers"
+)]
 async fn restrict(_dir: &std::path::Path) {}
 
 impl ResultStore {

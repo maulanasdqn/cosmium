@@ -11,7 +11,6 @@ pub mod handlers_scrape;
 pub mod handlers_tests;
 mod shutdown;
 pub mod summary;
-pub mod ui;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -33,7 +32,6 @@ pub struct AppState {
     pub api_key: String,
     pub llm: Option<Arc<dyn LlmClient>>,
     pub llm_model: String,
-    pub ui_dir: Option<PathBuf>,
     pub results: Arc<crate::infrastructure::results::ResultStore>,
     pub browsers: Arc<BrowserPool>,
 }
@@ -89,8 +87,8 @@ pub fn router(state: AppState) -> Router {
         .merge(protected)
         .fallback(api_not_found);
 
-    let ui_dir = state.ui_dir.clone();
-    ui::attach(Router::new().nest("/api", api), ui_dir.as_deref())
+    Router::new()
+        .nest("/api", api)
         .layer(CorsLayer::permissive())
         .with_state(state)
 }
