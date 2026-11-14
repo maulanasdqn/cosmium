@@ -40,5 +40,5 @@ authors are not liable for any misuse.
 If you are unsure whether a use is permitted, ask the site owner or a lawyer
 before you start.
 
-See [licenses and trademarks](legal.md) for the licensing terms of the
+See [licenses and trademarks](LEGAL.md) for the licensing terms of the
 software and the browser binary.

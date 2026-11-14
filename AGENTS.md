@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this repository. Human-facing docs live in `README.md` and `docs/`.
+Guidance for AI coding agents working in this repository. Human-facing docs live in `README.md`, `LEGAL.md`, and `ACCEPTABLE-USE.md`.
 
 ## What this is
 
@@ -15,7 +15,7 @@ Cosmium is a patched Chromium (`patches/`, pinned tag in `VERSION`) plus a Rust 
 
 These are enforced by CI (`.github/workflows/ci.yml`) and lefthook (`lefthook.yml`). Do not work around them.
 
-1. **No comments anywhere.** No `//`, `///`, `//!`, `/* */`, `#` comments, or JSDoc in any source file, in any language. Put explanations in commit messages, `README.md`, or `docs/`. The only exceptions are functional directives: shebangs, `#[expect(..., reason = "...")]`, and tool pragmas that change behavior.
+1. **No comments anywhere.** No `//`, `///`, `//!`, `/* */`, `#` comments, or JSDoc in any source file, in any language. Put explanations in commit messages or `README.md`. The only exceptions are functional directives: shebangs, `#[expect(..., reason = "...")]`, and tool pragmas that change behavior.
 2. **Max 200 lines per `.rs` file.** Split into submodules instead of growing a file.
 3. **Strict clippy, zero warnings.** Workspace lints live in `[workspace.lints]` in the root `Cargo.toml` (`all`, `pedantic`, `nursery`, `cargo` at deny, plus restriction lints such as `unwrap_used`, `expect_used`, `indexing_slicing`, `panic`, `print_stdout`). Every crate opts in with `[lints] workspace = true`.
    - Fix the code; do not silence it. `#[allow]` is forbidden (`allow_attributes`).
