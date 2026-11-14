@@ -37,9 +37,6 @@ pub struct ServeArgs {
     #[arg(long, env = "DEEPSEEK_API_KEY")]
     pub deepseek_api_key: Option<String>,
 
-    #[arg(long, env = "COSMIUM_UI_DIR")]
-    pub ui_dir: Option<std::path::PathBuf>,
-
     #[arg(long, env = "COSMIUM_RESULTS_DIR")]
     pub results_dir: Option<std::path::PathBuf>,
 
@@ -71,13 +68,6 @@ impl ServeArgs {
             idle_ttl: std::time::Duration::from_secs(self.browser_idle_secs),
         }
     }
-}
-
-fn default_ui_dir() -> Option<std::path::PathBuf> {
-    let root = std::env::var_os("COSMIUM_ROOT")
-        .map(std::path::PathBuf::from)
-        .or_else(|| std::env::current_dir().ok())?;
-    Some(root.join("apps").join("ui").join("dist"))
 }
 
 fn build_llm(
@@ -120,7 +110,6 @@ pub async fn execute(args: ServeArgs, state: &CliState) -> Result<()> {
         api_key: args.api_key,
         llm,
         llm_model: args.llm_model.clone(),
-        ui_dir: args.ui_dir.or_else(default_ui_dir),
         results: Arc::new(ResultStore::new(
             args.results_dir.unwrap_or_else(ResultStore::default_dir),
             Retention {
