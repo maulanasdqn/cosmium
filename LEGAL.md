@@ -42,4 +42,4 @@ sponsored by Google, Microsoft, NVIDIA, Apple, or any other trademark holder.
 ## No warranty
 
 Cosmium and the prebuilt browser are provided "as is", without warranty of any
-kind. Use is subject to the [acceptable use](acceptable-use.md) terms.
+kind. Use is subject to the [acceptable use](ACCEPTABLE-USE.md) terms.
