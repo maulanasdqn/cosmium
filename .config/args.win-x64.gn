@@ -1,0 +1,29 @@
+is_debug = false
+is_component_build = false
+symbol_level = 0
+blink_symbol_level = 0
+v8_symbol_level = 0
+
+is_official_build = false
+chrome_pgo_phase = 0
+dcheck_always_on = false
+
+is_chrome_branded = false
+
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+treat_warnings_as_errors = false
+clang_use_chrome_plugins = true
+use_custom_libcxx = true
+
+angle_enable_swiftshader = true
+enable_swiftshader = true
+
+enable_remoting = false
+enable_reporting = false
+
+target_os = "win"
+target_cpu = "x64"
+
+extra_cflags = "-DCOSMIUM_BUILD=1"
