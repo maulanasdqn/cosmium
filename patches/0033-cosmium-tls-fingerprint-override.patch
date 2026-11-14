@@ -1,39 +1,46 @@
 diff --git a/content/browser/service_host/utility_process_host.cc b/content/browser/service_host/utility_process_host.cc
-index 0000000001..0000000002 100644
+index 0ea6fa7b92..e1e9195c37 100644
 --- a/content/browser/service_host/utility_process_host.cc
 +++ b/content/browser/service_host/utility_process_host.cc
-@@ -392,6 +392,14 @@
- #if BUILDFLAG(IS_OZONE)
-         switches::kRenderNodeOverride,
+@@ -483,6 +483,14 @@ bool UtilityProcessHost::StartProcess() {
+ #if BUILDFLAG(USE_VAAPI)
+       switches::kHardwareVideoDevicePath,
  #endif
-+        "cosmium-tls-ciphers",
-+        "cosmium-tls-sigalgs",
-+        "cosmium-tls-curves",
-+        "cosmium-tls-alpn",
-+        "cosmium-tls-min-version",
-+        "cosmium-tls-max-version",
-+        "cosmium-tls-permute-extensions",
-+        "cosmium-tls-grease",
-     };
-     cmd_line->CopySwitchesFrom(browser_command_line, kSwitchNames);
-
++      "cosmium-tls-ciphers",
++      "cosmium-tls-sigalgs",
++      "cosmium-tls-curves",
++      "cosmium-tls-alpn",
++      "cosmium-tls-min-version",
++      "cosmium-tls-max-version",
++      "cosmium-tls-permute-extensions",
++      "cosmium-tls-grease",
+   };
+   cmd_line->CopySwitchesFrom(browser_command_line, kSwitchNames);
+ #if BUILDFLAG(IS_WIN)
 diff --git a/net/socket/ssl_client_socket_impl.cc b/net/socket/ssl_client_socket_impl.cc
-index 0000000003..0000000004 100644
+index f586acfe0f..e12acc8d96 100644
 --- a/net/socket/ssl_client_socket_impl.cc
 +++ b/net/socket/ssl_client_socket_impl.cc
-@@ -70,6 +70,8 @@
- #include "third_party/boringssl/src/include/openssl/evp.h"
- #include "third_party/boringssl/src/include/openssl/mem.h"
- #include "third_party/boringssl/src/include/openssl/ssl.h"
+@@ -14,6 +14,7 @@
+ #include <string_view>
+ #include <utility>
+ 
 +#include "base/command_line.h"
+ #include "base/containers/span.h"
+ #include "base/containers/to_vector.h"
+ #include "base/feature_list.h"
+@@ -27,6 +28,7 @@
+ #include "base/metrics/histogram_macros.h"
+ #include "base/notreached.h"
+ #include "base/rand_util.h"
 +#include "base/strings/string_split.h"
-
- namespace net {
-
-@@ -203,6 +205,13 @@
-     SSL_CTX_set_timeout(ssl_ctx_.get(), 1 * 60 * 60 /* one hour */);
-
-     SSL_CTX_set_grease_enabled(ssl_ctx_.get(), 1);
+ #include "base/strings/string_util.h"
+ #include "base/strings/string_view_util.h"
+ #include "base/synchronization/lock.h"
+@@ -211,6 +213,14 @@ class SSLClientSocketImpl::SSLContext {
+     if (base::FeatureList::IsEnabled(features::kTlsGreaseSigalgs)) {
+       SSL_CTX_set_grease_sigalgs_enabled(ssl_ctx_.get(), 1);
+     }
 +    {
 +      const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +      if (cosmium_cmd->HasSwitch("cosmium-tls-grease")) {
@@ -42,16 +49,13 @@ index 0000000003..0000000004 100644
 +            cosmium_cmd->GetSwitchValueASCII("cosmium-tls-grease") != "0");
 +      }
 +    }
-
+ 
      // Deduplicate all certificates minted from the SSL_CTX in memory.
      SSL_CTX_set0_buffer_pool(ssl_ctx_.get(), x509_util::GetBufferPool());
-@@ -820,6 +829,49 @@
-     }
+@@ -884,6 +894,74 @@ int SSLClientSocketImpl::Init() {
+         ssl_.get(), ssl_config_.server_padding_to_request.value());
    }
-
--  SSL_set_permute_extensions(ssl_.get(), 1);
-+  SSL_set_permute_extensions(ssl_.get(), 1);
-+
+ 
 +  {
 +    const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
 +
@@ -119,6 +123,7 @@ index 0000000003..0000000004 100644
 +              "cosmium-tls-permute-extensions") != "0");
 +    }
 +  }
-
-   return OK;
- }
++
+   // The compliance policy must be the last thing configured in order to have
+   // defined behavior.
+   if (context_->config().tls13_cipher_prefer_aes_256 &&
