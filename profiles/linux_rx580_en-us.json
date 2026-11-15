@@ -58,8 +58,10 @@
     "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "webgpu_adapter": {
       "vendor": "amd",
-      "architecture": "polaris",
-      "device": "rx-580"
+      "architecture": "gcn-4",
+      "device": "rx-580",
+      "subgroup_min_size": 64,
+      "subgroup_max_size": 64
     }
   },
   "screen": {

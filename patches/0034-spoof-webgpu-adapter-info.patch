@@ -1,0 +1,87 @@
+# cosmium patch: 0034-spoof-webgpu-adapter-info
+# Authored: 2026-11-15
+# Chromium base: 154.0.8037.57
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/modules/webgpu/gpu_adapter.cc, content/browser/renderer_host/render_process_host_impl.cc
+# - what changed: GPUAdapterInfo vendor, architecture and subgroupMin/MaxSize come from --cosmium-webgpu-* switches so WebGPU agrees with the spoofed WebGL GPU
+# - profile fields read: gpu.webgpu_adapter.vendor, architecture, subgroup_min_size, subgroup_max_size
+# - test: cosmium test fingerprint (webgpu_vendor, webgpu_architecture, webgpu_subgroups)
+#
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 38bbd104c8..7880411dcb 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3867,6 +3867,9 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       "cosmium-webgl-renderer",
+       "cosmium-webgl-limits",
+       "cosmium-webgl-exclude-extensions",
++      "cosmium-webgpu-vendor",
++      "cosmium-webgpu-architecture",
++      "cosmium-webgpu-subgroup-sizes",
+       "cosmium-audio-base-latency",
+       "cosmium-audio-output-latency",
+       "cosmium-audio-sample-rate",
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_adapter.cc b/third_party/blink/renderer/modules/webgpu/gpu_adapter.cc
+index 5d35a355c7..1e32860546 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_adapter.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_adapter.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "third_party/blink/renderer/modules/webgpu/gpu_adapter.h"
+ 
++#include "base/command_line.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/string_split.h"
+ #include "services/metrics/public/cpp/ukm_builders.h"
+ #include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_object_builder.h"
+@@ -51,6 +54,39 @@ GPUSupportedFeatures* MakeFeatureNameSet(wgpu::Adapter adapter) {
+   return features;
+ }
+ 
++void CosmiumOverrideAdapterInfo(String& vendor,
++                                String& architecture,
++                                uint32_t& subgroup_min_size,
++                                uint32_t& subgroup_max_size) {
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (cosmium_cmd->HasSwitch("cosmium-webgpu-vendor")) {
++    vendor = String::FromUtf8(
++        cosmium_cmd->GetSwitchValueASCII("cosmium-webgpu-vendor"));
++  }
++  if (cosmium_cmd->HasSwitch("cosmium-webgpu-architecture")) {
++    architecture = String::FromUtf8(
++        cosmium_cmd->GetSwitchValueASCII("cosmium-webgpu-architecture"));
++  }
++  if (!cosmium_cmd->HasSwitch("cosmium-webgpu-subgroup-sizes")) {
++    return;
++  }
++  const std::vector<std::string> cosmium_sizes = base::SplitString(
++      cosmium_cmd->GetSwitchValueASCII("cosmium-webgpu-subgroup-sizes"), ",",
++      base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++  if (cosmium_sizes.size() != 2) {
++    return;
++  }
++  unsigned cosmium_min = 0;
++  unsigned cosmium_max = 0;
++  if (!base::StringToUint(cosmium_sizes[0], &cosmium_min) ||
++      !base::StringToUint(cosmium_sizes[1], &cosmium_max) ||
++      cosmium_min == 0 || cosmium_min > cosmium_max) {
++    return;
++  }
++  subgroup_min_size = cosmium_min;
++  subgroup_max_size = cosmium_max;
++}
++
+ }  // anonymous namespace
+ 
+ GPUAdapter::GPUAdapter(
+@@ -112,6 +148,8 @@ GPUAdapter::GPUAdapter(
+   }
+   subgroup_min_size_ = info.subgroupMinSize;
+   subgroup_max_size_ = info.subgroupMaxSize;
++  CosmiumOverrideAdapterInfo(vendor_, architecture_, subgroup_min_size_,
++                             subgroup_max_size_);
+   power_preference_ = powerProperties.powerPreference;
+ 
+   features_ = MakeFeatureNameSet(GetHandle());

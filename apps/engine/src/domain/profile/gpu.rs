@@ -43,7 +43,25 @@ impl Gpu {
 pub struct WebGpuAdapter {
     pub vendor: String,
     pub architecture: String,
+    #[serde(default)]
     pub device: String,
+    #[serde(default)]
+    pub subgroup_min_size: Option<u32>,
+    #[serde(default)]
+    pub subgroup_max_size: Option<u32>,
+}
+
+impl WebGpuAdapter {
+    pub fn push_flags(&self, f: &mut Vec<String>) {
+        f.push(format!("--cosmium-webgpu-vendor={}", self.vendor));
+        f.push(format!(
+            "--cosmium-webgpu-architecture={}",
+            self.architecture
+        ));
+        if let (Some(min), Some(max)) = (self.subgroup_min_size, self.subgroup_max_size) {
+            f.push(format!("--cosmium-webgpu-subgroup-sizes={min},{max}"));
+        }
+    }
 }
 
 fn default_webgl_version() -> String {
@@ -74,6 +92,35 @@ mod tests {
             g.webgl_excluded_extensions_switch().as_deref(),
             Some("WEBGL_compressed_texture_astc")
         );
+    }
+
+    #[test]
+    fn webgpu_adapter_emits_vendor_architecture_and_subgroups() {
+        let a: super::WebGpuAdapter = serde_json::from_str(
+            r#"{"vendor":"nvidia","architecture":"ampere","subgroup_min_size":32,"subgroup_max_size":32}"#,
+        )
+        .expect("adapter parses");
+        let mut f = Vec::new();
+        a.push_flags(&mut f);
+        assert_eq!(
+            f,
+            [
+                "--cosmium-webgpu-vendor=nvidia",
+                "--cosmium-webgpu-architecture=ampere",
+                "--cosmium-webgpu-subgroup-sizes=32,32",
+            ]
+        );
+    }
+
+    #[test]
+    fn webgpu_adapter_skips_subgroups_when_incomplete() {
+        let a: super::WebGpuAdapter = serde_json::from_str(
+            r#"{"vendor":"amd","architecture":"rdna-2","subgroup_min_size":64}"#,
+        )
+        .expect("adapter parses");
+        let mut f = Vec::new();
+        a.push_flags(&mut f);
+        assert_eq!(f.len(), 2);
     }
 
     #[test]

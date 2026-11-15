@@ -3,6 +3,7 @@ mod parse;
 pub(crate) mod probe;
 mod probe_lies;
 mod probe_render;
+mod probe_webgpu;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

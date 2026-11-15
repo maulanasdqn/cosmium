@@ -124,10 +124,14 @@
         },
         "webgpu_adapter": {
           "type": "object",
+          "description": "Values reported by GPUAdapter.info. They must describe the same GPU as the WebGL vendor and renderer.",
+          "required": ["vendor", "architecture"],
           "properties": {
-            "vendor": { "type": "string" },
-            "architecture": { "type": "string" },
-            "device": { "type": "string" }
+            "vendor": { "type": "string", "description": "Lowercase Dawn vendor name.", "examples": ["nvidia", "amd", "intel", "apple"] },
+            "architecture": { "type": "string", "description": "Dawn architecture name, lowercase with hyphens.", "examples": ["ampere", "lovelace", "rdna-2", "gcn-4", "gen-9", "metal-3"] },
+            "device": { "type": "string" },
+            "subgroup_min_size": { "type": "integer", "minimum": 1, "description": "GPUAdapterInfo.subgroupMinSize. NVIDIA and Apple report 32, AMD RDNA on D3D12 reports 64." },
+            "subgroup_max_size": { "type": "integer", "minimum": 1, "description": "GPUAdapterInfo.subgroupMaxSize." }
           }
         }
       }

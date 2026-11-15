@@ -56,8 +56,10 @@
     "webgl_version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "webgpu_adapter": {
       "vendor": "apple",
-      "architecture": "apple-m2",
-      "device": ""
+      "architecture": "metal-3",
+      "device": "",
+      "subgroup_min_size": 32,
+      "subgroup_max_size": 32
     }
   },
   "screen": {
