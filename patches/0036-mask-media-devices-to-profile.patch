@@ -1,0 +1,138 @@
+# cosmium patch: 0036-mask-media-devices-to-profile
+# Authored: 2026-11-15
+# Chromium base: 154.0.8037.57
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/modules/mediastream/media_devices.cc, content/browser/renderer_host/render_process_host_impl.cc
+# - what changed: when enumerateDevices() runs without media permission (every device id empty), the result is replaced by one masked entry per device kind present in --cosmium-media-devices, in Chrome order; with permission the real list is kept so getUserMedia still works
+# - profile fields read: media_devices[].kind
+# - test: cosmium test fingerprint (media_device_kinds)
+#
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index c7a535e3f1..1e22655827 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3871,6 +3871,7 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       "cosmium-webgpu-architecture",
+       "cosmium-webgpu-subgroup-sizes",
+       "cosmium-fonts",
++      "cosmium-media-devices",
+       "cosmium-audio-base-latency",
+       "cosmium-audio-output-latency",
+       "cosmium-audio-sample-rate",
+diff --git a/third_party/blink/renderer/modules/mediastream/media_devices.cc b/third_party/blink/renderer/modules/mediastream/media_devices.cc
+index f0e1886c47..2a20936075 100644
+--- a/third_party/blink/renderer/modules/mediastream/media_devices.cc
++++ b/third_party/blink/renderer/modules/mediastream/media_devices.cc
+@@ -5,9 +5,14 @@
+ #include "third_party/blink/renderer/modules/mediastream/media_devices.h"
+ 
+ #include <algorithm>
++#include <array>
++#include <optional>
+ #include <utility>
+ 
++#include "base/command_line.h"
+ #include "base/feature_list.h"
++#include "base/json/json_reader.h"
++#include "base/values.h"
+ #include "base/metrics/histogram_functions.h"
+ #include "base/notreached.h"
+ #include "base/strings/strcat.h"
+@@ -1407,6 +1412,63 @@ void MediaDevices::StopObserving() {
+   receiver_.reset();
+ }
+ 
++namespace {
++
++std::optional<std::array<bool, 3>> CosmiumMaskedDeviceKinds() {
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (!cosmium_cmd->HasSwitch("cosmium-media-devices")) {
++    return std::nullopt;
++  }
++  std::optional<base::Value> cosmium_parsed = base::JSONReader::Read(
++      cosmium_cmd->GetSwitchValueASCII("cosmium-media-devices"),
++      base::JSON_PARSE_RFC);
++  if (!cosmium_parsed || !cosmium_parsed->is_list()) {
++    return std::nullopt;
++  }
++  std::array<bool, 3> cosmium_kinds = {false, false, false};
++  for (const base::Value& cosmium_device : cosmium_parsed->GetList()) {
++    if (!cosmium_device.is_dict()) {
++      continue;
++    }
++    const std::string* cosmium_kind =
++        cosmium_device.GetDict().FindString("kind");
++    if (!cosmium_kind) {
++      continue;
++    }
++    if (*cosmium_kind == "audioinput") {
++      cosmium_kinds[0] = true;
++    } else if (*cosmium_kind == "videoinput") {
++      cosmium_kinds[1] = true;
++    } else if (*cosmium_kind == "audiooutput") {
++      cosmium_kinds[2] = true;
++    }
++  }
++  return cosmium_kinds;
++}
++
++MediaDeviceInfoVector CosmiumMaskedDevices(
++    const std::array<bool, 3>& cosmium_kinds) {
++  MediaDeviceInfoVector cosmium_devices;
++  if (cosmium_kinds[0]) {
++    cosmium_devices.push_back(MakeGarbageCollected<InputDeviceInfo>(
++        String(""), String(""), String(""),
++        mojom::blink::MediaDeviceType::kMediaAudioInput));
++  }
++  if (cosmium_kinds[1]) {
++    cosmium_devices.push_back(MakeGarbageCollected<InputDeviceInfo>(
++        String(""), String(""), String(""),
++        mojom::blink::MediaDeviceType::kMediaVideoInput));
++  }
++  if (cosmium_kinds[2]) {
++    cosmium_devices.push_back(MakeGarbageCollected<MediaDeviceInfo>(
++        String(""), String(""), String(""),
++        mojom::blink::MediaDeviceType::kMediaAudioOutput));
++  }
++  return cosmium_devices;
++}
++
++}  // namespace
++
+ void MediaDevices::DevicesEnumerated(
+     ScriptPromiseResolverWithTracker<EnumerateDevicesResult,
+                                      IDLSequence<MediaDeviceInfo>>*
+@@ -1456,6 +1518,7 @@ void MediaDevices::DevicesEnumerated(
+ 
+   MediaDeviceInfoVector media_devices;
+   bool result_contains_nonempty_input_device_ids = false;
++  bool cosmium_any_device_id = false;
+   for (wtf_size_t i = 0;
+        i < static_cast<wtf_size_t>(
+                mojom::blink::MediaDeviceType::kNumMediaDeviceTypes);
+@@ -1465,6 +1528,9 @@ void MediaDevices::DevicesEnumerated(
+           static_cast<mojom::blink::MediaDeviceType>(i);
+       WebMediaDeviceInfo device_info = enumeration[i][j];
+       String device_label = String::FromUtf8(device_info.label);
++      if (!device_info.device_id.empty()) {
++        cosmium_any_device_id = true;
++      }
+       if (device_type == mojom::blink::MediaDeviceType::kMediaAudioInput ||
+           device_type == mojom::blink::MediaDeviceType::kMediaVideoInput) {
+         if (!device_info.device_id.empty()) {
+@@ -1493,6 +1559,14 @@ void MediaDevices::DevicesEnumerated(
+     }
+   }
+ 
++  if (!cosmium_any_device_id) {
++    static const std::optional<std::array<bool, 3>> cosmium_kinds =
++        CosmiumMaskedDeviceKinds();
++    if (cosmium_kinds.has_value()) {
++      media_devices = CosmiumMaskedDevices(*cosmium_kinds);
++    }
++  }
++
+   ReportCompletedEnumerateDevices(result_contains_nonempty_input_device_ids);
+   result_tracker->Resolve(media_devices);
+   tracer->End();
