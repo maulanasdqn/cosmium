@@ -56,12 +56,12 @@ mod tests {
         let s = summarize("win11", &fixture());
         assert_eq!(s.navigator_platform.as_deref(), Some("Win32"));
         assert_eq!(s.client_hints_platform.as_deref(), Some("Windows"));
-        assert_eq!(s.chrome_version.as_deref(), Some("154.0.8037.57"));
+        assert_eq!(s.chrome_version.as_deref(), Some("158.0.8127.37"));
         assert_eq!(s.screen.as_deref(), Some("1920x1080"));
         assert_eq!(s.errors, Some(0));
         assert!(
             s.user_agent
-                .is_some_and(|ua| ua.contains("Chrome/154.0.0.0"))
+                .is_some_and(|ua| ua.contains("Chrome/158.0.0.0"))
         );
         assert!(s.load_error.is_none());
     }
@@ -76,8 +76,8 @@ mod tests {
     #[test]
     fn extracts_major_from_user_agent() {
         assert_eq!(
-            ua_major("Mozilla/5.0 Chrome/154.0.0.0 Safari").as_deref(),
-            Some("154")
+            ua_major("Mozilla/5.0 Chrome/158.0.0.0 Safari").as_deref(),
+            Some("158")
         );
         assert_eq!(ua_major("Mozilla/5.0 Firefox/130"), None);
     }
