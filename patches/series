@@ -31,3 +31,4 @@
 0031-spoof-speech-synthesis-voices.patch
 0032-spoof-webgl-limits-and-extensions.patch
 0033-cosmium-tls-fingerprint-override.patch
+0034-spoof-webgpu-adapter-info.patch
