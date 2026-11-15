@@ -105,6 +105,15 @@ mod tests {
     }
 
     #[test]
+    fn matches_native_chrome_158() {
+        let b = chrome_brands("158.0.8127.37");
+        assert_eq!(
+            names(&b.major),
+            ["Chromium=158", "Not.A/Brand=24", "Google Chrome=158"]
+        );
+    }
+
+    #[test]
     fn matches_native_chrome_154() {
         let b = chrome_brands("154.0.8037.57");
         assert_eq!(
