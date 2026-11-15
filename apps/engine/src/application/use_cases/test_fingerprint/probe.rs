@@ -21,6 +21,7 @@ pub(crate) fn for_profile(p: &Profile) -> Vec<ProbeDef> {
     let mut probes = navigator_probes(p);
     probes.extend(device_probes(p));
     probes.extend(page_probes(p));
+    probes.extend(super::probe_webgpu::webgpu_probes(p));
     probes.extend(super::probe_lies::lie_probes());
     probes.shrink_to_fit();
     probes

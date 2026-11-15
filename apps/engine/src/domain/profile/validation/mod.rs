@@ -60,6 +60,7 @@ pub fn validate(profile: &Profile) -> Vec<Diagnostic> {
     out.extend(device::webgl_renderer(profile));
     out.extend(device::canvas_noise_seed(profile));
     out.extend(device::gpu_vendor_matches_platform(profile));
+    out.extend(device::webgpu_matches_webgl(profile));
     out.extend(device::touch_points_match_form_factor(profile));
     out.extend(device::ram_cores_plausible(profile));
     out.extend(fonts::platform_staples_present(profile));

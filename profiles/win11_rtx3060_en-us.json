@@ -61,7 +61,9 @@
     "webgpu_adapter": {
       "vendor": "nvidia",
       "architecture": "ampere",
-      "device": "rtx-3060"
+      "device": "rtx-3060",
+      "subgroup_min_size": 32,
+      "subgroup_max_size": 32
     }
   },
   "screen": {

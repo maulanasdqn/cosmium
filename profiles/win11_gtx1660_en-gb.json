@@ -61,7 +61,9 @@
     "webgpu_adapter": {
       "vendor": "nvidia",
       "architecture": "turing",
-      "device": "gtx-1660-super"
+      "device": "gtx-1660-super",
+      "subgroup_min_size": 32,
+      "subgroup_max_size": 32
     }
   },
   "screen": {

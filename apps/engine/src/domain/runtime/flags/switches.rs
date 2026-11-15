@@ -52,6 +52,9 @@ fn push_hardware(f: &mut Vec<String>, p: &Profile) {
     if let Some(excluded) = p.gpu.webgl_excluded_extensions_switch() {
         f.push(format!("--cosmium-webgl-exclude-extensions={excluded}"));
     }
+    if let Some(adapter) = &p.gpu.webgpu_adapter {
+        adapter.push_flags(f);
+    }
     f.push(format!(
         "--cosmium-audio-base-latency={}",
         p.audio.base_latency
