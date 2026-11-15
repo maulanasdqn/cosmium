@@ -1,6 +1,7 @@
 mod matcher;
 mod parse;
 pub(crate) mod probe;
+mod probe_device_lists;
 mod probe_lies;
 mod probe_render;
 mod probe_webgpu;

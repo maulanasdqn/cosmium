@@ -22,6 +22,7 @@ pub(crate) fn for_profile(p: &Profile) -> Vec<ProbeDef> {
     probes.extend(device_probes(p));
     probes.extend(page_probes(p));
     probes.extend(super::probe_webgpu::webgpu_probes(p));
+    probes.extend(super::probe_device_lists::device_list_probes(p));
     probes.extend(super::probe_lies::lie_probes());
     probes.shrink_to_fit();
     probes

@@ -1,0 +1,133 @@
+# cosmium patch: 0035-restrict-fonts-to-profile
+# Authored: 2026-11-15
+# Chromium base: 154.0.8037.57
+#
+# Describe the detection vector this patch fixes:
+# - target file(s): third_party/blink/renderer/platform/fonts/font_cache.cc, content/browser/renderer_host/render_process_host_impl.cc
+# - what changed: FontCache::GetFontData, IsPlatformFamilyMatchAvailable and IsPlatformFontUniqueNameMatchAvailable report a system font only when the family of the resolved typeface is listed in --cosmium-fonts, hiding host fonts from CSS, canvas measureText, document.fonts.check and local(); per-character fallback is untouched so text still renders
+# - profile fields read: fonts.installed
+# - test: cosmium test fingerprint (fonts_unlisted_hidden, fonts_listed_visible)
+#
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 7880411dcb..c7a535e3f1 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3870,6 +3870,7 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       "cosmium-webgpu-vendor",
+       "cosmium-webgpu-architecture",
+       "cosmium-webgpu-subgroup-sizes",
++      "cosmium-fonts",
+       "cosmium-audio-base-latency",
+       "cosmium-audio-output-latency",
+       "cosmium-audio-sample-rate",
+diff --git a/third_party/blink/renderer/platform/fonts/font_cache.cc b/third_party/blink/renderer/platform/fonts/font_cache.cc
+index 372b10936b..53081ac6ad 100644
+--- a/third_party/blink/renderer/platform/fonts/font_cache.cc
++++ b/third_party/blink/renderer/platform/fonts/font_cache.cc
+@@ -33,8 +33,17 @@
+ 
+ #include <limits>
+ #include <memory>
++#include <optional>
++#include <string>
++#include <string_view>
++#include <vector>
+ 
+ #include "base/byte_size.h"
++#include "base/command_line.h"
++#include "base/containers/flat_set.h"
++#include "base/no_destructor.h"
++#include "base/strings/string_split.h"
++#include "base/strings/string_util.h"
+ #include "base/debug/alias.h"
+ #include "base/feature_list.h"
+ #include "base/notreached.h"
+@@ -70,6 +79,7 @@
+ #include "third_party/blink/renderer/platform/wtf/text/code_point_iterator.h"
+ #include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
+ #include "third_party/blink/renderer/platform/wtf/vector.h"
++#include "third_party/skia/include/core/SkString.h"
+ #include "third_party/blink/renderer/platform/wtf/wtf.h"
+ #include "ui/gfx/font_list.h"
+ 
+@@ -152,6 +162,42 @@ const FontPlatformData* FontCache::SystemFontPlatformData(
+ }
+ #endif
+ 
++namespace {
++
++std::optional<base::flat_set<std::string>> CosmiumParseAllowedFonts() {
++  const auto* cosmium_cmd = base::CommandLine::ForCurrentProcess();
++  if (!cosmium_cmd->HasSwitch("cosmium-fonts")) {
++    return std::nullopt;
++  }
++  std::vector<std::string> cosmium_names;
++  for (const auto& cosmium_name :
++       base::SplitString(cosmium_cmd->GetSwitchValueASCII("cosmium-fonts"),
++                         ",", base::TRIM_WHITESPACE,
++                         base::SPLIT_WANT_NONEMPTY)) {
++    cosmium_names.push_back(base::ToLowerASCII(cosmium_name));
++  }
++  if (cosmium_names.empty()) {
++    return std::nullopt;
++  }
++  return base::flat_set<std::string>(std::move(cosmium_names));
++}
++
++bool CosmiumFontAllowed(const FontPlatformData* platform_data) {
++  static const base::NoDestructor<std::optional<base::flat_set<std::string>>>
++      cosmium_allowed(CosmiumParseAllowedFonts());
++  if (!cosmium_allowed->has_value() || !platform_data ||
++      !platform_data->Typeface()) {
++    return true;
++  }
++  SkString cosmium_family;
++  platform_data->Typeface()->getFamilyName(&cosmium_family);
++  return (*cosmium_allowed)
++      ->contains(base::ToLowerASCII(
++          std::string_view(cosmium_family.c_str(), cosmium_family.size())));
++}
++
++}  // namespace
++
+ const FontPlatformData* FontCache::GetFontPlatformData(
+     const FontDescription& font_description,
+     const FontFaceCreationParams& creation_params,
+@@ -182,6 +228,9 @@ const SimpleFontData* FontCache::GetFontData(
+           FontFaceCreationParams(
+               AdjustFamilyNameToAvoidUnsupportedFonts(family)),
+           altername_font_name)) {
++    if (!CosmiumFontAllowed(platform_data)) {
++      return nullptr;
++    }
+     return FontDataFromFontPlatformData(
+         platform_data, font_description.SubpixelAscentDescent());
+   }
+@@ -198,10 +247,11 @@ const SimpleFontData* FontCache::FontDataFromFontPlatformData(
+ bool FontCache::IsPlatformFamilyMatchAvailable(
+     const FontDescription& font_description,
+     const AtomicString& family) {
+-  return GetFontPlatformData(
++  const FontPlatformData* platform_data = GetFontPlatformData(
+       font_description,
+       FontFaceCreationParams(AdjustFamilyNameToAvoidUnsupportedFonts(family)),
+       AlternateFontName::kNoAlternate);
++  return platform_data && CosmiumFontAllowed(platform_data);
+ }
+ 
+ bool FontCache::IsPlatformFontUniqueNameMatchAvailable(
+@@ -212,9 +262,11 @@ bool FontCache::IsPlatformFontUniqueNameMatchAvailable(
+     return false;
+   }
+ 
+-  return GetFontPlatformData(font_description,
+-                             FontFaceCreationParams(unique_font_name),
+-                             AlternateFontName::kLocalUniqueFace);
++  const FontPlatformData* platform_data =
++      GetFontPlatformData(font_description,
++                          FontFaceCreationParams(unique_font_name),
++                          AlternateFontName::kLocalUniqueFace);
++  return platform_data && CosmiumFontAllowed(platform_data);
+ }
+ 
+ String FontCache::FirstAvailableOrFirst(const String& families) {

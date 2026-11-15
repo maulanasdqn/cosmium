@@ -32,3 +32,5 @@
 0032-spoof-webgl-limits-and-extensions.patch
 0033-cosmium-tls-fingerprint-override.patch
 0034-spoof-webgpu-adapter-info.patch
+0035-restrict-fonts-to-profile.patch
+0036-mask-media-devices-to-profile.patch
